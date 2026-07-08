@@ -1,0 +1,251 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getCompanyContext } from "@/lib/company";
+import {
+  isOfferteEditable,
+  lineTotals,
+  statusMeta,
+  type OfferteLijnInput,
+  type OfferteStatus,
+} from "@/lib/offertes";
+
+export type CreateOfferteInput = {
+  customerId: number | null;
+  klant: string;
+  datum: string;
+  geldigTot: string | null;
+  notes: string;
+  lines: OfferteLijnInput[];
+};
+
+export type UpdateOfferteInput = CreateOfferteInput & { id: number };
+
+export async function createOfferte(input: CreateOfferteInput) {
+  const { supabase, user, companyId } = await getCompanyContext();
+  if (!user || !companyId) {
+    return { error: "Geen actief bedrijf gevonden." };
+  }
+
+  const cleanLines = input.lines.filter(
+    (l) => l.omschrijving.trim() !== "" || Number(l.prijs_per_eenheid) > 0,
+  );
+  if (cleanLines.length === 0) {
+    return { error: "Voeg minstens één offertelijn toe." };
+  }
+
+  const { totaal } = lineTotals(cleanLines);
+
+  const year = new Date().getFullYear();
+
+  // Bepaal het startnummer op basis van het hoogste bestaande offertenummer
+  // van dit jaar (per bedrijf). Robuuster dan tellen: houdt rekening met
+  // verwijderde offertes en gaten in de nummering.
+  const { data: laatste } = await supabase
+    .from("offertes")
+    .select("nummer")
+    .eq("bedrijf_id", companyId)
+    .like("nummer", `OFF-${year}-%`)
+    .order("nummer", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let seq = 1;
+  if (laatste?.nummer) {
+    const m = String(laatste.nummer).match(/(\d+)\s*$/);
+    if (m) seq = parseInt(m[1], 10) + 1;
+  }
+
+  // Insert met retry: bij een uniek-conflict op het nummer schuiven we op
+  // naar het volgende vrije nummer (bv. als de unique constraint globaal is).
+  let offerte: { id: number } | null = null;
+  let lastError: { message: string; code?: string } | null = null;
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const nummer = `OFF-${year}-${String(seq).padStart(4, "0")}`;
+    const res = await supabase
+      .from("offertes")
+      .insert({
+        nummer,
+        klant: input.klant || "Onbekende klant",
+        customer_id: input.customerId,
+        bedrijf_id: companyId,
+        user_id: user.id,
+        bedrag: totaal,
+        datum: input.datum,
+        geldig_tot: input.geldigTot,
+        notes: input.notes || null,
+        status: "Concept",
+        status_new: "concept",
+      })
+      .select("id")
+      .single();
+
+    if (!res.error && res.data) {
+      offerte = res.data as { id: number };
+      lastError = null;
+      break;
+    }
+    lastError = res.error;
+    if (res.error?.code === "23505") {
+      seq += 1;
+      continue;
+    }
+    break;
+  }
+
+  if (!offerte) {
+    return { error: lastError?.message ?? "Aanmaken mislukt." };
+  }
+
+  const lijnen = cleanLines.map((l, i) => ({
+    offerte_id: offerte.id,
+    company_id: companyId,
+    omschrijving: l.omschrijving,
+    aantal: Number(l.aantal) || 0,
+    eenheid: l.eenheid || "stuks",
+    prijs_per_eenheid: Number(l.prijs_per_eenheid) || 0,
+    btw_percentage: Number(l.btw_percentage) || 0,
+    sort_order: i,
+  }));
+
+  const { error: lineError } = await supabase
+    .from("offerte_lijnen")
+    .insert(lijnen);
+
+  if (lineError) {
+    return { error: lineError.message };
+  }
+
+  revalidatePath("/dashboard/offertes");
+  return { id: offerte.id as number };
+}
+
+export async function updateOfferte(input: UpdateOfferteInput) {
+  const { supabase, user, companyId } = await getCompanyContext();
+  if (!user || !companyId) {
+    return { error: "Geen actief bedrijf gevonden." };
+  }
+
+  // Haal de bestaande offerte op en controleer of die nog bewerkbaar is.
+  const { data: bestaand } = await supabase
+    .from("offertes")
+    .select("id, status_new")
+    .eq("id", input.id)
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  if (!bestaand) {
+    return { error: "Offerte niet gevonden." };
+  }
+  if (!isOfferteEditable(bestaand.status_new)) {
+    return {
+      error: "Deze offerte is definitief bevestigd en kan niet meer bewerkt worden.",
+    };
+  }
+
+  const cleanLines = input.lines.filter(
+    (l) => l.omschrijving.trim() !== "" || Number(l.prijs_per_eenheid) > 0,
+  );
+  if (cleanLines.length === 0) {
+    return { error: "Voeg minstens één offertelijn toe." };
+  }
+
+  const { totaal } = lineTotals(cleanLines);
+
+  const { error: updateError } = await supabase
+    .from("offertes")
+    .update({
+      klant: input.klant || "Onbekende klant",
+      customer_id: input.customerId,
+      bedrag: totaal,
+      datum: input.datum,
+      geldig_tot: input.geldigTot,
+      notes: input.notes || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.id)
+    .eq("bedrijf_id", companyId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  // Vervang de offertelijnen: verwijder de oude en voeg de nieuwe toe.
+  await supabase.from("offerte_lijnen").delete().eq("offerte_id", input.id);
+
+  const lijnen = cleanLines.map((l, i) => ({
+    offerte_id: input.id,
+    company_id: companyId,
+    omschrijving: l.omschrijving,
+    aantal: Number(l.aantal) || 0,
+    eenheid: l.eenheid || "stuks",
+    prijs_per_eenheid: Number(l.prijs_per_eenheid) || 0,
+    btw_percentage: Number(l.btw_percentage) || 0,
+    sort_order: i,
+  }));
+
+  const { error: lineError } = await supabase
+    .from("offerte_lijnen")
+    .insert(lijnen);
+
+  if (lineError) {
+    return { error: lineError.message };
+  }
+
+  revalidatePath("/dashboard/offertes");
+  revalidatePath(`/dashboard/offertes/${input.id}`);
+  return { id: input.id };
+}
+
+export async function updateOfferteStatus(id: number, status: OfferteStatus) {
+  const { supabase, user, companyId } = await getCompanyContext();
+  if (!user || !companyId) return { error: "Geen toegang." };
+
+  const patch: {
+    status_new: OfferteStatus;
+    status: string;
+    updated_at: string;
+    sent_at?: string;
+    viewed_at?: string;
+    accepted_at?: string;
+    rejected_at?: string;
+  } = {
+    status_new: status,
+    status: statusMeta(status).label,
+    updated_at: new Date().toISOString(),
+  };
+  const nowIso = new Date().toISOString();
+  if (status === "verzonden") patch.sent_at = nowIso;
+  if (status === "bekeken") patch.viewed_at = nowIso;
+  if (status === "geaccepteerd") patch.accepted_at = nowIso;
+  if (status === "afgewezen") patch.rejected_at = nowIso;
+
+  const { error } = await supabase
+    .from("offertes")
+    .update(patch)
+    .eq("id", id)
+    .eq("bedrijf_id", companyId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/offertes");
+  revalidatePath(`/dashboard/offertes/${id}`);
+  return { ok: true };
+}
+
+export async function deleteOfferte(id: number) {
+  const { supabase, user, companyId } = await getCompanyContext();
+  if (!user || !companyId) return { error: "Geen toegang." };
+
+  await supabase.from("offerte_lijnen").delete().eq("offerte_id", id);
+  const { error } = await supabase
+    .from("offertes")
+    .delete()
+    .eq("id", id)
+    .eq("bedrijf_id", companyId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/offertes");
+  return { ok: true };
+}
