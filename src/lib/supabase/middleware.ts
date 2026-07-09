@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { PREVIEW_COOKIE } from "@/components/dashboard/trial";
 import type { Database } from "@/types/database.types";
 
 export async function updateSession(request: NextRequest) {
@@ -32,12 +33,27 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect the dashboard: redirect unauthenticated users to login.
-  if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
+  // Protect the dashboard, maar laat anonieme voorbeeldmodus toe.
+  const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");
+  const isPreviewEntry = request.nextUrl.pathname === "/dashboard/voorbeeld";
+  const isPreviewMode =
+    request.cookies.get(PREVIEW_COOKIE)?.value === "1" || isPreviewEntry;
+
+  if (!user && isDashboard && !isPreviewMode) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(url);
+  }
+
+  // Verwijder voorbeeldcookie zodra iemand inlogt — voorkomt geblokkeerde acties.
+  if (user && request.cookies.get(PREVIEW_COOKIE)?.value === "1") {
+    supabaseResponse.cookies.set(PREVIEW_COOKIE, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
   }
 
   return supabaseResponse;

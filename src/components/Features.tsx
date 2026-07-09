@@ -42,7 +42,8 @@ const features = [
 
 export default function Features() {
   return (
-    <section id="features" className="relative py-24">
+    <section id="features" className="section-tint relative py-24">
+      <div aria-hidden className="section-edge" />
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-medium text-sky-400">Alles op één plek</p>
@@ -55,13 +56,13 @@ export default function Features() {
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="section-surface mt-14 grid gap-4 p-2 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           {features.map((f) => (
             <div
               key={f.title}
-              className="group rounded-2xl border border-white/10 bg-zinc-900/50 p-6 transition-colors hover:border-sky-500/40 hover:bg-zinc-900"
+              className="card-subtle group p-6"
             >
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-sky-400 ring-1 ring-inset ring-white/10">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-sky-500/10 text-sky-400 ring-1 ring-inset ring-white/5">
                 <f.icon size={20} />
               </div>
               <h3 className="mt-5 text-lg font-semibold text-zinc-50">

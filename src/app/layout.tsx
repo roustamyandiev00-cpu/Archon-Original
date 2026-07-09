@@ -47,7 +47,7 @@ export default function RootLayout({
   return (
     <html
       lang="nl"
-      data-scroll-behavior="smooth"
+      data-scroll-behavior="auto"
       className={`${inter.variable} h-full`}
     >
       <body className="min-h-full antialiased">{children}</body>

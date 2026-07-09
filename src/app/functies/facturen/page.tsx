@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   ArrowRight,
   Sparkles,
@@ -646,7 +647,7 @@ function FinalCta() {
               14 dagen gratis proberen. Zonder creditcard. Zonder verplichting.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a
+              <Link
                 href="/#start"
                 className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
               >
@@ -655,7 +656,7 @@ function FinalCta() {
                   size={16}
                   className="transition-transform group-hover:translate-x-0.5"
                 />
-              </a>
+              </Link>
               <a
                 href="/functies/ai-metgezel#hoe"
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"

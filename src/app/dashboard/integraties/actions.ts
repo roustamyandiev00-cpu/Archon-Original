@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 import { providerMeta, untyped } from "@/lib/integraties";
 import {
   hasOAuth,
@@ -16,9 +16,9 @@ export async function connectIntegration(
   provider: string,
   config: Record<string, string>,
 ) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Geen actief bedrijf gevonden." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   const meta = providerMeta(provider);
   if (!meta) return { error: "Onbekende provider." };
 
@@ -63,9 +63,9 @@ export async function connectIntegration(
 
 /** Verbreekt de koppeling met een provider (config wordt gewist). */
 export async function disconnectIntegration(provider: string) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Geen actief bedrijf gevonden." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   const now = new Date().toISOString();
   const { error } = await untyped(supabase)
     .from("integraties")
@@ -92,9 +92,9 @@ export async function disconnectIntegration(provider: string) {
  * accountnaam op bij de provider. Bewijst dat de volledige keten werkt.
  */
 export async function testIntegration(provider: string) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Geen actief bedrijf gevonden." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   if (!hasOAuth(provider)) {
     return { error: "Verbindingstest is alleen beschikbaar voor OAuth-koppelingen." };
   }

@@ -1,21 +1,42 @@
 import Image from "next/image";
+import Link from "next/link";
 
 const columns = [
   {
     title: "Product",
-    links: ["Offertes", "Facturen", "Klanten", "AI-agents"],
+    links: [
+      { label: "Offertes", href: "/functies/schatting" },
+      { label: "Facturen", href: "/functies/facturen" },
+      { label: "Klanten", href: "/#features" },
+      { label: "AI-agents", href: "/functies/ai-metgezel" },
+    ],
   },
   {
     title: "Bronnen",
-    links: ["Demo", "Prijzen", "Support", "Handleiding"],
+    links: [
+      { label: "Demo", href: "/#start" },
+      { label: "Prijzen", href: "/prijzen" },
+      { label: "Support", href: "mailto:support@archonpro.be" },
+      { label: "Handleiding", href: "/blog" },
+    ],
   },
   {
     title: "Bedrijf",
-    links: ["Over ArchonPro", "Contact", "Vacatures", "Blog"],
+    links: [
+      { label: "Over ArchonPro", href: "/over" },
+      { label: "Contact", href: "/contact" },
+      { label: "Vacatures", href: "/vacatures" },
+      { label: "Blog", href: "/blog" },
+    ],
   },
   {
     title: "Juridisch",
-    links: ["Privacybeleid", "Algemene voorwaarden", "Cookiebeleid", "GDPR"],
+    links: [
+      { label: "Privacybeleid", href: "/juridisch#privacy" },
+      { label: "Algemene voorwaarden", href: "/juridisch#voorwaarden" },
+      { label: "Cookiebeleid", href: "/juridisch#cookies" },
+      { label: "GDPR", href: "/juridisch#gdpr" },
+    ],
   },
 ];
 
@@ -50,13 +71,13 @@ export default function Footer() {
               </h3>
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((l) => (
-                  <li key={l}>
-                    <a
-                      href="#"
+                  <li key={l.label}>
+                    <Link
+                      href={l.href}
                       className="text-sm text-zinc-400 transition-colors hover:text-zinc-100"
                     >
-                      {l}
-                    </a>
+                      {l.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -68,7 +89,15 @@ export default function Footer() {
           <p className="text-xs text-zinc-500">
             © {new Date().getFullYear()} ArchonPro. Alle rechten voorbehouden.
           </p>
-          <p className="text-xs text-zinc-500">Gebouwd in België 🇧🇪</p>
+          <div className="flex items-center gap-4">
+            <a
+              href="mailto:support@archonpro.be"
+              className="text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              support@archonpro.be
+            </a>
+            <p className="text-xs text-zinc-500">Gebouwd in België 🇧🇪</p>
+          </div>
         </div>
       </div>
     </footer>

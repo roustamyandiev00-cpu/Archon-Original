@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   ArrowRight,
   Sparkles,
@@ -418,7 +419,7 @@ function MidCta() {
               ontdek meer functies.
             </p>
           </div>
-          <a
+          <Link
             href="/#start"
             className="group inline-flex shrink-0 items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
           >
@@ -427,7 +428,7 @@ function MidCta() {
               size={16}
               className="transition-transform group-hover:translate-x-0.5"
             />
-          </a>
+          </Link>
         </div>
       </div>
     </section>
@@ -496,7 +497,7 @@ function FinalCta() {
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a
+              <Link
                 href="/#start"
                 className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
               >
@@ -505,7 +506,7 @@ function FinalCta() {
                   size={16}
                   className="transition-transform group-hover:translate-x-0.5"
                 />
-              </a>
+              </Link>
               <a
                 href="#hoe"
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"

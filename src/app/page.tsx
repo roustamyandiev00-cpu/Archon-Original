@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import IntroOverlay from "@/components/IntroOverlay";
+import PrefetchRoutes from "@/components/PrefetchRoutes";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
@@ -13,6 +14,7 @@ import Footer from "@/components/Footer";
 export default function Home() {
   return (
     <>
+      <PrefetchRoutes />
       <IntroOverlay />
       <Navbar />
       <main>

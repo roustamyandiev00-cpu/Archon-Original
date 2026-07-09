@@ -85,8 +85,8 @@ function SectionHeader({
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-3 border-b border-white/10 pb-4">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
+    <div className="flex items-start gap-3 border-b border-white/10 pb-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
         {icon}
       </span>
       <div>
@@ -277,17 +277,11 @@ export default function SettingsForm({
   initial: SettingsInput;
   apiKeys: ApiKeyInfo[];
 }) {
+  const [tab, setTab] = useState<Section>("bedrijf");
   const [form, setForm] = useState<SettingsInput>(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-
-  function scrollToSection(id: Section) {
-    document.getElementById(`settings-${id}`)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
 
   function set<K extends keyof SettingsInput>(key: K, value: SettingsInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -315,28 +309,33 @@ export default function SettingsForm({
     });
   }
 
-  const tabs: { id: Section; label: string; icon: React.ReactNode }[] = sections;
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Snel naar sectie — alles staat op één pagina */}
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((t) => (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-sm text-zinc-500">
+        Kies een categorie — alle instellingen staan in de 4 tabs hieronder.
+      </p>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {sections.map((t) => (
           <button
             key={t.id}
             type="button"
-            onClick={() => scrollToSection(t.id)}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-white/20 hover:bg-white/5 hover:text-zinc-100"
+            onClick={() => setTab(t.id)}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+              tab === t.id
+                ? "bg-sky-500 text-zinc-950 shadow-sm"
+                : "border border-white/10 text-zinc-300 hover:bg-white/5"
+            }`}
           >
             {t.icon}
-            {t.label}
+            <span className="truncate">{t.label}</span>
           </button>
         ))}
       </div>
 
-      <GlowCard innerClassName="divide-y divide-white/10 p-0 sm:p-0">
-        {/* VAK 1 — BEDRIJFSGEGEVENS */}
-        <section id="settings-bedrijf" className="scroll-mt-24 space-y-6 p-5 sm:p-7">
+      <GlowCard subtle innerClassName="p-4 sm:p-6">
+        {tab === "bedrijf" && (
+          <div className="space-y-6">
             <SectionHeader
               icon={<Building2 size={18} />}
               title="Bedrijfsgegevens"
@@ -426,10 +425,11 @@ export default function SettingsForm({
                 />
               </Field>
             </div>
-        </section>
+          </div>
+        )}
 
-        {/* VAK 2 — OFFERTES & FACTUREN */}
-        <section id="settings-documenten" className="scroll-mt-24 space-y-6 p-5 sm:p-7">
+        {tab === "documenten" && (
+          <div className="space-y-6">
             <SectionHeader
               icon={<FileText size={18} />}
               title="Gegevens op offertes & facturen"
@@ -514,10 +514,11 @@ export default function SettingsForm({
                 />
               </div>
             </div>
-        </section>
+          </div>
+        )}
 
-        {/* VAK 3 — AI-AGENT */}
-        <section id="settings-ai" className="scroll-mt-24 space-y-6 p-5 sm:p-7">
+        {tab === "ai" && (
+          <div className="space-y-6">
             <SectionHeader
               icon={<Bot size={18} />}
               title="AI-agent instellingen"
@@ -661,17 +662,13 @@ export default function SettingsForm({
                 vragen), hoe scherper de AI jouw offertes en berichten opstelt.
               </p>
             </div>
-        </section>
+          </div>
+        )}
+
+        {tab === "api" && <ApiKeysManager initialKeys={apiKeys} />}
       </GlowCard>
 
-      {/* VAK 4 — API & INTEGRATIES */}
-      <section id="settings-api" className="scroll-mt-24">
-        <GlowCard innerClassName="p-5 sm:p-7">
-          <ApiKeysManager initialKeys={apiKeys} />
-        </GlowCard>
-      </section>
-
-      {/* Actiebalk */}
+      {tab !== "api" && (
       <div className="flex items-center justify-end gap-3">
         {error && (
           <p className="mr-auto rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
@@ -697,6 +694,7 @@ export default function SettingsForm({
           )}
         </button>
       </div>
+      )}
     </form>
   );
 }

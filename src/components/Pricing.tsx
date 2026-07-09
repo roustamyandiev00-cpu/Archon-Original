@@ -7,6 +7,8 @@ import {
   GraduationCap,
   Calculator,
 } from "lucide-react";
+import WorkflowFlow from "@/components/WorkflowFlow";
+import { FastLink } from "@/components/FastLink";
 
 type Plan = {
   name: string;
@@ -76,14 +78,6 @@ const plans: Plan[] = [
   },
 ];
 
-const workflow = [
-  { step: "1", title: "Klant komt binnen", desc: "Contact, aanvraag, notities en documenten op één plek." },
-  { step: "2", title: "Offerte maken", desc: "Professionele PDF, duidelijke prijzen en slimme tekstsuggesties." },
-  { step: "3", title: "Opvolgen", desc: "Herinneringen, status en automatische opvolging zonder chaos." },
-  { step: "4", title: "Project uitvoeren", desc: "Taken, foto's, documenten, planning en teamcommunicatie." },
-  { step: "5", title: "Factureren", desc: "Factuur, betaalstatus en klantcommunicatie netjes bewaard." },
-];
-
 const addOns = [
   { icon: UserPlus, title: "Extra gebruiker", price: "€9 – €15 / maand" },
   { icon: Sparkles, title: "Extra AI-credits", price: "€10 / €25 / €50 pakketten" },
@@ -94,7 +88,8 @@ const addOns = [
 
 export default function Pricing({ showIntro = true }: { showIntro?: boolean }) {
   return (
-    <section id="prijzen" className="relative overflow-hidden py-24">
+    <section id="prijzen" className="section-tint-alt relative overflow-hidden py-24">
+      <div aria-hidden className="section-edge" />
       <div className="mx-auto max-w-6xl px-6">
         {showIntro && (
           <div className="mx-auto max-w-2xl text-center">
@@ -113,14 +108,16 @@ export default function Pricing({ showIntro = true }: { showIntro?: boolean }) {
         )}
 
         {/* Pakketten */}
-        <div className={`grid items-start gap-6 lg:grid-cols-3 ${showIntro ? "mt-14" : ""}`}>
+        <div
+          className={`section-surface grid items-start gap-4 p-2 sm:gap-5 lg:grid-cols-3 ${showIntro ? "mt-14" : ""}`}
+        >
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative flex flex-col rounded-3xl border p-6 sm:p-8 ${
+              className={`relative flex flex-col rounded-3xl p-6 sm:p-8 ${
                 plan.highlight
-                  ? "border-cyan-400/50 bg-zinc-900/80 lg:-mt-4 lg:mb-4 lg:shadow-2xl lg:shadow-cyan-500/10"
-                  : "border-white/10 bg-zinc-900/50"
+                  ? "card-subtle-raised lg:-mt-2 lg:mb-2"
+                  : "card-subtle"
               }`}
             >
               {plan.highlight && (
@@ -173,9 +170,9 @@ export default function Pricing({ showIntro = true }: { showIntro?: boolean }) {
                   ))}
                 </ul>
 
-                <a
+                <FastLink
                   href={plan.href}
-                  className={`group mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium transition-all ${
+                  className={`group mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium ${
                     plan.highlight
                       ? "bg-gradient-to-r from-sky-500 to-cyan-400 text-zinc-950 hover:from-sky-400 hover:to-cyan-300 hover:shadow-lg hover:shadow-cyan-500/25"
                       : "border border-white/15 text-zinc-100 hover:border-sky-500/50 hover:bg-white/5"
@@ -184,9 +181,9 @@ export default function Pricing({ showIntro = true }: { showIntro?: boolean }) {
                   {plan.cta}
                   <ArrowRight
                     size={16}
-                    className="transition-transform group-hover:translate-x-0.5"
+                    className="transition-transform duration-75 group-hover:translate-x-0.5"
                   />
-                </a>
+                </FastLink>
               </div>
             </div>
           ))}
@@ -197,36 +194,7 @@ export default function Pricing({ showIntro = true }: { showIntro?: boolean }) {
           nodig · Veilig online dashboard
         </p>
 
-        {/* Workflow */}
-        <div className="mt-20 rounded-3xl border border-white/10 bg-zinc-900/40 p-6 sm:p-10">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-medium text-sky-400">
-              Van aanvraag tot betaald project
-            </p>
-            <h3 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
-              Eén centrale cockpit, geen losse administratie-tools
-            </h3>
-          </div>
-
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {workflow.map((w) => (
-              <div
-                key={w.step}
-                className="relative rounded-2xl border border-white/10 bg-zinc-950/40 p-5"
-              >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/20 text-sm font-semibold text-sky-300 ring-1 ring-inset ring-white/10">
-                  {w.step}
-                </span>
-                <h4 className="mt-4 text-sm font-semibold text-zinc-50">
-                  {w.title}
-                </h4>
-                <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
-                  {w.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <WorkflowFlow />
 
         {/* Add-ons */}
         <div className="mt-12">
@@ -240,13 +208,13 @@ export default function Pricing({ showIntro = true }: { showIntro?: boolean }) {
             </p>
           </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="section-surface mt-8 grid gap-3 p-2 sm:grid-cols-2 lg:grid-cols-3">
             {addOns.map((a) => (
               <div
                 key={a.title}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-900/50 px-4 py-3.5"
+                className="card-subtle flex items-center gap-3 px-4 py-3.5"
               >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400 ring-1 ring-inset ring-white/10">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400 ring-1 ring-inset ring-white/5">
                   <a.icon size={17} />
                 </span>
                 <div>

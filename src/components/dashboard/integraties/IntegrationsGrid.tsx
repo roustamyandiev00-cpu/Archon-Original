@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useSyncExternalStore, useState, useTransition } from "react";
 import {
   Check,
   Loader2,
@@ -139,14 +139,14 @@ function ConnectModal({
   const [configured, setConfigured] = useState(
     current?.status === "configured",
   );
-  const [origin, setOrigin] = useState("");
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
   const [testErr, setTestErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") setOrigin(window.location.origin);
-  }, []);
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "",
+  );
 
   const [apiKey, setApiKey] = useState((cfg.apiKey as string) ?? "");
   const [clientId, setClientId] = useState((cfg.clientId as string) ?? "");

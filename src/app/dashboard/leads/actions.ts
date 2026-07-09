@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 import { STADIA, type Stadium } from "@/components/dashboard/leads/stages";
 
 function isStadium(value: string): value is Stadium {
@@ -11,10 +11,9 @@ function isStadium(value: string): value is Stadium {
 export async function moveDeal(dealId: number, stadium: string) {
   if (!isStadium(stadium)) return { error: "Onbekend stadium." };
 
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Je account is nog niet aan een bedrijf gekoppeld." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
 
   const { error } = await supabase
     .from("deals")
@@ -38,10 +37,9 @@ export type CreateDealInput = {
 export async function createDeal(input: CreateDealInput) {
   if (!isStadium(input.stadium)) return { error: "Onbekend stadium." };
 
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Je account is nog niet aan een bedrijf gekoppeld." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
   if (!input.titel.trim()) return { error: "Geef de deal een titel." };
 
   const { data, error } = await supabase
@@ -64,9 +62,9 @@ export async function createDeal(input: CreateDealInput) {
 }
 
 export async function deleteDeal(dealId: number) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   const { error } = await supabase
     .from("deals")
     .delete()

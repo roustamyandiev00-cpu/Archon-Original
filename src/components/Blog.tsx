@@ -31,7 +31,8 @@ export default async function Blog() {
   if (!artikelen || artikelen.length === 0) return null;
 
   return (
-    <section id="blog" className="relative py-24">
+    <section id="blog" className="section-tint relative py-24">
+      <div aria-hidden className="section-edge" />
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
@@ -47,7 +48,7 @@ export default async function Blog() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="section-surface mt-12 grid gap-4 p-2 md:grid-cols-3 md:gap-5">
           {artikelen.map((a) => {
             const afbeelding =
               a.afbeelding_url ?? a.thumbnail_url ?? fallbackAfbeeldingen[a.slug] ?? null;
@@ -55,7 +56,7 @@ export default async function Blog() {
             <a
               key={a.id}
               href={`/blog/${a.slug}`}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 transition-colors hover:border-white/20"
+              className="card-subtle group flex flex-col overflow-hidden transition-colors hover:border-white/10"
             >
               <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-sky-500/20 via-indigo-500/15 to-transparent">
                 {afbeelding ? (

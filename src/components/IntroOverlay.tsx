@@ -2,24 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Volume2, VolumeX } from "lucide-react";
+import { fastButtonClass } from "@/components/FastLink";
 
 const STORAGE_KEY = "archonpro-intro-seen-v4";
 const INTRO_VIDEO = "/ArchonPro_CRM_logo_intro_premium_16x9.mp4";
 
 export default function IntroOverlay() {
-  const [mounted, setMounted] = useState(false);
   const [show, setShow] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [muted, setMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    setMounted(true);
     if (typeof window === "undefined") return;
     const seen = sessionStorage.getItem(STORAGE_KEY);
     if (!seen) {
-      setShow(true);
-      document.body.style.overflow = "hidden";
+      requestAnimationFrame(() => {
+        setShow(true);
+        document.body.style.overflow = "hidden";
+      });
     }
   }, []);
 
@@ -58,17 +59,15 @@ export default function IntroOverlay() {
     if (typeof window !== "undefined") {
       sessionStorage.setItem(STORAGE_KEY, "1");
     }
-    window.setTimeout(() => {
-      setShow(false);
-      document.body.style.overflow = "";
-    }, 600);
+    document.body.style.overflow = "";
+    window.setTimeout(() => setShow(false), 180);
   };
 
-  if (!mounted || !show) return null;
+  if (!show) return null;
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-950 transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-950 transition-opacity duration-200 ${
         leaving ? "opacity-0" : "opacity-100"
       }`}
     >
@@ -101,7 +100,9 @@ export default function IntroOverlay() {
 
       <button
         onClick={dismiss}
-        className="group absolute bottom-12 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-sky-500 px-7 py-3 text-sm font-medium text-zinc-950 transition-all hover:bg-sky-400 hover:shadow-[0_0_30px_-5px_rgba(56,189,248,0.6)]"
+        className={fastButtonClass(
+          "group absolute bottom-12 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-sky-500 px-7 py-3 text-sm font-medium text-zinc-950 hover:bg-sky-400 hover:shadow-[0_0_30px_-5px_rgba(56,189,248,0.6)]",
+        )}
       >
         Verder gaan
         <ArrowRight

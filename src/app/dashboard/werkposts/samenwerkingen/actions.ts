@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 
 export type AfspraakInput = {
   channelId: string;
@@ -30,9 +30,9 @@ function toIso(datum: string, tijd: string): string | null {
  * geplande afspraak ziet.
  */
 export async function createAfspraak(input: AfspraakInput) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
   const titel = input.titel.trim();
   if (!titel) return { error: "Geef de afspraak een titel." };
 
@@ -107,9 +107,9 @@ export async function updateAfspraakStatus(
   afspraakId: number,
   status: "gepland" | "bevestigd" | "geannuleerd" | "afgerond",
 ) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   const { error } = await supabase
     .from("afspraken")
     .update({ status })

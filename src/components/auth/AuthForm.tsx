@@ -8,12 +8,14 @@ import {
   Building2,
   Eye,
   EyeOff,
+  Gift,
   Lock,
   Mail,
   User,
   Loader2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { REFERRAL_REWARDS } from "@/components/ReferralProgram";
 
 type Mode = "login" | "register";
 
@@ -53,12 +55,14 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "/dashboard";
+  const refCode = searchParams.get("ref")?.trim() ?? "";
+  const prefillEmail = searchParams.get("email") ?? "";
 
   const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [name, setName] = useState("");
   const [bedrijf, setBedrijf] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +84,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             data: {
               full_name: name,
               ...(bedrijf.trim() ? { company_name: bedrijf.trim() } : {}),
+              ...(refCode ? { referred_by: refCode } : {}),
             },
             emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
           },
@@ -147,6 +152,22 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {isRegister && refCode && (
+          <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">
+            <p className="flex items-center gap-2 font-medium">
+              <Gift size={16} className="shrink-0 text-violet-300" />
+              Je bent uitgenodigd door een collega
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-violet-200/80">
+              Maak je account af en ontvang automatisch{" "}
+              <span className="font-semibold text-violet-100">
+                {REFERRAL_REWARDS.invitee}
+              </span>{" "}
+              op je eerste facturatie.
+            </p>
+          </div>
+        )}
+
         {isRegister && (
           <Field label="Naam">
             <InputIcon icon={<User size={16} />} />

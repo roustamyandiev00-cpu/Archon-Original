@@ -85,15 +85,19 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: membership } = await supabase
-    .from("company_memberships")
-    .select("company_id")
-    .eq("user_id", user!.id)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+  let companyId: number | null = null;
 
-  const companyId = membership?.company_id ?? null;
+  if (user) {
+    const { data: membership } = await supabase
+      .from("company_memberships")
+      .select("company_id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    companyId = membership?.company_id ?? null;
+  }
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)

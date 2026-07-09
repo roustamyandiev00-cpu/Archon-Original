@@ -12,7 +12,7 @@ type Soort = "offerte" | "factuur" | "proforma";
  * als Belgisch (+32) behandeld.
  */
 function toWhatsappNumber(phone: string): string {
-  let digits = phone.replace(/[^\d+]/g, "");
+  const digits = phone.replace(/[^\d+]/g, "");
   if (digits.startsWith("+")) return digits.slice(1);
   if (digits.startsWith("00")) return digits.slice(2);
   if (digits.startsWith("0")) return "32" + digits.slice(1);

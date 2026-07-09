@@ -1,15 +1,15 @@
 "use server";
 
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 import { getPeppolConfig, buildFactuurUbl } from "@/lib/peppol/build";
 import { buildInvoiceUBL } from "@/lib/peppol/ubl";
 import { sendViaAccessPoint } from "@/lib/peppol/send";
 
 /** Verstuurt een factuur als e-factuur via het geconfigureerde Peppol access point. */
 export async function sendFactuurViaPeppol(factuurId: number) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Geen actief bedrijf gevonden." };
-  if (!Number.isFinite(factuurId)) return { error: "Ongeldige factuur." };
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
 
   const peppol = await getPeppolConfig(supabase, companyId);
   if (!peppol) {

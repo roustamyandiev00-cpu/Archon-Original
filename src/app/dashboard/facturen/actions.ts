@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 import { lineTotals, type OfferteLijnInput } from "@/lib/offertes";
 import { documentTypeMeta, type FactuurDocumentType } from "@/lib/facturen";
 
@@ -17,10 +17,9 @@ export type CreateFactuurInput = {
 };
 
 export async function createFactuur(input: CreateFactuurInput) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Geen actief bedrijf gevonden." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
 
   const cleanLines = input.lines.filter(
     (l) => l.omschrijving.trim() !== "" || Number(l.prijs_per_eenheid) > 0,

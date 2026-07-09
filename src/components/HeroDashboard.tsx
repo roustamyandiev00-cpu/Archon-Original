@@ -1,39 +1,32 @@
 import Image from "next/image";
-import HeroPhone from "@/components/HeroPhone";
+import { Sparkles } from "lucide-react";
 
-/** Mission View dashboard + smartphone-preview voor de hero. */
+/** Hero-visual: tablet + smartphone uit het Gemini-ontwerp. */
 export default function HeroDashboard() {
   return (
-    <div className="relative mx-auto w-full max-w-[720px] overflow-visible lg:max-w-none">
+    <div className="relative mx-auto w-full max-w-[640px] lg:max-w-none">
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-sky-500/25 via-indigo-500/15 to-cyan-500/20 blur-3xl"
+        className="pointer-events-none absolute -inset-8 rounded-[2.5rem] bg-[radial-gradient(ellipse_at_center,rgba(14,165,233,0.2),transparent_72%)] blur-3xl lg:-inset-12"
       />
-      <div
+
+      <Image
+        src="/hero-devices-mockup.png"
+        alt="ArchonPro dashboard op tablet en smartphone"
+        width={1376}
+        height={1536}
+        priority
+        unoptimized
+        className="relative h-auto w-full translate-x-1 scale-[1.02] [filter:drop-shadow(0_48px_96px_rgba(0,0,0,0.55))] lg:translate-x-3 lg:scale-[1.06] xl:translate-x-5 xl:scale-[1.08]"
+        sizes="(max-width: 1024px) 92vw, 52vw"
+      />
+
+      <Sparkles
         aria-hidden
-        className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-[#9089fc]/20 blur-3xl"
+        className="pointer-events-none absolute bottom-2 right-1 text-white/30 sm:right-3"
+        size={22}
+        strokeWidth={1.5}
       />
-
-      <div className="relative z-10 overflow-hidden rounded-2xl border border-white/15 bg-zinc-950 shadow-[0_40px_100px_-24px_rgba(0,0,0,0.85)] ring-1 ring-white/5">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
-
-        <Image
-          src="/hero-dashboard-mission-view.png"
-          alt="ArchonPro Mission View dashboard — overzicht met offertes, facturen, action items en Nova AI-metgezel"
-          width={1920}
-          height={1080}
-          priority
-          className="h-auto w-full"
-          sizes="(max-width: 1024px) 100vw, 50vw"
-        />
-
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-zinc-950/80 to-transparent"
-        />
-      </div>
-
-      <HeroPhone />
     </div>
   );
 }

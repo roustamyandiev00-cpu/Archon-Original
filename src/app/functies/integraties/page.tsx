@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ArrowRight, Plug, Check, Search, LifeBuoy } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PageHero from "@/components/PageHero";
@@ -138,13 +139,13 @@ function NotFound() {
             ArchonPro exporteert naar Excel en CSV, compatibel met de meeste
             bouwtools, en verstuurt via Peppol. Ons team helpt je graag verder.
           </p>
-          <a
+          <Link
             href="/#start"
             className="mt-7 inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
           >
             <LifeBuoy size={16} className="text-sky-400" />
             Contacteer de support
-          </a>
+          </Link>
         </div>
       </div>
     </section>
@@ -165,7 +166,7 @@ function FinalCta() {
               14 dagen gratis proberen. Zonder creditcard. Zonder verplichting.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a
+              <Link
                 href="/#start"
                 className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
               >
@@ -174,7 +175,7 @@ function FinalCta() {
                   size={16}
                   className="transition-transform group-hover:translate-x-0.5"
                 />
-              </a>
+              </Link>
               <a
                 href="/functies/facturen"
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"

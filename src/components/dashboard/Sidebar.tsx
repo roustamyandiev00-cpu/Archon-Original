@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { LogoMark } from "@/components/dashboard/LogoMark";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Gauge,
   Users,
@@ -26,6 +26,7 @@ import {
   Handshake,
   Plug,
   ChevronDown,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -114,29 +115,22 @@ function itemIsAvailable(item: Item) {
   return item.available !== false;
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    setOpenGroups((prev) => {
-      const next = { ...prev };
-      for (const group of groups) {
-        if (group.collapsible && groupHasActivePath(group, pathname)) {
-          next[group.title] = true;
-        }
-      }
-      return next;
-    });
-  }, [pathname]);
-
   function toggleGroup(title: string) {
-    setOpenGroups((prev) => ({ ...prev, [title]: !prev[title] }));
+    setOpenGroups((prev) => ({ ...prev, [title]: !isGroupOpen(title) }));
   }
 
-  function isGroupOpen(group: NavGroup) {
-    if (!group.collapsible) return true;
+  function isGroupOpen(titleOrGroup: string | NavGroup) {
+    const group =
+      typeof titleOrGroup === "string"
+        ? groups.find((g) => g.title === titleOrGroup)
+        : titleOrGroup;
+    if (!group || !group.collapsible) return true;
+    if (groupHasActivePath(group, pathname)) return true;
     return openGroups[group.title] ?? false;
   }
 
@@ -212,13 +206,7 @@ export default function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] flex-col border-r border-white/[0.06] bg-zinc-950 lg:flex">
       <div className="relative flex h-14 items-center gap-2.5 border-b border-white/[0.06] px-4">
         <div className="rounded-lg ring-1 ring-white/[0.06]">
-          <Image
-            src="/logo-tile.png"
-            alt="ArchonPro logo"
-            width={40}
-            height={40}
-            className="h-10 w-10 rounded-lg"
-          />
+          <LogoMark size={40} />
         </div>
         <div className="leading-tight">
           <p className="text-sm font-semibold tracking-tight text-zinc-50">
@@ -290,36 +278,52 @@ export default function Sidebar() {
       </nav>
 
       <div className="relative space-y-0.5 border-t border-white/[0.06] p-3">
-        <Link
-          href="/dashboard/instellingen"
-          className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-200 ${
-            pathname === "/dashboard/instellingen"
-              ? "bg-sky-500/10 text-sky-200"
-              : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
-          }`}
-        >
-          <Settings
-            size={16}
-            strokeWidth={pathname === "/dashboard/instellingen" ? 2 : 1.75}
-            className={
+        {!isPreviewMode && (
+          <Link
+            href="/dashboard/instellingen"
+            className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-200 ${
               pathname === "/dashboard/instellingen"
-                ? "text-sky-400"
-                : "text-zinc-500 transition-colors group-hover:text-zinc-300"
-            }
-          />
-          Instellingen
-        </Link>
-        <button
-          onClick={handleLogout}
-          className="group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-zinc-400 transition-all duration-200 hover:bg-white/[0.04] hover:text-rose-400"
-        >
-          <LogOut
-            size={16}
-            strokeWidth={1.75}
-            className="text-zinc-500 transition-colors group-hover:text-rose-400/90"
-          />
-          Uitloggen
-        </button>
+                ? "bg-sky-500/10 text-sky-200"
+                : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
+            }`}
+          >
+            <Settings
+              size={16}
+              strokeWidth={pathname === "/dashboard/instellingen" ? 2 : 1.75}
+              className={
+                pathname === "/dashboard/instellingen"
+                  ? "text-sky-400"
+                  : "text-zinc-500 transition-colors group-hover:text-zinc-300"
+              }
+            />
+            Instellingen
+          </Link>
+        )}
+        {isPreviewMode ? (
+          <Link
+            href="/register"
+            className="group flex w-full items-center gap-2.5 rounded-xl bg-sky-500/15 px-2.5 py-2 text-sm font-medium text-sky-200 transition-all duration-200 hover:bg-sky-500/25"
+          >
+            <Sparkles
+              size={16}
+              strokeWidth={1.75}
+              className="text-sky-400 transition-colors group-hover:text-sky-300"
+            />
+            Start 7 dagen gratis
+          </Link>
+        ) : (
+          <button
+            onClick={handleLogout}
+            className="group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-zinc-400 transition-all duration-200 hover:bg-white/[0.04] hover:text-rose-400"
+          >
+            <LogOut
+              size={16}
+              strokeWidth={1.75}
+              className="text-zinc-500 transition-colors group-hover:text-rose-400/90"
+            />
+            Uitloggen
+          </button>
+        )}
       </div>
     </aside>
   );

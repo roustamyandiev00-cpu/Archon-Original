@@ -1,15 +1,19 @@
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { DemoBadge } from "@/components/dashboard/mission";
 import LeadsBoard, {
   type DealCard,
 } from "@/components/dashboard/leads/LeadsBoard";
 import CompanySetupCard from "@/components/werkposts/CompanySetupCard";
+import { DEMO_LEADS } from "@/lib/demo";
 
 export const metadata = { title: "Leads / CRM — ArchonPro" };
 
 export default async function LeadsPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, user, companyId } = await getCompanyContext();
 
-  if (!user || !companyId) {
+  if (!preview && (!user || !companyId)) {
     return (
       <div className="mx-auto max-w-lg py-8">
         <CompanySetupCard />
@@ -17,13 +21,30 @@ export default async function LeadsPage() {
     );
   }
 
-  const { data } = await supabase
-    .from("deals")
-    .select("id, titel, stadium, waarde, kans, deadline")
-    .eq("bedrijf_id", companyId)
-    .order("created_at", { ascending: true });
+  let deals: DealCard[] = [];
+  let isDemo = preview;
 
-  const deals = (data ?? []) as DealCard[];
+  if (companyId) {
+    const { data } = await supabase
+      .from("deals")
+      .select("id, titel, stadium, waarde, kans, deadline")
+      .eq("bedrijf_id", companyId)
+      .order("created_at", { ascending: true });
 
-  return <LeadsBoard initialDeals={deals} />;
+    deals = (data ?? []) as DealCard[];
+    isDemo = deals.length === 0;
+  }
+
+  if (isDemo) deals = DEMO_LEADS;
+
+  return (
+    <div className="space-y-4">
+      {isDemo && (
+        <div className="flex justify-end">
+          <DemoBadge />
+        </div>
+      )}
+      <LeadsBoard initialDeals={deals} />
+    </div>
+  );
 }

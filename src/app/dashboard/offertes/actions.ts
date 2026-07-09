@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 import {
   isOfferteEditable,
   lineTotals,
@@ -22,10 +22,9 @@ export type CreateOfferteInput = {
 export type UpdateOfferteInput = CreateOfferteInput & { id: number };
 
 export async function createOfferte(input: CreateOfferteInput) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Geen actief bedrijf gevonden." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
 
   const cleanLines = input.lines.filter(
     (l) => l.omschrijving.trim() !== "" || Number(l.prijs_per_eenheid) > 0,
@@ -121,10 +120,9 @@ export async function createOfferte(input: CreateOfferteInput) {
 }
 
 export async function updateOfferte(input: UpdateOfferteInput) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Geen actief bedrijf gevonden." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
 
   // Haal de bestaande offerte op en controleer of die nog bewerkbaar is.
   const { data: bestaand } = await supabase
@@ -198,9 +196,9 @@ export async function updateOfferte(input: UpdateOfferteInput) {
 }
 
 export async function updateOfferteStatus(id: number, status: OfferteStatus) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Geen toegang." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   const patch: {
     status_new: OfferteStatus;
     status: string;
@@ -234,9 +232,9 @@ export async function updateOfferteStatus(id: number, status: OfferteStatus) {
 }
 
 export async function deleteOfferte(id: number) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Geen toegang." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   await supabase.from("offerte_lijnen").delete().eq("offerte_id", id);
   const { error } = await supabase
     .from("offertes")

@@ -11,6 +11,13 @@ import {
 import { demoCronJobs } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
 
+function scheduleBounds() {
+  const now = Date.now();
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return { now, endOfToday: endOfToday.getTime() };
+}
+
 export const metadata = { title: "Cron — ArchonPro" };
 
 type Job = {
@@ -92,13 +99,11 @@ export default async function CronPage() {
   const isDemo = jobs.length === 0;
   if (isDemo) jobs = demoCronJobs();
 
-  const now = Date.now();
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
+  const { now, endOfToday } = scheduleBounds();
 
   const overdue = jobs.filter((j) => j.when != null && j.when < now).length;
   const today = jobs.filter(
-    (j) => j.when != null && j.when >= now && j.when <= endOfToday.getTime(),
+    (j) => j.when != null && j.when >= now && j.when <= endOfToday,
   ).length;
 
   jobs.sort((a, b) => {

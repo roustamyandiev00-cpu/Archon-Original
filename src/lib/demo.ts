@@ -156,6 +156,49 @@ export const DEMO_CONTACTS = [
   },
 ];
 
+export const DEMO_LEADS = [
+  {
+    id: -1,
+    titel: "Renovatie Vandenberghe",
+    stadium: "Lead",
+    waarde: 18500,
+    kans: 35,
+    deadline: "2026-07-20",
+  },
+  {
+    id: -2,
+    titel: "Gevelisolatie Immo Coninckx",
+    stadium: "Gekwalificeerd",
+    waarde: 42000,
+    kans: 55,
+    deadline: "2026-07-25",
+  },
+  {
+    id: -3,
+    titel: "Dakwerken Peeters",
+    stadium: "Voorstel",
+    waarde: 12800,
+    kans: 70,
+    deadline: "2026-07-18",
+  },
+  {
+    id: -4,
+    titel: "Badkamerrenovatie Janssens",
+    stadium: "Onderhandeling",
+    waarde: 9600,
+    kans: 80,
+    deadline: "2026-07-15",
+  },
+  {
+    id: -5,
+    titel: "Nieuwbouw De Vlaming",
+    stadium: "Gewonnen",
+    waarde: 215000,
+    kans: 100,
+    deadline: null,
+  },
+];
+
 export const DEMO_DASHBOARD = {
   offertesCount: 7,
   klantenCount: 24,

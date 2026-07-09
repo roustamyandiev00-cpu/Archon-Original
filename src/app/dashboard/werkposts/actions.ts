@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode, requireWriteAccess } from "@/components/dashboard/context";
 
 const WERKPOST_MEDIA_BUCKET = "werkpost-media";
 const MAX_FOTO_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -38,10 +39,9 @@ export type CreateWerkpostInput = {
 };
 
 export async function createWerkpost(input: CreateWerkpostInput) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Je account is nog niet aan een bedrijf gekoppeld." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
   if (!input.titel.trim() || !input.beschrijving.trim() || !input.regio.trim()) {
     return { error: "Titel, omschrijving en regio zijn verplicht." };
   }
@@ -101,10 +101,9 @@ export async function uploadWerkpostFotos(
   werkpostId: string,
   formData: FormData,
 ) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Je account is nog niet aan een bedrijf gekoppeld." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
 
   const { data: post } = await supabase
     .from("werkposts")
@@ -165,6 +164,13 @@ export async function uploadWerkpostFotos(
  * Werkt voor elke geregistreerde gebruiker, ook zonder gekoppeld bedrijf.
  */
 export async function toggleLike(werkpostId: string) {
+  if (await isActivePreviewMode()) {
+    return {
+      error:
+        "Je bekijkt het dashboard in voorbeeldmodus. Maak een gratis account aan om te reageren.",
+    };
+  }
+
   const { supabase, user } = await getCompanyContext();
   if (!user) {
     return { error: "Log in om een werkpost te liken." };
@@ -202,6 +208,13 @@ export async function toggleLike(werkpostId: string) {
  * al een bedrijf, dan wordt dat teruggegeven.
  */
 export async function provisionCompany(naam: string) {
+  if (await isActivePreviewMode()) {
+    return {
+      error:
+        "Je bekijkt het dashboard in voorbeeldmodus. Maak een gratis account aan om een bedrijf te koppelen.",
+    };
+  }
+
   const { supabase, user } = await getCompanyContext();
   if (!user) return { error: "Log in om een bedrijf aan te maken." };
   if (!naam.trim()) return { error: "Vul een bedrijfsnaam in." };
@@ -219,8 +232,9 @@ export async function provisionCompany(naam: string) {
 }
 
 export async function sluitWerkpost(werkpostId: string, reden?: string) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
 
   const { error } = await supabase
     .from("werkposts")
@@ -250,10 +264,9 @@ export async function createReactie(
   werkpostId: string,
   input: CreateReactieInput,
 ) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Log in met een bedrijfsaccount om te reageren." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
   if (!input.bericht.trim()) {
     return { error: "Schrijf een kort bericht bij je reactie." };
   }
@@ -307,8 +320,9 @@ async function countReacties(
 }
 
 export async function rejectReactie(reactieId: string) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
 
   const { data: reactie } = await supabase
     .from("werkpost_reacties")
@@ -343,8 +357,9 @@ export async function rejectReactie(reactieId: string) {
  * (kolommen werkpost_id / werkpost_reactie_id op bouwnetwerk_channels).
  */
 export async function acceptReactie(reactieId: string) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
 
   const { data: reactie } = await supabase
     .from("werkpost_reacties")

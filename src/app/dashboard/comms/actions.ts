@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 
 const COMMS_MEDIA_BUCKET = "werkpost-media";
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -25,9 +25,9 @@ const slugify = (name: string) =>
     .slice(0, 50) || "bestand";
 
 export async function sendMessage(channelId: string, content: string) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
-  if (!content.trim()) return { error: "Bericht is leeg." };
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
 
   const { data: membership } = await supabase
     .from("bouwnetwerk_channel_members")
@@ -66,9 +66,9 @@ export async function sendMessage(channelId: string, content: string) {
  * de bijlagen in de bestaande `attachments`-kolom.
  */
 export async function sendAttachments(channelId: string, formData: FormData) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
   const { data: membership } = await supabase
     .from("bouwnetwerk_channel_members")
     .select("id")

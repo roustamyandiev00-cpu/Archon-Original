@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 import { DEFAULT_TEMPLATE, type Extras, type SettingsInput } from "./settings";
 
 const num = (v: number, fallback = 0) =>
@@ -11,10 +11,9 @@ const TEMPLATE_BUCKET = "documents";
 const MAX_TEMPLATE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export async function updateSettings(input: SettingsInput) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Geen actief bedrijf gevonden." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
 
   if (!input.naam.trim()) {
     return { error: "Bedrijfsnaam is verplicht." };
@@ -72,10 +71,9 @@ export async function saveDefaultTemplate(
   soort: "quote" | "invoice",
   value: string,
 ) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Geen actief bedrijf gevonden." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   if (soort !== "quote" && soort !== "invoice") {
     return { error: "Ongeldig documenttype." };
   }
@@ -109,10 +107,9 @@ export async function saveDocumentTemplate(
   id: number,
   value: string,
 ) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Geen actief bedrijf gevonden." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   if (kind !== "quote" && kind !== "invoice") {
     return { error: "Ongeldig documenttype." };
   }
@@ -153,10 +150,9 @@ const slugify = (name: string) =>
  * waarde ("upload:<pad>") zodat het formulier die kan tonen.
  */
 export async function uploadTemplate(formData: FormData) {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Geen actief bedrijf gevonden." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
 
   const soort = String(formData.get("soort") || "");
   if (soort !== "quote" && soort !== "invoice") {

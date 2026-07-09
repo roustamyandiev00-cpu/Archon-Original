@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { HardHat, Plus, MessageSquare, Eye, Handshake } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { DemoBadge } from "@/components/dashboard/mission";
 import { typeMeta, statusMeta, formatDate, type WerkpostRow } from "@/lib/werkposts";
 import GlowCard from "@/components/dashboard/GlowCard";
 
 export const metadata = { title: "Bouwnetwerk — ArchonPro" };
 
 export default async function WerkpostsPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   let posts: WerkpostRow[] = [];
@@ -33,7 +36,10 @@ export default async function WerkpostsPage() {
             <HardHat size={20} />
           </span>
           <div>
-            <h1 className="text-xl font-semibold text-zinc-50">Bouwnetwerk</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-zinc-50">Bouwnetwerk</h1>
+              {preview && <DemoBadge />}
+            </div>
             <p className="mt-0.5 text-sm text-zinc-500">
               Je geplaatste aanvragen en aanbiedingen voor onderaanneming.
             </p>
@@ -52,16 +58,18 @@ export default async function WerkpostsPage() {
           >
             Publieke pagina
           </Link>
-          <Link
-            href="/dashboard/werkposts/nieuw"
-            className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
-          >
-            <Plus size={16} /> Nieuwe werkpost
-          </Link>
+          {!preview && (
+            <Link
+              href="/dashboard/werkposts/nieuw"
+              className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
+            >
+              <Plus size={16} /> Nieuwe werkpost
+            </Link>
+          )}
         </div>
       </header>
 
-      {!companyId && (
+      {!companyId && !preview && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
           Je account is nog niet aan een bedrijf gekoppeld.
         </div>

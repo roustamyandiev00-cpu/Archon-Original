@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   ArrowRight,
   Sparkles,
@@ -493,7 +494,7 @@ function ProjectSection() {
             />
             <ul className="mt-8 space-y-3">
               <Bullet>Offertes, facturen en documenten gegroepeerd per werf</Bullet>
-              <Bullet>Werffoto's opgeslagen en chronologisch geordend</Bullet>
+              <Bullet>Werffoto&apos;s opgeslagen en chronologisch geordend</Bullet>
               <Bullet>Volledige historiek van alle acties</Bullet>
               <Bullet>Voortgang: lopend, afgewerkt, te factureren</Bullet>
             </ul>
@@ -535,7 +536,7 @@ function ProjectSection() {
             </div>
 
             <div className="mt-4">
-              <p className="text-xs text-zinc-500">📷 Werffoto's (8)</p>
+              <p className="text-xs text-zinc-500">📷 Werffoto&apos;s (8)</p>
               <div className="mt-2 flex gap-2">
                 {[0, 1, 2].map((i) => (
                   <div
@@ -780,7 +781,7 @@ function FinalCta() {
               14 dagen gratis proberen. Zonder creditcard. Zonder verplichting.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a
+              <Link
                 href="/#start"
                 className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
               >
@@ -789,7 +790,7 @@ function FinalCta() {
                   size={16}
                   className="transition-transform group-hover:translate-x-0.5"
                 />
-              </a>
+              </Link>
               <a
                 href="/functies/ai-metgezel#hoe"
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"

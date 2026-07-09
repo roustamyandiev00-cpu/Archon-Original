@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useSyncExternalStore, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   KeyRound,
@@ -72,11 +72,11 @@ export default function ApiKeysManager({
   const [error, setError] = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
-  const [origin, setOrigin] = useState("https://jouw-domein.be");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") setOrigin(window.location.origin);
-  }, []);
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "https://jouw-domein.be",
+  );
 
   const activeKeys = initialKeys.filter((k) => !k.revokedAt);
 

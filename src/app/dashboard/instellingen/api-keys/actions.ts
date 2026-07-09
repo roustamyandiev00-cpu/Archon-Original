@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCompanyContext } from "@/lib/company";
+import { requireWriteAccess } from "@/components/dashboard/context";
 import { generateApiKey } from "@/lib/apiKeys";
 import { sanitizeScopes } from "@/lib/apiResources";
 
@@ -9,10 +9,9 @@ export async function createApiKey(
   name: string,
   scopes: string[] = [],
 ): Promise<{ error: string } | { id: string; rawKey: string; keyPrefix: string }> {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) {
-    return { error: "Geen actief bedrijf gevonden voor je account." };
-  }
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
 
   const clean = name.trim().slice(0, 60) || "API-sleutel";
   const cleanScopes = sanitizeScopes(scopes);
@@ -40,9 +39,9 @@ export async function createApiKey(
 export async function revokeApiKey(
   id: string,
 ): Promise<{ error: string } | { success: true }> {
-  const { supabase, user, companyId } = await getCompanyContext();
-  if (!user || !companyId) return { error: "Niet ingelogd." };
-
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
   const { error } = await supabase
     .from("company_api_keys")
     .update({ revoked_at: new Date().toISOString() })

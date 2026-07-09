@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -38,6 +38,22 @@ type Contact = {
 };
 
 const STORAGE_KEY = "archon.contacten";
+const CONTACTS_EVENT = "archon.contacten-updated";
+
+function readContacts(): Contact[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as Contact[];
+  } catch {
+    // ongeldige opslag
+  }
+  return DEMO_CONTACTS;
+}
+
+function subscribeContacts(onStoreChange: () => void) {
+  window.addEventListener(CONTACTS_EVENT, onStoreChange);
+  return () => window.removeEventListener(CONTACTS_EVENT, onStoreChange);
+}
 
 const perks = [
   {
@@ -62,28 +78,18 @@ const companySizes = ["1–5", "6–20", "21–50", "51–200", "200+"];
 export default function ContactForm() {
   const [sent, setSent] = useState(false);
   const [type, setType] = useState<ContactType>("bedrijf");
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const contacts = useSyncExternalStore(
+    subscribeContacts,
+    readContacts,
+    () => DEMO_CONTACTS,
+  );
   const [selected, setSelected] = useState<Contact | null>(null);
   const isBedrijf = type === "bedrijf";
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        setContacts(JSON.parse(raw) as Contact[]);
-      } else {
-        // Demovoorbeeld zolang er nog niets is toegevoegd (niet opgeslagen).
-        setContacts(DEMO_CONTACTS);
-      }
-    } catch {
-      setContacts(DEMO_CONTACTS);
-    }
-  }, []);
-
   function persist(next: Contact[]) {
-    setContacts(next);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event(CONTACTS_EVENT));
     } catch {
       // opslag niet beschikbaar
     }

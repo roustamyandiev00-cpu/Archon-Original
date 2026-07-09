@@ -1,20 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import { Search, Bell, Radio, Activity } from "lucide-react";
+import { LogoMark } from "@/components/dashboard/LogoMark";
 
 export default function Topbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center border-b border-white/10 bg-zinc-900/85 backdrop-blur-xl lg:left-[220px]">
       <div className="flex w-full items-center gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-2.5 lg:hidden">
-          <Image
-            src="/logo-tile.png"
-            alt="ArchonPro logo"
-            width={36}
-            height={36}
-            className="h-9 w-9 rounded-lg"
-          />
+          <LogoMark size={36} />
           <span className="text-sm font-semibold text-zinc-50">ArchonPro</span>
         </div>
 

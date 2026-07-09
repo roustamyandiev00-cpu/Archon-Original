@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local tooling
+.playwright-cli/
+
+# generated captures
+/screenshots/dashboard-tour/

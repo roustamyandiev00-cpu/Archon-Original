@@ -1,0 +1,38 @@
+---
+description: Alleen wijzigen wat de gebruiker expliciet vraagt — geen eigen initiatief
+alwaysApply: true
+---
+
+# Geen wijzigingen buiten de vraag
+
+Werk **uitsluitend** aan wat de gebruiker in het bericht vraagt. Voeg niets toe,
+vervang niets en refactor niets "omdat het beter is" tenzij de gebruiker dat
+expliciet vraagt.
+
+## Wel doen
+
+- Alleen de genoemde bestanden, secties of features aanpassen
+- Bestaande keuzes respecteren (video-pad, teksten, componenten, styling)
+- Eerst vragen vóór je iets buiten de vraag wilt wijzigen
+- Minimale diff: de kleinste correcte oplossing
+
+## Niet doen (tenzij expliciet gevraagd)
+
+- Andere bestanden, pagina's of componenten "meenemen" of verbeteren
+- Eigen alternatieven kiezen (andere video, andere copy, andere layout)
+- Extra features, refactors, opschoning of hernoemen buiten scope
+- Storage keys, bestandsnamen of defaults wijzigen zonder opdracht
+- "Terwijl ik bezig was"-wijzigingen in dezelfde commit/sessie
+
+## Bij twijfel
+
+- Vraag kort: "Wil je dat ik ook X aanpas?"
+- Niet gissen en niet proactief uitbreiden
+
+## Voorbeelden
+
+| Gebruiker vraagt | ✅ Goed | ❌ Fout |
+|------------------|---------|---------|
+| "Video terug op login" | Alleen login-preview video herstellen | Ook hero, intro-overlay en auth-tekst wijzigen |
+| "Knoppen weg uit video" | Alleen die video/knoppen aanpakken | Andere video of component vervangen |
+| "Tekst groter in workflow" | Alleen typografie in die sectie | Hele pricing-pagina herstructureren |
