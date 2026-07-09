@@ -2537,16 +2537,11 @@ export type Database = {
         Row: {
           bedrijf_id: number | null
           contact_id: number | null
-          contactpersoon: string | null
           created_at: string | null
           deadline: string | null
-          email: string | null
           id: number
           kans: number | null
-          laatste_contact_op: string | null
-          notitie: string | null
           stadium: string
-          telefoon: string | null
           titel: string
           updated_at: string | null
           user_id: string | null
@@ -2555,16 +2550,11 @@ export type Database = {
         Insert: {
           bedrijf_id?: number | null
           contact_id?: number | null
-          contactpersoon?: string | null
           created_at?: string | null
           deadline?: string | null
-          email?: string | null
           id?: number
           kans?: number | null
-          laatste_contact_op?: string | null
-          notitie?: string | null
           stadium: string
-          telefoon?: string | null
           titel: string
           updated_at?: string | null
           user_id?: string | null
@@ -2573,16 +2563,11 @@ export type Database = {
         Update: {
           bedrijf_id?: number | null
           contact_id?: number | null
-          contactpersoon?: string | null
           created_at?: string | null
           deadline?: string | null
-          email?: string | null
           id?: number
           kans?: number | null
-          laatste_contact_op?: string | null
-          notitie?: string | null
           stadium?: string
-          telefoon?: string | null
           titel?: string
           updated_at?: string | null
           user_id?: string | null

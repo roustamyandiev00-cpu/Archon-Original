@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-  Building2,
   Mail,
   MapPin,
   Pencil,
