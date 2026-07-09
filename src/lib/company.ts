@@ -1,10 +1,11 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * Resolves the current authenticated user and their active company.
  * Returns the (server) Supabase client so callers can reuse it.
  */
-export async function getCompanyContext() {
+export const getCompanyContext = cache(async function getCompanyContext() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -27,4 +28,4 @@ export async function getCompanyContext() {
     user,
     companyId: (membership?.company_id ?? null) as number | null,
   };
-}
+});

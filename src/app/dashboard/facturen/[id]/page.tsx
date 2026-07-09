@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { formatEuro, formatDate, lineTotals } from "@/lib/offertes";
@@ -14,7 +15,35 @@ import {
 } from "@/lib/documentData";
 import { untyped } from "@/lib/integraties";
 
-export const metadata = { title: "Factuur — ArchonPro" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const factuurId = Number(id);
+  const { supabase, companyId } = await getCompanyContext();
+
+  if (!companyId || Number.isNaN(factuurId)) {
+    return { title: "Factuur — ArchonPro" };
+  }
+
+  const { data } = await supabase
+    .from("facturen")
+    .select("nummer, klant")
+    .eq("id", factuurId)
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  if (!data?.nummer) return { title: "Factuur — ArchonPro" };
+
+  const klant = data.klant?.trim();
+  return {
+    title: klant
+      ? `${data.nummer} — ${klant} | ArchonPro`
+      : `${data.nummer} | ArchonPro`,
+  };
+}
 
 export default async function FactuurDetailPage({
   params,
@@ -30,7 +59,7 @@ export default async function FactuurDetailPage({
   const { data: factuur } = await supabase
     .from("facturen")
     .select(
-      "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, paid_at, customer_id, template_id",
+      "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, paid_at, customer_id, template_id, offerte_id",
     )
     .eq("id", factuurId)
     .eq("bedrijf_id", companyId)
@@ -59,7 +88,7 @@ export default async function FactuurDetailPage({
   const { data: bedrijf } = await supabase
     .from("bedrijven")
     .select(
-      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst",
+      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_invoice_template",
     )
     .eq("id", companyId)
     .maybeSingle();
@@ -226,11 +255,21 @@ export default async function FactuurDetailPage({
           </div>
         )}
 
+        {factuur.offerte_id && (
+          <Link
+            href={`/dashboard/offertes/${factuur.offerte_id}`}
+            className="mt-6 inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-4 py-2 text-sm font-medium text-sky-300 transition-colors hover:bg-sky-500/20"
+          >
+            Bekijk bronofferte
+          </Link>
+        )}
+
         <div className="mt-6 space-y-4 border-t border-white/10 pt-6">
           <DocumentDownload
             kind="invoice"
             documentId={factuur.id}
             currentTemplate={factuur.template_id ?? ""}
+            defaultTemplate={bedrijf?.default_invoice_template ?? ""}
             values={docValues}
             rows={docRows}
           />

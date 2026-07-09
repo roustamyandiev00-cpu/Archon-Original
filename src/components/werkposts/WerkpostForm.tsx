@@ -2,7 +2,18 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import {
+  ImagePlus,
+  Loader2,
+  X,
+  FileText,
+  MapPin,
+  Users,
+  Calendar,
+  Euro,
+  Tag,
+  Plus
+} from "lucide-react";
 import {
   createWerkpost,
   uploadWerkpostFotos,
@@ -10,8 +21,9 @@ import {
 import { REGIOS } from "@/lib/werkposts";
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
-const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
+  "w-full rounded-xl border border-white/10 bg-zinc-900/50 px-3.5 py-2.5 text-sm text-zinc-100 outline-none transition-all placeholder:text-zinc-500 focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/10";
+const labelClass = "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-400";
+const sectionHeaderClass = "flex items-center gap-2 pb-3 mb-4 border-b border-white/5 text-sm font-semibold text-zinc-100";
 
 export default function WerkpostForm({
   onCreated,
@@ -110,252 +122,327 @@ export default function WerkpostForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <label className={labelClass}>Titel</label>
-          <input
-            value={titel}
-            onChange={(e) => setTitel(e.target.value)}
-            placeholder="bijv. Metselaars gezocht voor nieuwbouw"
-            className={inputClass}
-            required
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Sectie 1: Algemeen */}
+      <div className="rounded-2xl border border-white/5 bg-zinc-900/30 p-5 backdrop-blur-sm">
+        <h3 className={sectionHeaderClass}>
+          <FileText size={16} className="text-sky-400" />
+          1. Algemene Informatie
+        </h3>
+        
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Titel van de post</label>
+            <input
+              value={titel}
+              onChange={(e) => setTitel(e.target.value)}
+              placeholder="bijv. Ervaren metselaars gezocht voor renovatieproject"
+              className={inputClass}
+              required
+            />
+          </div>
 
-        <div>
-          <label className={labelClass}>Type</label>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value as "vraag" | "aanbod")}
-            className={inputClass}
-          >
-            <option value="vraag">Ik zoek personeel (vraag)</option>
-            <option value="aanbod">Ik heb personeel beschikbaar (aanbod)</option>
-          </select>
-        </div>
+          <div>
+            <label className={labelClass}>Ik wil...</label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as "vraag" | "aanbod")}
+              className={inputClass}
+            >
+              <option value="vraag">Personeel zoeken (Vraag)</option>
+              <option value="aanbod">Personeel aanbieden (Aanbod)</option>
+            </select>
+          </div>
 
-        <div>
-          <label className={labelClass}>Urgentie</label>
-          <select
-            value={urgentie}
-            onChange={(e) =>
-              setUrgentie(e.target.value as "normaal" | "urgent" | "zeer_urgent")
-            }
-            className={inputClass}
-          >
-            <option value="normaal">Normaal</option>
-            <option value="urgent">Urgent</option>
-            <option value="zeer_urgent">Zeer urgent</option>
-          </select>
-        </div>
+          <div>
+            <label className={labelClass}>Urgentieniveau</label>
+            <select
+              value={urgentie}
+              onChange={(e) =>
+                setUrgentie(e.target.value as "normaal" | "urgent" | "zeer_urgent")
+              }
+              className={inputClass}
+            >
+              <option value="normaal">Normaal</option>
+              <option value="urgent">Urgent (Binnen 2 weken)</option>
+              <option value="zeer_urgent">Zeer urgent (Direct nodig)</option>
+            </select>
+          </div>
 
-        <div className="sm:col-span-2">
-          <label className={labelClass}>Omschrijving</label>
-          <textarea
-            value={beschrijving}
-            onChange={(e) => setBeschrijving(e.target.value)}
-            rows={4}
-            placeholder="Beschrijf het werk, vereiste ervaring, planning…"
-            className={`${inputClass} resize-none`}
-            required
-          />
-        </div>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Uitgebreide omschrijving</label>
+            <textarea
+              value={beschrijving}
+              onChange={(e) => setBeschrijving(e.target.value)}
+              rows={4}
+              placeholder="Beschrijf de taken, benodigde certificaten (zoals VCA), verwachtingen en andere relevante details..."
+              className={`${inputClass} resize-none`}
+              required
+            />
+          </div>
 
-        <div className="sm:col-span-2">
-          <label className={labelClass}>Aard van het werk</label>
-          <input
-            value={aardVanWerk}
-            onChange={(e) => setAardVanWerk(e.target.value)}
-            placeholder="bijv. Ruwbouw, afwerking, elektriciteit…"
-            className={inputClass}
-          />
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Aard van het werk / Categorie</label>
+            <input
+              value={aardVanWerk}
+              onChange={(e) => setAardVanWerk(e.target.value)}
+              placeholder="bijv. Ruwbouw, Afwerking, Elektriciteit, Sanitair..."
+              className={inputClass}
+            />
+          </div>
         </div>
+      </div>
 
-        <div>
-          <label className={labelClass}>Regio</label>
-          <input
-            value={regio}
-            onChange={(e) => setRegio(e.target.value)}
-            list="regio-opties"
-            placeholder="bijv. Antwerpen"
-            className={inputClass}
-            required
-          />
-          <datalist id="regio-opties">
-            {REGIOS.map((r) => (
-              <option key={r} value={r} />
-            ))}
-          </datalist>
-        </div>
-        <div>
-          <label className={labelClass}>Stad</label>
-          <input
-            value={stad}
-            onChange={(e) => setStad(e.target.value)}
-            className={inputClass}
-          />
-        </div>
+      {/* Sectie 2: Locatie & Capaciteit */}
+      <div className="rounded-2xl border border-white/5 bg-zinc-900/30 p-5 backdrop-blur-sm">
+        <h3 className={sectionHeaderClass}>
+          <MapPin size={16} className="text-sky-400" />
+          2. Locatie &amp; Capaciteit
+        </h3>
 
-        <div>
-          <label className={labelClass}>Postcode</label>
-          <input
-            value={postcode}
-            onChange={(e) => setPostcode(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <label className={labelClass}>Adres (optioneel)</label>
-          <input
-            value={adres}
-            onChange={(e) => setAdres(e.target.value)}
-            placeholder="Straat en nummer"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Aantal personen</label>
-          <input
-            type="number"
-            min={1}
-            value={aantalPersonen}
-            onChange={(e) => setAantalPersonen(Number(e.target.value))}
-            className={inputClass}
-            required
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Startdatum</label>
-          <input
-            type="date"
-            value={startdatum}
-            onChange={(e) => setStartdatum(e.target.value)}
-            className={inputClass}
-            required
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Einddatum (optioneel)</label>
-          <input
-            type="date"
-            value={einddatum}
-            onChange={(e) => setEinddatum(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Budget min. (€, optioneel)</label>
-          <input
-            type="number"
-            value={budgetMin}
-            onChange={(e) => setBudgetMin(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Budget max. (€, optioneel)</label>
-          <input
-            type="number"
-            value={budgetMax}
-            onChange={(e) => setBudgetMax(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Tarief per uur (€, optioneel)</label>
-          <input
-            type="number"
-            value={tariefPerUur}
-            onChange={(e) => setTariefPerUur(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className={labelClass}>
-            Vereiste vaardigheden (komma-gescheiden, optioneel)
-          </label>
-          <input
-            value={vaardigheden}
-            onChange={(e) => setVaardigheden(e.target.value)}
-            placeholder="bijv. metselen, betonstorten, VCA"
-            className={inputClass}
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className={labelClass}>Foto&apos;s van het werk (optioneel)</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              addFiles(e.target.files);
-              if (fileInputRef.current) fileInputRef.current.value = "";
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-200 transition-colors hover:bg-white/5"
-          >
-            <ImagePlus size={15} /> Foto&apos;s toevoegen
-          </button>
-          <p className="mt-1.5 text-xs text-zinc-500">
-            Max. 8 foto&apos;s, tot 10 MB per stuk.
-          </p>
-
-          {fotos.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-3">
-              {fotos.map((file, i) => (
-                <div
-                  key={`${file.name}-${i}`}
-                  className="group relative h-20 w-20 overflow-hidden rounded-xl border border-white/10"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="h-full w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeFoto(i)}
-                    className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-zinc-950/80 text-zinc-200 opacity-0 transition-opacity group-hover:opacity-100"
-                    aria-label="Foto verwijderen"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className={labelClass}>Regio / Provincie</label>
+            <input
+              value={regio}
+              onChange={(e) => setRegio(e.target.value)}
+              list="regio-opties"
+              placeholder="Selecteer of typ een regio"
+              className={inputClass}
+              required
+            />
+            <datalist id="regio-opties">
+              {REGIOS.map((r) => (
+                <option key={r} value={r} />
               ))}
+            </datalist>
+          </div>
+
+          <div>
+            <label className={labelClass}>Stad / Gemeente</label>
+            <input
+              value={stad}
+              onChange={(e) => setStad(e.target.value)}
+              placeholder="bijv. Antwerpen"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Postcode</label>
+            <input
+              value={postcode}
+              onChange={(e) => setPostcode(e.target.value)}
+              placeholder="bijv. 2000"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Aantal personen</label>
+            <div className="relative flex items-center">
+              <Users size={16} className="absolute left-3.5 text-zinc-500" />
+              <input
+                type="number"
+                min={1}
+                value={aantalPersonen}
+                onChange={(e) => setAantalPersonen(Number(e.target.value))}
+                className={`${inputClass} pl-10`}
+                required
+              />
             </div>
-          )}
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Adres (Optioneel)</label>
+            <input
+              value={adres}
+              onChange={(e) => setAdres(e.target.value)}
+              placeholder="Straatnaam en huisnummer"
+              className={inputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Sectie 3: Planning & Budget */}
+      <div className="rounded-2xl border border-white/5 bg-zinc-900/30 p-5 backdrop-blur-sm">
+        <h3 className={sectionHeaderClass}>
+          <Calendar size={16} className="text-sky-400" />
+          3. Planning &amp; Tarieven
+        </h3>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className={labelClass}>Startdatum</label>
+            <input
+              type="date"
+              value={startdatum}
+              onChange={(e) => setStartdatum(e.target.value)}
+              className={inputClass}
+              required
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Einddatum (Optioneel)</label>
+            <input
+              type="date"
+              value={einddatum}
+              onChange={(e) => setEinddatum(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          <div className="sm:col-span-2 grid gap-4 sm:grid-cols-3 border-t border-white/5 pt-4 mt-2">
+            <div>
+              <label className={labelClass}>Uurtarief (€ / uur)</label>
+              <div className="relative flex items-center">
+                <Euro size={14} className="absolute left-3.5 text-zinc-500" />
+                <input
+                  type="number"
+                  value={tariefPerUur}
+                  onChange={(e) => setTariefPerUur(e.target.value)}
+                  placeholder="Richtprijs"
+                  className={`${inputClass} pl-9`}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Min. Totaal Budget (€)</label>
+              <div className="relative flex items-center">
+                <Euro size={14} className="absolute left-3.5 text-zinc-500" />
+                <input
+                  type="number"
+                  value={budgetMin}
+                  onChange={(e) => setBudgetMin(e.target.value)}
+                  placeholder="Minimaal"
+                  className={`${inputClass} pl-9`}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Max. Totaal Budget (€)</label>
+              <div className="relative flex items-center">
+                <Euro size={14} className="absolute left-3.5 text-zinc-500" />
+                <input
+                  type="number"
+                  value={budgetMax}
+                  onChange={(e) => setBudgetMax(e.target.value)}
+                  placeholder="Maximaal"
+                  className={`${inputClass} pl-9`}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sectie 4: Vaardigheden & Foto's */}
+      <div className="rounded-2xl border border-white/5 bg-zinc-900/30 p-5 backdrop-blur-sm">
+        <h3 className={sectionHeaderClass}>
+          <Tag size={16} className="text-sky-400" />
+          4. Vaardigheden &amp; Visuals
+        </h3>
+
+        <div className="space-y-5">
+          <div>
+            <label className={labelClass}>Vereiste vaardigheden / Certificaten</label>
+            <input
+              value={vaardigheden}
+              onChange={(e) => setVaardigheden(e.target.value)}
+              placeholder="Metselen, VCA-vol, Beton storten, Tekening lezen (scheid met komma's)"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Foto&apos;s van de werf of het werk (Optioneel)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                addFiles(e.target.files);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            />
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/35 px-4 py-2.5 text-sm text-zinc-200 transition-all hover:bg-white/5 hover:border-zinc-700"
+              >
+                <ImagePlus size={15} className="text-sky-400" />
+                Foto&apos;s selecteren
+              </button>
+              <span className="text-xs text-zinc-500">
+                Max. 8 foto&apos;s, tot 10 MB per stuk.
+              </span>
+            </div>
+
+            {fotos.length > 0 && (
+              <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-8">
+                {fotos.map((file, i) => (
+                  <div
+                    key={`${file.name}-${i}`}
+                    className="group relative aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-zinc-950"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeFoto(i)}
+                      className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-zinc-950/80 text-zinc-200 opacity-0 transition-opacity hover:bg-rose-600/90 group-hover:opacity-100"
+                      aria-label="Foto verwijderen"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {error && (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
+        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
           {error}
-        </p>
+        </div>
       )}
 
-      <div className="flex justify-end">
+      {/* Actieknop */}
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+        >
+          Annuleren
+        </button>
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-2.5 text-sm font-semibold text-zinc-950 transition-all hover:bg-sky-400 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? (
             <>
-              <Loader2 size={16} className="animate-spin" /> Plaatsen…
+              <Loader2 size={16} className="animate-spin" /> Bezig met plaatsen…
             </>
           ) : (
-            "Werkpost plaatsen"
+            <>
+              <Plus size={16} /> Werkpost publiceren
+            </>
           )}
         </button>
       </div>

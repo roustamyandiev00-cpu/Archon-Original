@@ -1,0 +1,397 @@
+import type { CrmPreset, ImportEntity, ImportField } from "./types";
+
+export const CRM_PRESETS: {
+  id: CrmPreset;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    id: "generic",
+    label: "Generiek / ArchonPro",
+    hint: "Standaard CSV of JSON met herkenbare kolomnamen.",
+  },
+  {
+    id: "teamleader",
+    label: "Teamleader",
+    hint: "Export uit Teamleader Focus (contacten, deals, facturen).",
+  },
+  {
+    id: "hubspot",
+    label: "HubSpot",
+    hint: "Contact- of deal-export uit HubSpot.",
+  },
+  {
+    id: "pipedrive",
+    label: "Pipedrive",
+    hint: "Personen, deals of activiteiten-export.",
+  },
+  {
+    id: "billit",
+    label: "Billit / Yuki",
+    hint: "Belgische boekhoud- en factuursoftware.",
+  },
+  {
+    id: "exact",
+    label: "Exact Online",
+    hint: "Relaties, offertes of verkoopfacturen.",
+  },
+  {
+    id: "salesforce",
+    label: "Salesforce",
+    hint: "Account-, contact- of opportunity-export.",
+  },
+];
+
+export const ENTITY_OPTIONS: {
+  id: ImportEntity;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "customers",
+    label: "Contacten / klanten",
+    description: "Klantgegevens, bedrijven en contactpersonen.",
+  },
+  {
+    id: "offertes",
+    label: "Offertes",
+    description: "Offertes met bedrag, status en klantkoppeling.",
+  },
+  {
+    id: "facturen",
+    label: "Facturen",
+    description: "Facturen, proforma’s en openstaande bedragen.",
+  },
+  {
+    id: "leads",
+    label: "Leads / deals",
+    description: "CRM-pipeline, kansen en waarde.",
+  },
+];
+
+export const ENTITY_FIELDS: Record<ImportEntity, ImportField[]> = {
+  customers: [
+    { key: "name", label: "Naam", required: true },
+    { key: "company_name", label: "Bedrijfsnaam" },
+    { key: "first_name", label: "Voornaam" },
+    { key: "last_name", label: "Achternaam" },
+    { key: "email", label: "E-mail" },
+    { key: "phone", label: "Telefoon" },
+    { key: "address", label: "Adres" },
+    { key: "kvk", label: "Ondernemingsnummer / KvK" },
+    { key: "btw", label: "BTW-nummer" },
+    { key: "notes", label: "Notities" },
+  ],
+  offertes: [
+    { key: "nummer", label: "Offertenummer" },
+    { key: "klant", label: "Klantnaam", required: true },
+    { key: "klant_email", label: "Klant e-mail", hint: "Voor koppeling aan contact" },
+    { key: "bedrag", label: "Bedrag (€)", required: true },
+    { key: "datum", label: "Datum" },
+    { key: "geldig_tot", label: "Geldig tot" },
+    { key: "status", label: "Status" },
+    { key: "notes", label: "Notities" },
+  ],
+  facturen: [
+    { key: "nummer", label: "Factuurnummer" },
+    { key: "klant", label: "Klantnaam", required: true },
+    { key: "klant_email", label: "Klant e-mail" },
+    { key: "bedrag", label: "Totaalbedrag (€)", required: true },
+    { key: "datum", label: "Factuurdatum" },
+    { key: "vervaldatum", label: "Vervaldatum" },
+    { key: "status", label: "Status" },
+    { key: "document_type", label: "Type (factuur/proforma)" },
+    { key: "omschrijving", label: "Omschrijving" },
+  ],
+  leads: [
+    { key: "titel", label: "Titel / deal", required: true },
+    { key: "klant", label: "Contact / bedrijf" },
+    { key: "klant_email", label: "Contact e-mail" },
+    { key: "stadium", label: "Fase / stadium" },
+    { key: "waarde", label: "Waarde (€)" },
+    { key: "kans", label: "Kans (%)" },
+    { key: "deadline", label: "Deadline" },
+  ],
+};
+
+/** Kolomaliassen per CRM — genormaliseerde header → veldkey. */
+export const COLUMN_ALIASES: Record<
+  ImportEntity,
+  Partial<Record<CrmPreset | "generic", Record<string, string>>>
+> = {
+  customers: {
+    generic: {
+      naam: "name",
+      name: "name",
+      klant: "name",
+      customer: "name",
+      contact: "name",
+      bedrijf: "company_name",
+      company: "company_name",
+      company_name: "company_name",
+      organisatie: "company_name",
+      voornaam: "first_name",
+      first_name: "first_name",
+      firstname: "first_name",
+      achternaam: "last_name",
+      last_name: "last_name",
+      lastname: "last_name",
+      email: "email",
+      "e-mail": "email",
+      mail: "email",
+      telefoon: "phone",
+      phone: "phone",
+      gsm: "phone",
+      mobile: "phone",
+      adres: "address",
+      address: "address",
+      straat: "address",
+      kvk: "kvk",
+      ondernemingsnummer: "kvk",
+      btw: "btw",
+      vat: "btw",
+      notities: "notes",
+      notes: "notes",
+      opmerkingen: "notes",
+    },
+    teamleader: {
+      name: "name",
+      "company name": "company_name",
+      "first name": "first_name",
+      "last name": "last_name",
+      email: "email",
+      telephone: "phone",
+      "phone number": "phone",
+      address: "address",
+      vat: "btw",
+      remarks: "notes",
+    },
+    hubspot: {
+      "company name": "company_name",
+      "first name": "first_name",
+      "last name": "last_name",
+      email: "email",
+      phone: "phone",
+      "phone number": "phone",
+      address: "address",
+      city: "address",
+      notes: "notes",
+    },
+    pipedrive: {
+      name: "name",
+      "person - name": "name",
+      "org name": "company_name",
+      email: "email",
+      phone: "phone",
+      address: "address",
+    },
+    billit: {
+      klant: "name",
+      naam: "name",
+      email: "email",
+      telefoon: "phone",
+      adres: "address",
+      btwnummer: "btw",
+    },
+    exact: {
+      naam: "name",
+      code: "kvk",
+      email: "email",
+      telefoon: "phone",
+      adres: "address",
+    },
+    salesforce: {
+      name: "name",
+      accountname: "company_name",
+      firstname: "first_name",
+      lastname: "last_name",
+      email: "email",
+      phone: "phone",
+      mailingstreet: "address",
+      description: "notes",
+    },
+  },
+  offertes: {
+    generic: {
+      nummer: "nummer",
+      number: "nummer",
+      offerte: "nummer",
+      quote: "nummer",
+      klant: "klant",
+      customer: "klant",
+      client: "klant",
+      bedrag: "bedrag",
+      amount: "bedrag",
+      total: "bedrag",
+      totaal: "bedrag",
+      datum: "datum",
+      date: "datum",
+      geldig_tot: "geldig_tot",
+      valid_until: "geldig_tot",
+      status: "status",
+      notes: "notes",
+      omschrijving: "notes",
+    },
+    teamleader: {
+      number: "nummer",
+      title: "klant",
+      "customer name": "klant",
+      total: "bedrag",
+      "total price": "bedrag",
+      date: "datum",
+      "expiry date": "geldig_tot",
+      status: "status",
+    },
+    hubspot: {
+      "deal name": "klant",
+      amount: "bedrag",
+      "close date": "datum",
+      "deal stage": "status",
+    },
+    pipedrive: {
+      title: "klant",
+      value: "bedrag",
+      "expected close date": "geldig_tot",
+      status: "status",
+    },
+    billit: {
+      documentnummer: "nummer",
+      klant: "klant",
+      totaal: "bedrag",
+      datum: "datum",
+      vervaldatum: "geldig_tot",
+    },
+    exact: {
+      offertenummer: "nummer",
+      debiteur: "klant",
+      totaalbedrag: "bedrag",
+      datum: "datum",
+    },
+    salesforce: {
+      quotenumber: "nummer",
+      accountname: "klant",
+      totalprice: "bedrag",
+      quotedate: "datum",
+      status: "status",
+    },
+  },
+  facturen: {
+    generic: {
+      nummer: "nummer",
+      number: "nummer",
+      factuur: "nummer",
+      invoice: "nummer",
+      klant: "klant",
+      customer: "klant",
+      bedrag: "bedrag",
+      amount: "bedrag",
+      total: "bedrag",
+      totaal: "bedrag",
+      totaalbedrag: "bedrag",
+      datum: "datum",
+      date: "datum",
+      vervaldatum: "vervaldatum",
+      due_date: "vervaldatum",
+      status: "status",
+      type: "document_type",
+      omschrijving: "omschrijving",
+    },
+    teamleader: {
+      "invoice number": "nummer",
+      "customer name": "klant",
+      total: "bedrag",
+      "invoice date": "datum",
+      "due date": "vervaldatum",
+      status: "status",
+    },
+    billit: {
+      factuurnummer: "nummer",
+      klant: "klant",
+      totaal: "bedrag",
+      factuurdatum: "datum",
+      vervaldatum: "vervaldatum",
+      status: "status",
+    },
+    exact: {
+      factuurnummer: "nummer",
+      debiteur: "klant",
+      totaalbedrag: "bedrag",
+      datum: "datum",
+      vervaldatum: "vervaldatum",
+    },
+    salesforce: {
+      invoicenumber: "nummer",
+      accountname: "klant",
+      totalamount: "bedrag",
+      invoicedate: "datum",
+      duedate: "vervaldatum",
+      status: "status",
+    },
+  },
+  leads: {
+    generic: {
+      titel: "titel",
+      title: "titel",
+      deal: "titel",
+      naam: "titel",
+      klant: "klant",
+      contact: "klant",
+      company: "klant",
+      stadium: "stadium",
+      stage: "stadium",
+      fase: "stadium",
+      waarde: "waarde",
+      value: "waarde",
+      amount: "waarde",
+      kans: "kans",
+      probability: "kans",
+      deadline: "deadline",
+      "close date": "deadline",
+    },
+    teamleader: {
+      title: "titel",
+      customer: "klant",
+      phase: "stadium",
+      "estimated value": "waarde",
+      "estimated probability": "kans",
+      "due date": "deadline",
+    },
+    hubspot: {
+      "deal name": "titel",
+      "associated company": "klant",
+      "deal stage": "stadium",
+      amount: "waarde",
+      "close date": "deadline",
+    },
+    pipedrive: {
+      title: "titel",
+      "org name": "klant",
+      stage: "stadium",
+      value: "waarde",
+      "expected close date": "deadline",
+    },
+    salesforce: {
+      name: "titel",
+      accountname: "klant",
+      stagename: "stadium",
+      amount: "waarde",
+      probability: "kans",
+      closedate: "deadline",
+    },
+  },
+};
+
+export function csvTemplate(entity: ImportEntity): string {
+  const headers = ENTITY_FIELDS[entity].map((f) => f.key).join(",");
+  const sample: Record<ImportEntity, string> = {
+    customers:
+      "Jan Janssen,Bouwbedrijf Janssen,Jan,Janssen,jan@janssen.be,+32470123456,Stationsstraat 1,0123456789,BE0123456789,VIP klant",
+    offertes:
+      "OFF-2026-0001,Bouwbedrijf Janssen,jan@janssen.be,12500,2026-07-01,2026-08-01,verzonden,Badkamerrenovatie",
+    facturen:
+      "FAC-2026-0001,Bouwbedrijf Janssen,jan@janssen.be,12500,2026-07-05,2026-07-19,verzonden,factuur,Badkamerrenovatie",
+    leads:
+      "Renovatie keuken,Bouwbedrijf Janssen,jan@janssen.be,Offerte verzonden,18000,60,2026-09-01",
+  };
+  return `${headers}\n${sample[entity]}\n`;
+}

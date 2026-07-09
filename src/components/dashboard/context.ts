@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { getCompanyContext } from "@/lib/company";
 import {
@@ -34,7 +35,7 @@ async function loadTrialStatus(
   return computeTrialStatus(data?.created_at, data?.subscription_status);
 }
 
-export async function getDashboardContext() {
+export const getDashboardContext = cache(async function getDashboardContext() {
   const previewCookie = await isPreviewMode();
   const base = await getCompanyContext();
 
@@ -50,7 +51,7 @@ export async function getDashboardContext() {
   }
 
   return { ...base, isPreviewMode: false, trial: null };
-}
+});
 
 type WriteAccessError = { error: string };
 type WriteAccessOk = {

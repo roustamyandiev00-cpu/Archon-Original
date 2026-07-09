@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Area,
   AreaChart,
@@ -63,6 +64,8 @@ export function StatCard({
   icon,
   data,
   positive = true,
+  href,
+  size = "default",
 }: {
   label: string;
   value: string;
@@ -70,33 +73,83 @@ export function StatCard({
   icon: StatIcon;
   data: { v: number }[];
   positive?: boolean;
+  href?: string;
+  size?: "default" | "lg" | "compact";
 }) {
   const Icon = statIcons[icon];
   const stroke = positive ? "#38bdf8" : "#e85a6b";
   const gid = `spark-${label.replace(/\s+/g, "")}`;
-  return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-sky-500/40 hover:shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)]">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</p>
-          <p className="mt-1.5 font-mono text-2xl font-semibold text-zinc-50">{value}</p>
+  const large = size === "lg";
+  const compact = size === "compact";
+  const card = (
+    <div
+      className={`group relative overflow-hidden rounded-xl border bg-zinc-900/40 backdrop-blur transition-colors ${
+        compact
+          ? "border-white/5 p-3 hover:border-white/10"
+          : `border-white/10 hover:-translate-y-0.5 hover:border-sky-500/40 hover:shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)] ${
+              large ? "rounded-2xl p-5 sm:p-6" : "rounded-2xl p-4"
+            }`
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p
+            className={`uppercase tracking-wide text-zinc-500 ${
+              compact
+                ? "text-[10px] leading-tight"
+                : large
+                  ? "text-xs"
+                  : "text-[11px]"
+            }`}
+          >
+            {label}
+          </p>
+          <p
+            className={`font-mono font-semibold text-zinc-100 ${
+              compact
+                ? "mt-1 text-lg"
+                : large
+                  ? "mt-2 text-3xl sm:text-4xl"
+                  : "mt-1.5 text-2xl"
+            }`}
+          >
+            {value}
+          </p>
         </div>
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
-          <Icon size={16} />
-        </span>
-      </div>
-      <div className="mt-2 flex items-center gap-1 text-xs">
         <span
-          className={`inline-flex items-center gap-0.5 font-medium ${
-            positive ? "text-emerald-400" : "text-rose-400"
+          className={`grid shrink-0 place-items-center text-sky-400/80 ${
+            compact
+              ? "h-7 w-7 rounded-lg bg-white/[0.03]"
+              : large
+                ? "h-11 w-11 rounded-xl bg-sky-500/10"
+                : "h-8 w-8 rounded-lg bg-sky-500/10"
           }`}
         >
-          {positive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-          {trend}
+          <Icon size={compact ? 14 : large ? 20 : 16} />
         </span>
-        <span className="text-zinc-500">vs vorige week</span>
       </div>
-      <div className="mt-3 h-10">
+      {!compact && (
+        <div className={`flex items-center gap-1 ${large ? "mt-3 text-sm" : "mt-2 text-xs"}`}>
+          <span
+            className={`inline-flex items-center gap-0.5 font-medium ${
+              positive ? "text-emerald-400" : "text-rose-400"
+            }`}
+          >
+            {positive ? (
+              <ArrowUpRight size={large ? 15 : 13} />
+            ) : (
+              <ArrowDownRight size={large ? 15 : 13} />
+            )}
+            {trend}
+          </span>
+          <span className="text-zinc-500">vs vorige week</span>
+        </div>
+      )}
+      <div
+        className={
+          compact ? "mt-2 h-6 opacity-70" : large ? "mt-4 h-16" : "mt-3 h-10"
+        }
+      >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
             <defs>
@@ -109,7 +162,7 @@ export function StatCard({
               type="monotone"
               dataKey="v"
               stroke={stroke}
-              strokeWidth={2}
+              strokeWidth={compact ? 1.5 : 2}
               fill={`url(#${gid})`}
             />
           </AreaChart>
@@ -117,6 +170,16 @@ export function StatCard({
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {card}
+      </Link>
+    );
+  }
+
+  return card;
 }
 
 const tooltipStyle = {

@@ -163,7 +163,11 @@ export const DEMO_LEADS = [
     stadium: "Lead",
     waarde: 18500,
     kans: 35,
-    deadline: "2026-07-20",
+    deadline: "2026-07-05",
+    contactpersoon: "Marc Vandenberghe",
+    telefoon: "0475 12 34 56",
+    email: "marc.vandenberghe@example.be",
+    notitie: "Wil eerst een prijsindicatie voor het dakwerk.",
   },
   {
     id: -2,
@@ -172,6 +176,10 @@ export const DEMO_LEADS = [
     waarde: 42000,
     kans: 55,
     deadline: "2026-07-25",
+    contactpersoon: "Els Coninckx",
+    telefoon: "0468 22 33 44",
+    email: "els@immoconinckx.be",
+    notitie: null,
   },
   {
     id: -3,
@@ -179,7 +187,11 @@ export const DEMO_LEADS = [
     stadium: "Voorstel",
     waarde: 12800,
     kans: 70,
-    deadline: "2026-07-18",
+    deadline: "2026-07-11",
+    contactpersoon: "Tom Peeters",
+    telefoon: "0472 55 66 77",
+    email: null,
+    notitie: "Wacht op akkoord van de vrouw, opnieuw bellen donderdag.",
   },
   {
     id: -4,
@@ -188,6 +200,10 @@ export const DEMO_LEADS = [
     waarde: 9600,
     kans: 80,
     deadline: "2026-07-15",
+    contactpersoon: "Sofie Janssens",
+    telefoon: "0479 88 99 00",
+    email: "sofie.janssens@example.be",
+    notitie: null,
   },
   {
     id: -5,
@@ -196,6 +212,10 @@ export const DEMO_LEADS = [
     waarde: 215000,
     kans: 100,
     deadline: null,
+    contactpersoon: "Frank De Vlaming",
+    telefoon: "0477 10 20 30",
+    email: "frank@develaming.be",
+    notitie: null,
   },
 ];
 

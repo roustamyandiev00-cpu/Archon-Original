@@ -1,3 +1,5 @@
+import type { CustomAgent } from "@/components/dashboard/agents/config";
+
 export type AiToon = "formeel" | "neutraal" | "informeel";
 export type AiToestemming = "voorstellen" | "versturen";
 
@@ -8,12 +10,14 @@ export type AiConfig = {
   toestemming: AiToestemming;
   betalingsherinneringen: boolean;
   instructies: string;
+  tokens?: number;
 };
 
 /** Instellingen zonder eigen databasekolom, samen bewaard als JSON. */
 export type Extras = {
   ai: AiConfig;
   standaardBtw: number;
+  agents?: CustomAgent[];
 };
 
 export type SettingsInput = {
@@ -82,6 +86,7 @@ export const defaultAiConfig: AiConfig = {
   toestemming: "voorstellen",
   betalingsherinneringen: true,
   instructies: "",
+  tokens: 15000,
 };
 
 export const defaultExtras: Extras = {
@@ -106,6 +111,7 @@ export function parseExtras(raw: string | null): Extras {
           ai: { ...defaultAiConfig, ...parsed.ai },
           standaardBtw:
             typeof parsed.standaardBtw === "number" ? parsed.standaardBtw : 21,
+          agents: Array.isArray(parsed.agents) ? parsed.agents : undefined,
         };
       }
       // Tussenformaat: platte AiConfig

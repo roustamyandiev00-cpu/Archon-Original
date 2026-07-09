@@ -63,7 +63,7 @@ export default function ReactieActions({ reactieId }: { reactieId: string }) {
         </button>
         {channelId && (
           <Link
-            href="/dashboard/comms"
+            href="/dashboard/werkposts/samenwerkingen"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-400 hover:text-sky-300"
           >
             <MessageCircle size={13} /> Ga naar chat

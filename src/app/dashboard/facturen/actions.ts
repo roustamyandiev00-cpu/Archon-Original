@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
 import { lineTotals, type OfferteLijnInput } from "@/lib/offertes";
 import { documentTypeMeta, type FactuurDocumentType } from "@/lib/facturen";
+import { loadCompanyDefaultTemplate } from "@/components/dashboard/documenten/documentTemplate";
 
 export type CreateFactuurInput = {
   documentType: FactuurDocumentType;
@@ -29,6 +30,11 @@ export async function createFactuur(input: CreateFactuurInput) {
   }
 
   const { subtotaal, btw, totaal } = lineTotals(cleanLines);
+  const templateId = await loadCompanyDefaultTemplate(
+    supabase,
+    companyId,
+    "invoice",
+  );
 
   const year = new Date().getFullYear();
   const prefix = documentTypeMeta(input.documentType).prefix;
@@ -73,6 +79,7 @@ export async function createFactuur(input: CreateFactuurInput) {
         omschrijving: input.omschrijving || null,
         notities: input.notities || null,
         status: "concept",
+        template_id: templateId,
       })
       .select("id")
       .single();

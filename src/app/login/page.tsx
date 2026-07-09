@@ -22,7 +22,7 @@ export default function LoginPage() {
         title: "Welkom terug in je",
         accent: "werkruimte",
         subtitle:
-          "Log in en pak je offertes, facturen en projecten op waar je gebleven was.",
+          "Log in en pak je offertes en facturen op waar je gebleven was.",
       }}
     >
       <Suspense>

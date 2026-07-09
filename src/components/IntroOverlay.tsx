@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Volume2, VolumeX } from "lucide-react";
 import { fastButtonClass } from "@/components/FastLink";
 
-const STORAGE_KEY = "archonpro-intro-seen-v4";
+const STORAGE_KEY = "archonpro-intro-seen-v5";
 const INTRO_VIDEO = "/ArchonPro_CRM_logo_intro_premium_16x9.mp4";
 
 export default function IntroOverlay() {
@@ -70,28 +70,35 @@ export default function IntroOverlay() {
       className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-950 transition-opacity duration-200 ${
         leaving ? "opacity-0" : "opacity-100"
       }`}
+      onClick={dismiss}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Intro video"
     >
-      {/* gradient glow */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute left-1/2 top-1/2 h-[70vh] w-[70vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.18),rgba(144,137,252,0.12),transparent_70%)] blur-3xl" />
+        <div className="absolute left-1/2 top-1/2 h-[50vh] w-[50vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.1),transparent_72%)] blur-3xl" />
       </div>
 
       <video
         ref={videoRef}
-        className="absolute inset-0 h-full w-full object-contain object-center"
+        className="pointer-events-none absolute left-1/2 top-1/2 aspect-video w-[min(100vw-3rem,72rem)] max-h-[min(100vh-10rem,80vh)] -translate-x-1/2 -translate-y-1/2 object-contain"
         src={INTRO_VIDEO}
         autoPlay
         playsInline
         onEnded={dismiss}
         onError={dismiss}
+        onClick={(event) => event.stopPropagation()}
       />
 
       <button
         type="button"
-        onClick={toggleMute}
+        onClick={(event) => {
+          event.stopPropagation();
+          toggleMute();
+        }}
         aria-label={muted ? "Geluid aanzetten" : "Geluid uitzetten"}
         className="absolute right-6 top-6 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700/80 bg-zinc-900/70 text-zinc-200 backdrop-blur-sm transition-colors hover:border-sky-500/50 hover:text-sky-300"
       >
@@ -99,7 +106,10 @@ export default function IntroOverlay() {
       </button>
 
       <button
-        onClick={dismiss}
+        onClick={(event) => {
+          event.stopPropagation();
+          dismiss();
+        }}
         className={fastButtonClass(
           "group absolute bottom-12 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-sky-500 px-7 py-3 text-sm font-medium text-zinc-950 hover:bg-sky-400 hover:shadow-[0_0_30px_-5px_rgba(56,189,248,0.6)]",
         )}

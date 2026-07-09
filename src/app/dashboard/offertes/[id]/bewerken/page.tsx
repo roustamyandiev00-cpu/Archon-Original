@@ -3,8 +3,10 @@ import { FileText } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { isOfferteEditable } from "@/lib/offertes";
 import OfferteForm, {
+  type OfferteDocumentContext,
   type OfferteFormInitial,
 } from "@/components/dashboard/offertes/OfferteForm";
+import { DEFAULT_TEMPLATE } from "@/app/dashboard/instellingen/settings";
 
 export const metadata = { title: "Offerte bewerken — ArchonPro" };
 
@@ -22,7 +24,7 @@ export default async function OfferteBewerkenPage({
   const { data: offerte } = await supabase
     .from("offertes")
     .select(
-      "id, nummer, klant, customer_id, datum, geldig_tot, notes, status_new",
+      "id, nummer, klant, customer_id, datum, geldig_tot, notes, status_new, template_id",
     )
     .eq("id", offerteId)
     .eq("bedrijf_id", companyId)
@@ -41,15 +43,53 @@ export default async function OfferteBewerkenPage({
     .eq("offerte_id", offerteId)
     .order("sort_order");
 
-  let customers: { id: number; name: string; company_name: string | null }[] =
-    [];
-  const { data: klantData } = await supabase
-    .from("customers")
-    .select("id, name, company_name")
-    .eq("company_id", companyId)
-    .eq("is_active", true)
-    .order("name");
+  let customers: {
+    id: number;
+    name: string;
+    company_name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    address: string | null;
+    email: string | null;
+    phone: string | null;
+    btw: string | null;
+  }[] = [];
+
+  const [{ data: klantData }, { data: bedrijf }] = await Promise.all([
+    supabase
+      .from("customers")
+      .select(
+        "id, name, company_name, first_name, last_name, address, email, phone, btw",
+      )
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("bedrijven")
+      .select(
+        "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_quote_template",
+      )
+      .eq("id", companyId)
+      .maybeSingle(),
+  ]);
   customers = klantData ?? [];
+
+  const documentContext: OfferteDocumentContext = {
+    templateId: offerte.template_id ?? undefined,
+    defaultTemplate: bedrijf?.default_quote_template || DEFAULT_TEMPLATE,
+    bedrijf: bedrijf ?? {
+      naam: null,
+      adres: null,
+      postcode: null,
+      stad: null,
+      telefoon: null,
+      email: null,
+      btw: null,
+      iban: null,
+      algemene_voorwaarden: null,
+      footer_tekst: null,
+    },
+  };
 
   const initial: OfferteFormInitial = {
     customerId: offerte.customer_id ? String(offerte.customer_id) : "",
@@ -77,13 +117,14 @@ export default async function OfferteBewerkenPage({
             Offerte bewerken
           </h1>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Pas de gegevens aan en bekijk rechts direct de preview.
+            Pas de gegevens aan via Gegevens invullen en bekijk direct het sjabloon.
           </p>
         </div>
       </header>
 
       <OfferteForm
         customers={customers}
+        documentContext={documentContext}
         offerteId={offerteId}
         initial={initial}
         nummer={offerte.nummer ?? undefined}

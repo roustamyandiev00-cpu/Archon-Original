@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import { decideAction } from "./actions";
 
 export default function ApprovalActions({ id }: { id: number }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [acting, setActing] = useState<"approve" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +16,13 @@ export default function ApprovalActions({ id }: { id: number }) {
     setError(null);
     startTransition(async () => {
       const res = await decideAction(id, decision);
-      if (res?.error) setError(res.error);
+      if (res?.error) {
+        setError(res.error);
+      } else if (decision === "approve" && res && "route" in res && res.route) {
+        router.push(res.route);
+      } else {
+        router.refresh();
+      }
       setActing(null);
     });
   }

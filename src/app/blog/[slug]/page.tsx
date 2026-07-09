@@ -53,7 +53,7 @@ export default async function ArticlePage({
       <main>
         <PageHero
           variant={variant}
-          backLink={{ label: "Terug naar blog", href: "/#blog" }}
+          backLink={{ label: "Terug naar blog", href: "/blog" }}
           kicker={
             <>
               <BookOpen size={13} /> {type}

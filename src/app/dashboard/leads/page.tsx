@@ -27,7 +27,9 @@ export default async function LeadsPage() {
   if (companyId) {
     const { data } = await supabase
       .from("deals")
-      .select("id, titel, stadium, waarde, kans, deadline")
+      .select(
+        "id, titel, stadium, waarde, kans, deadline, contactpersoon, telefoon, email, notitie",
+      )
       .eq("bedrijf_id", companyId)
       .order("created_at", { ascending: true });
 

@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { FileText, Plus, Send, CheckCircle2, Euro } from "lucide-react";
+import { FileText, Send, CheckCircle2, Euro } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { statusMeta, formatEuro, formatDate } from "@/lib/offertes";
 import { DEMO_OFFERTES } from "@/lib/demo";
 import GlowCard from "@/components/dashboard/GlowCard";
 import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
+import NieuweOfferteActions from "@/components/dashboard/offertes/NieuweOfferteActions";
 
 export const metadata = { title: "Offertes — ArchonPro" };
 
@@ -123,12 +124,7 @@ export default async function OffertesPage() {
             </p>
           </div>
         </div>
-        <Link
-          href="/dashboard/offertes/nieuw"
-          className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
-        >
-          <Plus size={16} /> Nieuwe offerte
-        </Link>
+        <NieuweOfferteActions />
       </header>
 
       {!companyId && (
@@ -178,12 +174,7 @@ export default async function OffertesPage() {
               <p className="text-sm text-zinc-500">
                 Maak je eerste offerte aan en verstuur ze in enkele minuten.
               </p>
-              <Link
-                href="/dashboard/offertes/nieuw"
-                className="mx-auto mt-1 inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
-              >
-                <Plus size={16} /> Nieuwe offerte
-              </Link>
+              <NieuweOfferteActions className="justify-center" />
             </div>
           </div>
         ) : (

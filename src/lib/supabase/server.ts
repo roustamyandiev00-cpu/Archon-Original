@@ -1,8 +1,9 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database.types";
 
-export async function createClient() {
+async function createClientImpl() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
@@ -16,7 +17,10 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
+              cookieStore.set(name, value, {
+                ...options,
+                secure: process.env.NODE_ENV === "production",
+              }),
             );
           } catch {
             // Called from a Server Component — safe to ignore when middleware
@@ -27,3 +31,6 @@ export async function createClient() {
     },
   );
 }
+
+/** Eén Supabase-client per request (layout + pagina delen dezelfde instantie). */
+export const createClient = cache(createClientImpl);

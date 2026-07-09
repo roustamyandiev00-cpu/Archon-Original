@@ -9,6 +9,11 @@ import {
   type OfferteLijnInput,
   type OfferteStatus,
 } from "@/lib/offertes";
+import {
+  projectNameFromOfferte,
+  startLabelFromDate,
+} from "@/components/dashboard/projecten/fromOfferte";
+import { loadCompanyDefaultTemplate } from "@/components/dashboard/documenten/documentTemplate";
 
 export type CreateOfferteInput = {
   customerId: number | null;
@@ -34,6 +39,7 @@ export async function createOfferte(input: CreateOfferteInput) {
   }
 
   const { totaal } = lineTotals(cleanLines);
+  const templateId = await loadCompanyDefaultTemplate(supabase, companyId, "quote");
 
   const year = new Date().getFullYear();
 
@@ -75,6 +81,7 @@ export async function createOfferte(input: CreateOfferteInput) {
         notes: input.notes || null,
         status: "Concept",
         status_new: "concept",
+        template_id: templateId,
       })
       .select("id")
       .single();
@@ -115,8 +122,45 @@ export async function createOfferte(input: CreateOfferteInput) {
     return { error: lineError.message };
   }
 
+  const projectNaam = projectNameFromOfferte({
+    klant: input.klant || "Onbekende klant",
+    notes: input.notes || "",
+    lines: cleanLines,
+  });
+
+  const { data: project, error: projectError } = await supabase
+    .from("projecten")
+    .insert({
+      bedrijf_id: companyId,
+      naam: projectNaam,
+      klant_naam: input.klant || "Onbekende klant",
+      start_datum_label: startLabelFromDate(input.datum),
+      status: "gepland",
+    })
+    .select("id")
+    .single();
+
+  if (!projectError && project) {
+    const now = new Date().toISOString();
+    await supabase
+      .from("offertes")
+      .update({
+        converted_to_type: `project:${project.id}`,
+        converted_at: now,
+        converted_by: user.id,
+        updated_at: now,
+      })
+      .eq("id", offerte.id)
+      .eq("bedrijf_id", companyId);
+  }
+
   revalidatePath("/dashboard/offertes");
-  return { id: offerte.id as number };
+  revalidatePath("/dashboard/offertes/projecten");
+  return {
+    id: offerte.id as number,
+    projectId: project?.id as string | undefined,
+    projectError: projectError?.message,
+  };
 }
 
 export async function updateOfferte(input: UpdateOfferteInput) {

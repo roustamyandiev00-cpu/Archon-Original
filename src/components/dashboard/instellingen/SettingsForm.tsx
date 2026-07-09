@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   Building2,
@@ -16,13 +18,19 @@ import {
   X,
   ExternalLink,
   KeyRound,
+  ImageIcon,
+  Database,
 } from "lucide-react";
 import GlowCard from "@/components/dashboard/GlowCard";
 import ApiKeysManager from "@/components/dashboard/instellingen/ApiKeysManager";
+import ImportManager from "@/components/dashboard/instellingen/ImportManager";
 import type { ApiKeyInfo } from "@/lib/apiResources";
 import {
   updateSettings,
   uploadTemplate,
+  uploadLogo,
+  clearLogo,
+  buyAiTokens,
 } from "@/app/dashboard/instellingen/actions";
 import {
   TEMPLATE_PRESETS,
@@ -44,7 +52,7 @@ const inputClass =
 const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
 const hintClass = "mt-1 text-xs text-zinc-500";
 
-type Section = "bedrijf" | "documenten" | "ai" | "api";
+type Section = "bedrijf" | "documenten" | "ai" | "import" | "api";
 
 const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "bedrijf", label: "Bedrijfsgegevens", icon: <Building2 size={15} /> },
@@ -53,6 +61,7 @@ const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
     label: "Offertes & facturen",
     icon: <FileText size={15} />,
   },
+  { id: "import", label: "Data importeren", icon: <Database size={15} /> },
   { id: "ai", label: "AI-agent", icon: <Bot size={15} /> },
   { id: "api", label: "API", icon: <KeyRound size={15} /> },
 ];
@@ -270,6 +279,126 @@ function TemplatePicker({
   );
 }
 
+function LogoField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await uploadLogo(fd);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+    if ("error" in res && res.error) {
+      setError(res.error);
+      return;
+    }
+    if ("url" in res && res.url) onChange(res.url);
+  }
+
+  async function handleRemove() {
+    setError(null);
+    setUploading(true);
+    const res = await clearLogo();
+    setUploading(false);
+    if ("error" in res && res.error) {
+      setError(res.error);
+      return;
+    }
+    onChange("");
+  }
+
+  return (
+    <div className="sm:col-span-2">
+      <label className={labelClass}>Bedrijfslogo</label>
+      <p className={hintClass}>
+        Verschijnt op offertes en facturen. PNG, JPG, WebP, SVG of GIF — max. 2
+        MB.
+      </p>
+
+      <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/70">
+          {value ? (
+            <Image
+              src={value}
+              alt="Bedrijfslogo"
+              width={112}
+              height={112}
+              unoptimized
+              className="h-full w-full object-contain p-2"
+            />
+          ) : (
+            <ImageIcon size={28} className="text-zinc-600" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1 space-y-3">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+            onChange={handleFile}
+            className="hidden"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" /> Uploaden…
+                </>
+              ) : (
+                <>
+                  <Upload size={13} /> Logo uploaden
+                </>
+              )}
+            </button>
+            {value && (
+              <button
+                type="button"
+                onClick={handleRemove}
+                disabled={uploading}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-60"
+              >
+                <X size={13} /> Verwijderen
+              </button>
+            )}
+          </div>
+
+          <Field
+            label="Of plak een logo-URL"
+            hint="Handig als je logo al online staat."
+          >
+            <input
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="https://..."
+              className={inputClass}
+            />
+          </Field>
+
+          {error && <p className="text-xs text-rose-400">{error}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsForm({
   initial,
   apiKeys,
@@ -277,11 +406,27 @@ export default function SettingsForm({
   initial: SettingsInput;
   apiKeys: ApiKeyInfo[];
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Section>("bedrijf");
   const [form, setForm] = useState<SettingsInput>(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  // Token packages & checkout states
+  const TOKEN_PACKAGES = [
+    { id: "bronze", name: "Brons (Starter)", tokens: 50000, price: 9 },
+    { id: "silver", name: "Zilver (Pro)", tokens: 250000, price: 29, popular: true },
+    { id: "gold", name: "Goud (Enterprise)", tokens: 1000000, price: 79 },
+  ];
+  const [selectedPackage, setSelectedPackage] = useState<typeof TOKEN_PACKAGES[0] | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [cardHolder, setCardHolder] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCVC, setCardCVC] = useState("");
 
   function set<K extends keyof SettingsInput>(key: K, value: SettingsInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -312,10 +457,10 @@ export default function SettingsForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-sm text-zinc-500">
-        Kies een categorie — alle instellingen staan in de 4 tabs hieronder.
+        Kies een categorie — alle instellingen staan in de tabs hieronder.
       </p>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {sections.map((t) => (
           <button
             key={t.id}
@@ -416,14 +561,10 @@ export default function SettingsForm({
                   className={inputClass}
                 />
               </Field>
-              <Field label="Logo-URL" hint="Link naar je logo (optioneel).">
-                <input
-                  value={form.logo_url}
-                  onChange={(e) => set("logo_url", e.target.value)}
-                  placeholder="https://..."
-                  className={inputClass}
-                />
-              </Field>
+              <LogoField
+                value={form.logo_url}
+                onChange={(v) => set("logo_url", v)}
+              />
             </div>
           </div>
         )}
@@ -524,8 +665,106 @@ export default function SettingsForm({
               title="AI-agent instellingen"
               description="Bepaal hoe je AI-assistent werkt en wat die voor je mag doen."
             />
+
+            {/* AI Token Saldo & Packages */}
+            <div className="rounded-2xl border border-white/5 bg-zinc-950/40 p-5 space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                    <Bot className="text-sky-400" size={16} />
+                    AI Token Saldo
+                  </h3>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    Tokens worden verbruikt wanneer de AI-agent offertes opstelt, facturen matcht of herinneringen stuurt.
+                  </p>
+                </div>
+                <div className="bg-zinc-900 border border-white/5 px-4 py-2.5 rounded-xl text-right">
+                  <span className="block text-2xl font-black text-zinc-50 tracking-tight">
+                    {(form.ai.tokens ?? 15000).toLocaleString("nl-NL")}
+                  </span>
+                  <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mt-0.5">
+                    Beschikbare tokens
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress / Status Meter */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-zinc-400">
+                  <span>Verbruiksstatus</span>
+                  <span className={(form.ai.tokens ?? 15000) < 5000 ? "text-amber-400 font-semibold" : "text-sky-400 font-semibold"}>
+                    {(form.ai.tokens ?? 15000) < 5000 ? "Saldo is laag — koop bij om onderbrekingen te voorkomen" : "Actief & Voldoende saldo"}
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden border border-white/5">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      (form.ai.tokens ?? 15000) < 5000 ? "bg-amber-500" : "bg-sky-500"
+                    }`}
+                    style={{ width: `${Math.min(100, ((form.ai.tokens ?? 15000) / 100000) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Packages Grid */}
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Tokens bijladen
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {TOKEN_PACKAGES.map((pkg) => (
+                    <div 
+                      key={pkg.id} 
+                      className={`relative flex flex-col justify-between rounded-2xl p-4 border transition-all duration-300 ${
+                        pkg.popular 
+                          ? "border-sky-500/30 bg-sky-500/[0.03] shadow-lg shadow-sky-500/5" 
+                          : "border-white/5 bg-zinc-900/40 hover:border-white/10"
+                      }`}
+                    >
+                      {pkg.popular && (
+                        <span className="absolute -top-2.5 left-4 bg-sky-500 text-zinc-950 font-extrabold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md">
+                          Aanbevolen
+                        </span>
+                      )}
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-zinc-400 block">{pkg.name}</span>
+                        <span className="text-xl font-extrabold text-zinc-50 tracking-tight block">
+                          {pkg.tokens.toLocaleString("nl-NL")} <span className="text-xs text-zinc-500 font-normal">tokens</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/5">
+                        <span className="text-sm font-black text-zinc-300">€ {pkg.price.toFixed(2)}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedPackage(pkg);
+                            setCardHolder("");
+                            setCardNumber("");
+                            setCardExpiry("");
+                            setCardCVC("");
+                            setPaymentStatus("idle");
+                            setPaymentError(null);
+                            setCheckoutOpen(true);
+                          }}
+                          className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                            pkg.popular 
+                              ? "bg-sky-500 text-zinc-950 hover:bg-sky-400 shadow-md" 
+                              : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                          }`}
+                        >
+                          Kopen
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Naam van de agent">
+              <Field
+                label="Jouw agentnaam"
+                hint="Persoonlijk — alleen jij ziet deze naam in het dashboard en in AI-voorstellen."
+              >
                 <input
                   value={form.ai.agentNaam}
                   onChange={(e) => setAi("agentNaam", e.target.value)}
@@ -666,9 +905,20 @@ export default function SettingsForm({
         )}
 
         {tab === "api" && <ApiKeysManager initialKeys={apiKeys} />}
+
+        {tab === "import" && (
+          <div className="space-y-6">
+            <SectionHeader
+              icon={<Database size={18} />}
+              title="Data importeren"
+              description="Zet klanten, offertes, facturen en leads uit een andere CRM over naar ArchonPro."
+            />
+            <ImportManager />
+          </div>
+        )}
       </GlowCard>
 
-      {tab !== "api" && (
+      {tab !== "api" && tab !== "import" && (
       <div className="flex items-center justify-end gap-3">
         {error && (
           <p className="mr-auto rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
@@ -694,6 +944,193 @@ export default function SettingsForm({
           )}
         </button>
       </div>
+      )}
+      {/* Token Checkout Modal */}
+      {checkoutOpen && selectedPackage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-900 p-6 shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setCheckoutOpen(false)}
+              className="absolute right-5 top-5 text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none"
+              disabled={paymentStatus === "processing"}
+            >
+              <X size={18} />
+            </button>
+
+            <h3 className="text-lg font-bold text-zinc-50">
+              AI-Tokens Afrekenen
+            </h3>
+            <p className="text-xs text-zinc-400 mt-1">
+              Je staat op het punt om {selectedPackage.tokens.toLocaleString("nl-NL")} AI-tokens te kopen voor {selectedPackage.name}.
+            </p>
+
+            {paymentStatus === "success" ? (
+              <div className="py-8 text-center space-y-4">
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Check size={32} />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-zinc-50">Betaling Geslaagd!</h4>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    De tokens zijn succesvol toegevoegd aan je bedrijfsaccount.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCheckoutOpen(false)}
+                  className="w-full rounded-full bg-emerald-500 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-colors"
+                >
+                  Terug naar Instellingen
+                </button>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-4">
+                {/* Invoice overview */}
+                <div className="rounded-2xl bg-zinc-950 p-4 border border-white/5 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Pakket:</span>
+                    <span className="font-semibold text-zinc-200">{selectedPackage.name}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Aantal tokens:</span>
+                    <span className="font-semibold text-zinc-200">{selectedPackage.tokens.toLocaleString("nl-NL")}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/5 pt-2 text-sm">
+                    <span className="font-bold text-zinc-300">Te betalen bedrag:</span>
+                    <span className="font-black text-sky-400">€ {selectedPackage.price.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Creditcard input mock fields */}
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setPaymentStatus("processing");
+                    setPaymentError(null);
+                    
+                    // Betaling simuleren
+                    setTimeout(async () => {
+                      const res = await buyAiTokens(selectedPackage.tokens);
+                      if ("error" in res && res.error) {
+                        setPaymentStatus("error");
+                        setPaymentError(res.error);
+                      } else {
+                        setPaymentStatus("success");
+                        // Update het lokale saldo in form.ai.tokens
+                        setAi("tokens", (form.ai.tokens ?? 15000) + selectedPackage.tokens);
+                        router.refresh();
+                      }
+                    }, 1500);
+                  }}
+                  className="space-y-3"
+                >
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                      Kaarthouder
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={cardHolder}
+                      onChange={(e) => setCardHolder(e.target.value)}
+                      placeholder="Bijv. J. de Vries"
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 outline-none focus:border-sky-500/55 placeholder:text-zinc-700"
+                      disabled={paymentStatus === "processing"}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                      Kaartnummer
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim())}
+                      maxLength={19}
+                      placeholder="4111 2222 3333 4444"
+                      className="w-full rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 outline-none focus:border-sky-500/55 placeholder:text-zinc-700 font-mono"
+                      disabled={paymentStatus === "processing"}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                        Vervaldatum
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={cardExpiry}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setCardExpiry(val.length > 2 ? `${val.slice(0,2)}/${val.slice(2,4)}` : val);
+                        }}
+                        maxLength={5}
+                        placeholder="MM/JJ"
+                        className="w-full rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 outline-none focus:border-sky-500/55 placeholder:text-zinc-700 font-mono"
+                        disabled={paymentStatus === "processing"}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                        CVC / CVC2
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={cardCVC}
+                        onChange={(e) => setCardCVC(e.target.value.replace(/\D/g, ""))}
+                        maxLength={3}
+                        placeholder="123"
+                        className="w-full rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 outline-none focus:border-sky-500/55 placeholder:text-zinc-700 font-mono"
+                        disabled={paymentStatus === "processing"}
+                      />
+                    </div>
+                  </div>
+
+                  {paymentError && (
+                    <p className="text-xs text-rose-400 bg-rose-500/5 border border-rose-500/10 rounded-xl px-3 py-2">
+                      {paymentError}
+                    </p>
+                  )}
+
+                  {paymentStatus === "error" && !paymentError && (
+                    <p className="text-xs text-rose-400 bg-rose-500/5 border border-rose-500/10 rounded-xl px-3 py-2">
+                      Er is een fout opgetreden bij de betaling. Probeer het opnieuw.
+                    </p>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutOpen(false)}
+                      className="flex-1 rounded-full border border-white/10 px-4 py-2.5 text-xs font-semibold text-zinc-400 hover:bg-white/5 hover:text-zinc-200 transition-colors"
+                      disabled={paymentStatus === "processing"}
+                    >
+                      Annuleren
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={paymentStatus === "processing"}
+                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-sky-400 disabled:opacity-60 transition-colors"
+                    >
+                      {paymentStatus === "processing" ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin" />
+                          Verwerken...
+                        </>
+                      ) : (
+                        "Betaling Voltooien"
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </form>
   );

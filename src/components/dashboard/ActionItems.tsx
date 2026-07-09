@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FileText, Receipt, Send, Check, X, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { decideAction } from "@/app/dashboard/automatisaties/actions";
 
 export type ActionItem = {
   id: number;
@@ -17,19 +19,38 @@ const kindMeta = {
   opvolging: { icon: Send, tone: "bg-indigo-500/12 text-indigo-400" },
 } as const;
 
-export default function ActionItems({ items }: { items: ActionItem[] }) {
+export default function ActionItems({
+  items,
+  demoMode = false,
+}: {
+  items: ActionItem[];
+  demoMode?: boolean;
+}) {
+  const router = useRouter();
   const [actions, setActions] = useState(items);
   const [busy, setBusy] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function resolve(id: number, status: "approved" | "rejected") {
+    if (demoMode || id < 0) {
+      router.push("/dashboard/automatisaties");
+      return;
+    }
     setBusy(id);
-    const supabase = createClient();
-    const stamp =
-      status === "approved"
-        ? { status, approved_at: new Date().toISOString() }
-        : { status, rejected_at: new Date().toISOString() };
-    await supabase.from("agent_actions").update(stamp).eq("id", id);
+    setError(null);
+    const decision = status === "approved" ? "approve" : "reject";
+    const result = await decideAction(id, decision);
+    if ("error" in result && result.error) {
+      setError(result.error);
+      setBusy(null);
+      return;
+    }
     setActions((a) => a.filter((x) => x.id !== id));
+    if (status === "approved" && "route" in result && result.route) {
+      router.push(result.route);
+    } else {
+      router.refresh();
+    }
     setBusy(null);
   }
 
@@ -43,6 +64,11 @@ export default function ActionItems({ items }: { items: ActionItem[] }) {
 
   return (
     <div className="space-y-2.5">
+      {error && (
+        <p role="alert" className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+          {error}
+        </p>
+      )}
       {actions.map((item) => {
         const meta = kindMeta[item.kind];
         return (
@@ -62,6 +88,15 @@ export default function ActionItems({ items }: { items: ActionItem[] }) {
               <p className="truncate text-xs text-zinc-500">{item.detail}</p>
             </div>
             <div className="flex items-center gap-1.5">
+              {demoMode || item.id < 0 ? (
+                <Link
+                  href="/dashboard/automatisaties"
+                  className="inline-flex items-center gap-1 rounded-lg bg-sky-500/15 px-2.5 py-1.5 text-xs font-medium text-sky-300 transition-colors hover:bg-sky-500/25"
+                >
+                  Bekijken
+                </Link>
+              ) : (
+                <>
               <button
                 onClick={() => resolve(item.id, "approved")}
                 disabled={busy === item.id}
@@ -77,10 +112,13 @@ export default function ActionItems({ items }: { items: ActionItem[] }) {
               <button
                 onClick={() => resolve(item.id, "rejected")}
                 disabled={busy === item.id}
+                aria-label="Afwijzen"
                 className="grid h-7 w-7 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-white/5 hover:text-rose-400 disabled:opacity-60"
               >
                 <X size={14} />
               </button>
+                </>
+              )}
             </div>
           </div>
         );

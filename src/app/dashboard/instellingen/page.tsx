@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
+import { loadUserAgentName } from "@/lib/agents/userAi";
 import SettingsForm from "@/components/dashboard/instellingen/SettingsForm";
 import PlaceholderPage from "@/components/dashboard/PlaceholderPage";
 import { parseExtras, DEFAULT_TEMPLATE, type SettingsInput } from "./settings";
@@ -8,7 +9,7 @@ import type { ApiKeyInfo } from "@/lib/apiResources";
 export const metadata = { title: "Instellingen — ArchonPro" };
 
 export default async function InstellingenPage() {
-  const { supabase, companyId } = await getCompanyContext();
+  const { supabase, companyId, user } = await getCompanyContext();
 
   if (!companyId) {
     return (
@@ -46,6 +47,9 @@ export default async function InstellingenPage() {
   }));
 
   const extras = parseExtras(data?.ai_assistant ?? null);
+  const userAgentName = user
+    ? await loadUserAgentName(supabase, user.id)
+    : extras.ai.agentNaam;
 
   const initial: SettingsInput = {
     naam: data?.naam ?? "",
@@ -64,7 +68,7 @@ export default async function InstellingenPage() {
     footer_tekst: data?.footer_tekst ?? "",
     quoteTemplate: data?.default_quote_template || DEFAULT_TEMPLATE,
     invoiceTemplate: data?.default_invoice_template || DEFAULT_TEMPLATE,
-    ai: extras.ai,
+    ai: { ...extras.ai, agentNaam: userAgentName },
   };
 
   return (
@@ -76,8 +80,7 @@ export default async function InstellingenPage() {
         <div>
           <h1 className="text-xl font-semibold text-zinc-50">Instellingen</h1>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Beheer je bedrijfsgegevens, offerte- &amp; factuurinstellingen en de
-            AI-agent.
+            Beheer je bedrijfsgegevens, documenten, data-import en de AI-agent.
           </p>
         </div>
       </header>

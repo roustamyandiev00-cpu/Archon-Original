@@ -1,22 +1,65 @@
 import { Receipt } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
-import FactuurForm from "@/components/dashboard/facturen/FactuurForm";
+import FactuurForm, {
+  type FactuurDocumentContext,
+} from "@/components/dashboard/facturen/FactuurForm";
+import { DEFAULT_TEMPLATE } from "@/app/dashboard/instellingen/settings";
 
 export const metadata = { title: "Nieuwe factuur — ArchonPro" };
 
 export default async function NieuweFactuurPage() {
   const { supabase, companyId } = await getCompanyContext();
 
-  let customers: { id: number; name: string; company_name: string | null }[] =
-    [];
+  let customers: {
+    id: number;
+    name: string;
+    company_name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    address: string | null;
+    email: string | null;
+    phone: string | null;
+    btw: string | null;
+  }[] = [];
+  let documentContext: FactuurDocumentContext = {
+    defaultTemplate: DEFAULT_TEMPLATE,
+    bedrijf: {
+      naam: null,
+      adres: null,
+      postcode: null,
+      stad: null,
+      telefoon: null,
+      email: null,
+      btw: null,
+      iban: null,
+      algemene_voorwaarden: null,
+      footer_tekst: null,
+    },
+  };
+
   if (companyId) {
-    const { data } = await supabase
-      .from("customers")
-      .select("id, name, company_name")
-      .eq("company_id", companyId)
-      .eq("is_active", true)
-      .order("name");
+    const [{ data }, { data: bedrijf }] = await Promise.all([
+      supabase
+        .from("customers")
+        .select(
+          "id, name, company_name, first_name, last_name, address, email, phone, btw",
+        )
+        .eq("company_id", companyId)
+        .eq("is_active", true)
+        .order("name"),
+      supabase
+        .from("bedrijven")
+        .select(
+          "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_invoice_template",
+        )
+        .eq("id", companyId)
+        .maybeSingle(),
+    ]);
     customers = data ?? [];
+    documentContext = {
+      defaultTemplate: bedrijf?.default_invoice_template || DEFAULT_TEMPLATE,
+      bedrijf: bedrijf ?? documentContext.bedrijf,
+    };
   }
 
   return (
@@ -28,13 +71,12 @@ export default async function NieuweFactuurPage() {
         <div>
           <h1 className="text-xl font-semibold text-zinc-50">Nieuwe factuur</h1>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Kies factuur of proforma, vul links de gegevens in en bekijk rechts
-            direct de preview.
+            Bekijk je factuursjabloon en vul via Gegevens invullen de details in.
           </p>
         </div>
       </header>
 
-      <FactuurForm customers={customers} />
+      <FactuurForm customers={customers} documentContext={documentContext} />
     </div>
   );
 }

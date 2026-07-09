@@ -22,7 +22,7 @@ export default function RegisterPage() {
         title: "Start vandaag met",
         accent: "ArchonPro",
         subtitle:
-          "14 dagen gratis proberen. Geen creditcard nodig — direct aan de slag met offertes en facturen.",
+          "14 dagen gratis proberen. Geen creditcard nodig.",
       }}
     >
       <Suspense>

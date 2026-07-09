@@ -7,6 +7,7 @@ import { Menu, X, ChevronDown } from "lucide-react";
 import { FastLink } from "@/components/FastLink";
 
 const functies = [
+  { label: "Overzicht", href: "/functies" },
   { label: "AI-metgezel", href: "/functies/ai-metgezel" },
   { label: "Schatting", href: "/functies/schatting" },
   { label: "Facturen", href: "/functies/facturen" },
@@ -15,11 +16,12 @@ const functies = [
 
 const links = [
   { label: "Welkom", href: "/" },
-  { label: "Functies", href: "/#features", children: functies },
-  { label: "Over", href: "/#resultaten" },
+  { label: "Functies", href: "/functies", children: functies },
+  { label: "Over", href: "/over" },
   { label: "Bouwnetwerk", href: "/bouwnetwerk" },
   { label: "Prijzen", href: "/prijzen" },
-  { label: "Blog", href: "/#blog" },
+  { label: "Blog", href: "/blog" },
+  { label: "Community", href: "/gemeenschap" },
 ];
 
 export default function Navbar() {

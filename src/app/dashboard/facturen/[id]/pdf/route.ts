@@ -6,7 +6,7 @@ import {
   buildDocumentRows,
   type CustomerLite,
 } from "@/lib/documentData";
-import { buildDocumentHtml, resolveTemplateId } from "@/components/dashboard/documenten/documentTemplate";
+import { buildDocumentHtml, resolveDocumentTemplateId } from "@/components/dashboard/documenten/documentTemplate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +46,7 @@ export async function GET(
   const { data: bedrijf } = await supabase
     .from("bedrijven")
     .select(
-      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst",
+      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_invoice_template",
     )
     .eq("id", companyId)
     .maybeSingle();
@@ -87,7 +87,10 @@ export async function GET(
   const rows = buildDocumentRows(lines);
 
   const requested = req.nextUrl.searchParams.get("template");
-  const templateId = resolveTemplateId(requested || factuur.template_id);
+  const templateId = resolveDocumentTemplateId(
+    requested || factuur.template_id,
+    bedrijf?.default_invoice_template,
+  );
   const html = buildDocumentHtml(templateId, "invoice", values, rows);
 
   const pdf = await htmlToPdf(html);

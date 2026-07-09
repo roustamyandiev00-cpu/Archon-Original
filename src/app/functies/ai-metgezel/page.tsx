@@ -63,7 +63,7 @@ function Hero() {
       title="Het beste van AI voor het opstellen van"
       accent="offertes & facturen"
       subtitle="Praat, stuur je documenten, geef je instructies… Nova zet je uren achter de computer om in minuten op je gsm."
-      primary={{ label: "Gratis proberen", href: "/#start" }}
+      primary={{ label: "Gratis proberen", href: "/register" }}
       secondary={{ label: "Hoe werkt het?", href: "#hoe" }}
       note="+10.000 vakmensen maken hun offertes met Nova"
       visual={
@@ -420,7 +420,7 @@ function MidCta() {
             </p>
           </div>
           <Link
-            href="/#start"
+            href="/register"
             className="group inline-flex shrink-0 items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
           >
             Mijn eerste offerte maken
@@ -498,7 +498,7 @@ function FinalCta() {
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                href="/#start"
+                href="/register"
                 className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
               >
                 Gratis account aanmaken

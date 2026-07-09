@@ -1,8 +1,21 @@
 import type { Metadata } from "next";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
+import MobileBottomNav from "@/components/dashboard/MobileBottomNav";
+import MobileSwipeNav from "@/components/dashboard/MobileSwipeNav";
+import DashboardThemeProvider from "@/components/dashboard/DashboardThemeProvider";
+import { AgentChatProvider } from "@/components/dashboard/agent-chat/AgentChatProvider";
+import AgentChatWidget from "@/components/dashboard/agent-chat/AgentChatWidget";
+import { PendingApprovalsProvider } from "@/components/dashboard/PendingApprovalsProvider";
 import { PreviewBanner, TrialBanner } from "@/components/dashboard/AccessBanners";
+import DashboardSidePreview from "@/components/dashboard/DashboardSidePreview";
+import {
+  DashboardMain,
+  DashboardSidePanel,
+  DashboardSidePanelProvider,
+} from "@/components/dashboard/DashboardSidePanel";
 import { getDashboardContext } from "@/components/dashboard/context";
+import { loadTopbarSummary } from "@/components/dashboard/mission-data";
 
 export const metadata: Metadata = {
   title: "Dashboard — ArchonPro",
@@ -14,18 +27,56 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isPreviewMode, trial } = await getDashboardContext();
+  const ctx = await getDashboardContext();
+  const { isPreviewMode, trial, supabase, companyId, user } = ctx;
   const showTrialBanner = !isPreviewMode && trial && trial.active && !trial.isPaid;
+  const showSidePreview = Boolean(user) && !isPreviewMode;
+  const topbarOffset = isPreviewMode || showTrialBanner ? "top-28" : "top-14";
+  const mainTop = isPreviewMode || showTrialBanner ? "pt-28" : "pt-14";
+  const topbarSummary = await loadTopbarSummary(supabase, companyId);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <DashboardThemeProvider>
+      <AgentChatProvider companyId={companyId}>
+      <PendingApprovalsProvider
+        companyId={companyId}
+        enabled={!isPreviewMode && Boolean(companyId)}
+      >
+      <DashboardSidePanelProvider enabled={showSidePreview}>
+      <a
+        href="#dashboard-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-sky-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-zinc-950"
+      >
+        Ga naar inhoud
+      </a>
       <Sidebar isPreviewMode={isPreviewMode} />
-      <Topbar />
+      <Topbar initial={topbarSummary} />
       {isPreviewMode && <PreviewBanner />}
       {showTrialBanner && <TrialBanner trial={trial} />}
-      <main className={`lg:pl-[220px] ${isPreviewMode || showTrialBanner ? "pt-28" : "pt-14"}`}>
-        <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">{children}</div>
-      </main>
-    </div>
+      <DashboardMain
+        id="dashboard-main"
+        tabIndex={-1}
+        showSidePanel={showSidePreview}
+        className={`lg:pl-[220px] pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0 ${mainTop}`}
+      >
+        <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8">
+          <MobileSwipeNav>{children}</MobileSwipeNav>
+        </div>
+      </DashboardMain>
+      {showSidePreview && (
+        <DashboardSidePanel topbarOffset={topbarOffset}>
+          <DashboardSidePreview
+            supabase={supabase}
+            companyId={companyId}
+            isPreview={isPreviewMode}
+          />
+        </DashboardSidePanel>
+      )}
+      <MobileBottomNav isPreviewMode={isPreviewMode} />
+      <AgentChatWidget />
+      </DashboardSidePanelProvider>
+      </PendingApprovalsProvider>
+      </AgentChatProvider>
+    </DashboardThemeProvider>
   );
 }

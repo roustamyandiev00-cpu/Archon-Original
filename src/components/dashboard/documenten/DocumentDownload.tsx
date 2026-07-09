@@ -5,7 +5,7 @@ import { Check, Download, Eye, FileText, Loader2, Save } from "lucide-react";
 import { saveDocumentTemplate } from "@/app/dashboard/instellingen/actions";
 import {
   buildDocumentHtml,
-  resolveTemplateId,
+  resolveDocumentTemplateId,
   RENDERABLE_TEMPLATES,
   type DocumentKind,
   type DocumentRow,
@@ -18,16 +18,20 @@ export default function DocumentDownload({
   kind,
   documentId,
   currentTemplate,
+  defaultTemplate,
   values,
   rows,
 }: {
   kind: DocumentKind;
   documentId: number;
   currentTemplate: string;
+  defaultTemplate?: string;
   values: Record<string, string>;
   rows: DocumentRow[];
 }) {
-  const [template, setTemplate] = useState(resolveTemplateId(currentTemplate));
+  const [template, setTemplate] = useState(
+    resolveDocumentTemplateId(currentTemplate, defaultTemplate),
+  );
   const [pending, startTransition] = useTransition();
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);

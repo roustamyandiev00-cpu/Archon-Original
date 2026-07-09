@@ -121,3 +121,46 @@ export async function updateAfspraakStatus(
   revalidatePath("/dashboard/werkposts/samenwerkingen");
   return { success: true };
 }
+
+export async function submitCompanyReview(
+  targetCompanyId: number,
+  rating: number,
+  commentaar: string
+) {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  if (companyId === targetCompanyId) {
+    return { error: "Je kunt je eigen bedrijf niet beoordelen." };
+  }
+
+  const cleanRating = Math.round(Number(rating));
+  if (cleanRating < 1 || cleanRating > 5) {
+    return { error: "De score moet tussen 1 en 5 sterren liggen." };
+  }
+
+  const cleanCommentaar = commentaar.trim();
+  if (!cleanCommentaar) {
+    return { error: "Schrijf een toelichting bij je beoordeling." };
+  }
+
+  const { error } = await supabase
+    .from("bedrijf_reviews")
+    .upsert({
+      reviewer_company_id: companyId,
+      target_company_id: targetCompanyId,
+      rating: cleanRating,
+      commentaar: cleanCommentaar,
+    }, {
+      onConflict: "reviewer_company_id,target_company_id"
+    });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/bouwnetwerk");
+  revalidatePath("/dashboard/werkposts/samenwerkingen");
+  revalidatePath("/dashboard/werkposts");
+  return { success: true };
+}
+

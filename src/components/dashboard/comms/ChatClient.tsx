@@ -64,6 +64,7 @@ export default function ChatClient({
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -115,10 +116,15 @@ export default function ChatClient({
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedId || !text.trim()) return;
+    setSendError(null);
     setSending(true);
     const res = await sendMessage(selectedId, text);
     setSending(false);
-    if (!("error" in res && res.error)) setText("");
+    if ("error" in res && res.error) {
+      setSendError(res.error);
+      return;
+    }
+    setText("");
   }
 
   async function handleFiles(list: FileList | null) {
@@ -204,8 +210,13 @@ export default function ChatClient({
 
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {loading ? (
-            <div className="grid h-full place-items-center text-zinc-500">
-              <Loader2 size={18} className="animate-spin" />
+            <div
+              role="status"
+              aria-live="polite"
+              className="grid h-full place-items-center text-zinc-500"
+            >
+              <Loader2 size={18} className="animate-spin" aria-hidden />
+              <span className="sr-only">Berichten laden</span>
             </div>
           ) : messages.length === 0 ? (
             <p className="text-sm text-zinc-500">
@@ -274,9 +285,9 @@ export default function ChatClient({
           <div ref={bottomRef} />
         </div>
 
-        {uploadError && (
+        {(uploadError || sendError) && (
           <p className="border-t border-white/10 px-4 py-2 text-xs text-rose-400">
-            {uploadError}
+            {uploadError ?? sendError}
           </p>
         )}
         <form
@@ -313,6 +324,7 @@ export default function ChatClient({
           <button
             type="submit"
             disabled={sending || !text.trim()}
+            aria-label="Bericht versturen"
             className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-sky-500 text-zinc-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {sending ? (

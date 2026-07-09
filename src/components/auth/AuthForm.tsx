@@ -145,13 +145,13 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       </div>
 
       {/* Divider */}
-      <div className="my-6 flex items-center gap-4">
+      <div className="my-4 flex items-center gap-3">
         <span className="h-px flex-1 bg-white/10" />
         <span className="text-xs text-zinc-500">Of</span>
         <span className="h-px flex-1 bg-white/10" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {isRegister && refCode && (
           <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">
             <p className="flex items-center gap-2 font-medium">
@@ -285,7 +285,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         <button
           type="submit"
           disabled={loading || (isRegister && !agreed)}
-          className="group mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="group mt-1 inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-6 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? (
             <>
@@ -304,7 +304,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-zinc-400">
+      <p className="mt-4 text-center text-sm text-zinc-400">
         {t.switchText}{" "}
         <Link
           href={t.switchHref}
@@ -318,7 +318,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 }
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-zinc-900/60 py-3 pl-10 pr-4 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60 focus:bg-zinc-900";
+  "w-full rounded-xl border border-white/10 bg-zinc-900/60 py-2.5 pl-10 pr-4 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60 focus:bg-zinc-900";
 
 function Field({
   label,
@@ -329,7 +329,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-zinc-200">
+      <label className="mb-1 block text-sm font-medium text-zinc-200">
         {label}
       </label>
       <div className="relative">{children}</div>
@@ -358,7 +358,7 @@ function SocialButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-zinc-800/60"
+      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-900/60 px-3 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-zinc-800/60"
     >
       {icon}
       {label}

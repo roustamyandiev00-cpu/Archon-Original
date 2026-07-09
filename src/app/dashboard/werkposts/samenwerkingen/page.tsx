@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowLeft, Handshake } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import SamenwerkingenClient, {
   type Samenwerking,
   type AfspraakRow,
+  type PendingReactie,
 } from "@/components/dashboard/werkposts/SamenwerkingenClient";
 
 export const metadata = { title: "Samenwerkingen — ArchonPro" };
@@ -13,13 +14,86 @@ type Deelnemers = {
   counterpart_naam?: string | null;
 } | null;
 
+function messagePreview(
+  content: string | null,
+  attachments: unknown,
+  type: string | null,
+): string {
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    const first = attachments[0] as { isImage?: boolean; name?: string };
+    if (first?.isImage) return "📷 Foto";
+    return `📎 ${first?.name ?? "Document"}`;
+  }
+  if (!content) return type === "text" ? "" : "Bericht";
+  if (content.startsWith("{")) {
+    try {
+      const rich = JSON.parse(content) as {
+        text?: string;
+        audioUrl?: string;
+        callType?: string;
+      };
+      if (rich.audioUrl) return "🎤 Spraakbericht";
+      if (rich.callType) return rich.callType === "video-oproep" ? "📹 Video-oproep" : "📞 Spraakoproep";
+      if (rich.text) return rich.text;
+    } catch {
+      /* plain text fallback */
+    }
+  }
+  return content.replace(/\s+/g, " ").trim();
+}
+
 export default async function SamenwerkingenPage() {
   const { supabase, companyId } = await getCompanyContext();
 
   let samenwerkingen: Samenwerking[] = [];
   let afspraken: AfspraakRow[] = [];
+  let myReviews: { target_company_id: number; rating: number; commentaar: string }[] = [];
+  let counterpartRatings: Record<number, { avg: number; count: number }> = {};
+  let pendingReacties: PendingReactie[] = [];
 
   if (companyId) {
+    const { data: myPosts } = await supabase
+      .from("werkposts")
+      .select("id, titel")
+      .eq("company_id", companyId);
+
+    const myPostIds = (myPosts ?? []).map((p) => p.id);
+    if (myPostIds.length > 0) {
+      const { data: pendingRows } = await supabase
+        .from("werkpost_reacties")
+        .select("id, werkpost_id, company_id, status")
+        .in("werkpost_id", myPostIds)
+        .or("status.eq.in_afwachting,status.is.null");
+
+      const pendingCompanyIds = [
+        ...new Set((pendingRows ?? []).map((r) => r.company_id)),
+      ];
+      const pendingNaamMap = new Map<number, string>();
+      if (pendingCompanyIds.length > 0) {
+        const { data: pendingBedrijven } = await supabase
+          .from("bedrijven_directory")
+          .select("id, naam")
+          .in("id", pendingCompanyIds);
+        for (const b of pendingBedrijven ?? []) {
+          if (b.id != null) {
+            pendingNaamMap.set(b.id, b.naam ?? `Bedrijf #${b.id}`);
+          }
+        }
+      }
+
+      const titelByPostId = new Map(
+        (myPosts ?? []).map((p) => [p.id, p.titel]),
+      );
+
+      pendingReacties = (pendingRows ?? []).map((r) => ({
+        id: r.id,
+        werkpostId: r.werkpost_id,
+        werkpostTitel: titelByPostId.get(r.werkpost_id) ?? "Werkpost",
+        companyNaam:
+          pendingNaamMap.get(r.company_id) ?? `Bedrijf #${r.company_id}`,
+      }));
+    }
+
     const { data: myMemberships } = await supabase
       .from("bouwnetwerk_channel_members")
       .select("channel_id")
@@ -63,6 +137,37 @@ export default async function SamenwerkingenPage() {
         for (const b of bedrijven ?? []) {
           if (b.id != null) naamMap.set(b.id, b.naam ?? `Bedrijf #${b.id}`);
         }
+
+        // Reviews van de ingelogde gebruiker ophalen.
+        const { data: myReviewsData } = await supabase
+          .from("bedrijf_reviews")
+          .select("target_company_id, rating, commentaar")
+          .eq("reviewer_company_id", companyId)
+          .in("target_company_id", counterpartIds);
+        myReviews = (myReviewsData ?? []) as any[];
+
+        // Reviews stats van de partners ophalen.
+        const { data: counterpartReviewsData } = await supabase
+          .from("bedrijf_reviews")
+          .select("target_company_id, rating")
+          .in("target_company_id", counterpartIds);
+
+        if (counterpartReviewsData) {
+          const totals = new Map<number, { sum: number; count: number }>();
+          for (const r of counterpartReviewsData) {
+            const current = totals.get(r.target_company_id) ?? { sum: 0, count: 0 };
+            totals.set(r.target_company_id, {
+              sum: current.sum + r.rating,
+              count: current.count + 1,
+            });
+          }
+          for (const [cid, val] of totals.entries()) {
+            counterpartRatings[cid] = {
+              avg: Math.round((val.sum / val.count) * 10) / 10,
+              count: val.count,
+            };
+          }
+        }
       }
 
       const werkpostIds = [
@@ -89,12 +194,33 @@ export default async function SamenwerkingenPage() {
           counterpartNaam: counterpartId
             ? naamMap.get(counterpartId) ?? `Bedrijf #${counterpartId}`
             : c.name ?? "Onbekend",
+          werkpostId: c.werkpost_id ?? null,
           werkpostTitel: c.werkpost_id
             ? titelMap.get(c.werkpost_id) ?? null
             : null,
           lastMessageAt: c.last_message_at,
+          lastMessagePreview: null as string | null,
         };
       });
+
+      const { data: recentMessages } = await supabase
+        .from("bouwnetwerk_messages")
+        .select("channel_id, content, type, attachments, created_at")
+        .in("channel_id", channelIds)
+        .order("created_at", { ascending: false })
+        .limit(250);
+
+      const previewByChannel = new Map<string, string>();
+      for (const msg of recentMessages ?? []) {
+        if (!msg.channel_id || previewByChannel.has(msg.channel_id)) continue;
+        const preview = messagePreview(msg.content, msg.attachments, msg.type);
+        if (preview) previewByChannel.set(msg.channel_id, preview);
+      }
+
+      samenwerkingen = samenwerkingen.map((s) => ({
+        ...s,
+        lastMessagePreview: previewByChannel.get(s.channelId) ?? null,
+      }));
 
       const { data: afspraakRows } = await supabase
         .from("afspraken")
@@ -124,27 +250,18 @@ export default async function SamenwerkingenPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
-            <Handshake size={20} />
-          </span>
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-50">Samenwerkingen</h1>
-            <p className="mt-0.5 text-sm text-zinc-500">
-              Chat, deel documenten en plan afspraken met de bedrijven waarmee je
-              een match hebt.
-            </p>
-          </div>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/dashboard/werkposts"
           className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3.5 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"
         >
           <ArrowLeft size={15} /> Bouwnetwerk
         </Link>
-      </header>
+        <p className="text-xs text-zinc-500">
+          Chat met partners waarmee je een match hebt
+        </p>
+      </div>
 
       {!companyId ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
@@ -163,6 +280,9 @@ export default async function SamenwerkingenPage() {
           samenwerkingen={samenwerkingen}
           afspraken={afspraken}
           companyId={companyId}
+          myReviews={myReviews}
+          counterpartRatings={counterpartRatings}
+          pendingReacties={pendingReacties}
         />
       )}
     </div>

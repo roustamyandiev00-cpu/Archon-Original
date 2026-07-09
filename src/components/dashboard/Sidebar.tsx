@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogoMark } from "@/components/dashboard/LogoMark";
+import { BrandLockup } from "@/components/BrandLogo";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -25,6 +25,7 @@ import {
   HardHat,
   Handshake,
   Plug,
+  FolderKanban,
   ChevronDown,
   Sparkles,
   type LucideIcon,
@@ -56,7 +57,18 @@ const groups: NavGroup[] = [
     title: "Operatie",
     items: [
       { label: "Contacten", href: "/dashboard/contacten", icon: Users },
-      { label: "Offertes", href: "/dashboard/offertes", icon: FileText },
+      {
+        label: "Offertes",
+        href: "/dashboard/offertes",
+        icon: FileText,
+        children: [
+          {
+            label: "Projecten",
+            href: "/dashboard/offertes/projecten",
+            icon: FolderKanban,
+          },
+        ],
+      },
       { label: "Facturen", href: "/dashboard/facturen", icon: Receipt, badge: 3, badgeTone: "warning" },
       { label: "Leads / CRM", href: "/dashboard/leads", icon: Contact, badge: 5, badgeTone: "info" },
       { label: "Automatisaties", href: "/dashboard/automatisaties", icon: Zap },
@@ -77,7 +89,7 @@ const groups: NavGroup[] = [
   {
     title: "AI",
     items: [
-      { label: "Nova-agents", href: "/dashboard/nova-agents", icon: Bot, available: false },
+      { label: "AI-agents", href: "/dashboard/nova-agents", icon: Bot },
       { label: "Comms", href: "/dashboard/comms", icon: MessageCircle, available: false },
       { label: "Geheugen", href: "/dashboard/geheugen", icon: BrainCircuit, available: false },
     ],
@@ -148,24 +160,20 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
     parentOfActive = false,
   ) {
     const available = itemIsAvailable(item);
+    const className = `group relative flex items-center gap-2.5 rounded-xl py-2 text-sm transition-all duration-200 ${
+      isChild ? "px-2 text-[13px]" : "px-2.5"
+    } ${
+      !available
+        ? "cursor-default text-zinc-600 hover:bg-transparent"
+        : active
+          ? "bg-sky-500/10 text-sky-200"
+          : parentOfActive
+            ? "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-100"
+            : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
+    }`;
 
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        aria-disabled={!available}
-        className={`group relative flex items-center gap-2.5 rounded-xl py-2 text-sm transition-all duration-200 ${
-          isChild ? "px-2 text-[13px]" : "px-2.5"
-        } ${
-          !available
-            ? "cursor-default text-zinc-600 hover:bg-transparent"
-            : active
-              ? "bg-sky-500/10 text-sky-200"
-              : parentOfActive
-                ? "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-100"
-                : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
-        }`}
-      >
+    const inner = (
+      <>
         {active && available && (
           <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-sky-500/70" />
         )}
@@ -198,24 +206,44 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
             {item.badge}
           </span>
         )}
+      </>
+    );
+
+    if (!available) {
+      return (
+        <span
+          key={item.href}
+          title="Binnenkort beschikbaar"
+          aria-disabled="true"
+          className={className}
+        >
+          {inner}
+        </span>
+      );
+    }
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        prefetch
+        aria-current={active ? "page" : undefined}
+        className={className}
+      >
+        {inner}
       </Link>
     );
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] flex-col border-r border-white/[0.06] bg-zinc-950 lg:flex">
-      <div className="relative flex h-14 items-center gap-2.5 border-b border-white/[0.06] px-4">
-        <div className="rounded-lg ring-1 ring-white/[0.06]">
-          <LogoMark size={40} />
-        </div>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold tracking-tight text-zinc-50">
-            ArchonPro
-          </p>
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-500">
-            Mission view
-          </p>
-        </div>
+    <aside className="dashboard-sidebar fixed inset-y-0 left-0 z-40 hidden w-[220px] flex-col border-r border-white/[0.06] bg-zinc-950 lg:flex">
+      <div className="relative flex h-14 items-center border-b border-white/[0.06] px-4">
+        <BrandLockup
+          href="/dashboard"
+          markSize={36}
+          wordmarkSize="sm"
+          tagline="Mission view"
+        />
       </div>
 
       <nav className="relative flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:rgba(255,255,255,0.08)_transparent] [scrollbar-width:thin]">
@@ -255,11 +283,23 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
                   {group.items.map((item) => {
                     const hasChildren = item.children && item.children.length > 0;
                     const childActive = item.children?.some(
-                      (child) => pathname === child.href,
+                      (child) =>
+                        pathname === child.href ||
+                        pathname.startsWith(`${child.href}/`),
                     );
+                    const itemActive =
+                      pathname === item.href ||
+                      (item.href === "/dashboard/offertes" &&
+                        pathname.startsWith("/dashboard/offertes") &&
+                        !childActive);
                     return (
                       <div key={item.label}>
-                        {renderLink(item, pathname === item.href, false, !!childActive)}
+                        {renderLink(
+                          item,
+                          itemActive,
+                          false,
+                          !!childActive,
+                        )}
                         {hasChildren && (
                           <div className="relative ml-[18px] mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3">
                             {item.children!.map((child) =>

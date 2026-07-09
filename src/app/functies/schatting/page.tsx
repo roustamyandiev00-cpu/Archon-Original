@@ -141,7 +141,7 @@ function Hero() {
       title="Nova maakt je offertes"
       accent="in jouw plaats"
       subtitle="Onze AI-agent Nova calculeert, structureert en bereidt je bouwofferte in enkele momenten voor. Jij hoeft alleen nog te valideren."
-      primary={{ label: "Gratis offerte maken", href: "/#start" }}
+      primary={{ label: "Gratis offerte maken", href: "/register" }}
       secondary={{ label: "Bekijk demo", href: "#demo" }}
       visual={
         <Card>
@@ -782,7 +782,7 @@ function FinalCta() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                href="/#start"
+                href="/register"
                 className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
               >
                 Gratis account aanmaken

@@ -54,6 +54,7 @@ export default function DocumentContactActions({
   detailPath?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
 
   const label =
     soort === "factuur"
@@ -83,12 +84,14 @@ export default function DocumentContactActions({
       typeof window !== "undefined"
         ? `${window.location.origin}${detailPath}`
         : detailPath;
+    setCopyError(false);
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // stil falen — sommige browsers blokkeren clipboard zonder https
+      setCopyError(true);
+      setTimeout(() => setCopyError(false), 2500);
     }
   }
 
@@ -133,7 +136,13 @@ export default function DocumentContactActions({
           as="button"
           onClick={copyLink}
           disabled={false}
-          title="Link kopiëren"
+          title={
+            copied
+              ? "Link gekopieerd"
+              : copyError
+                ? "Kopiëren mislukt"
+                : "Link kopiëren"
+          }
           colorClass={
             copied
               ? "text-emerald-400 bg-emerald-500/15"

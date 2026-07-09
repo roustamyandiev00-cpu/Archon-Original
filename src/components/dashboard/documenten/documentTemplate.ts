@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { DEFAULT_TEMPLATE } from "@/app/dashboard/instellingen/settings";
 import { ARCHON_TEMPLATE_SOURCES } from "@/components/dashboard/instellingen/templateSources";
 import { ARCHON_TEMPLATES } from "@/components/dashboard/instellingen/templatePreview";
 
@@ -20,6 +22,48 @@ const FALLBACK_TEMPLATE_ID = "archon-02";
 export function resolveTemplateId(value: string | null | undefined): string {
   if (value && value in ARCHON_TEMPLATE_SOURCES) return value;
   return FALLBACK_TEMPLATE_ID;
+}
+
+/** Haalt het standaardsjabloon uit Instellingen op voor dit documenttype. */
+export async function loadCompanyDefaultTemplate(
+  supabase: SupabaseClient,
+  companyId: number,
+  kind: DocumentKind,
+): Promise<string> {
+  const { data } = await supabase
+    .from("bedrijven")
+    .select("default_quote_template, default_invoice_template")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  const value =
+    kind === "quote"
+      ? data?.default_quote_template
+      : data?.default_invoice_template;
+
+  return (value && String(value).trim()) || DEFAULT_TEMPLATE;
+}
+
+/** Ruwe waarde voor opslag: document → bedrijfsstandaard → fallback. */
+export function pickStoredTemplateId(
+  documentTemplateId: string | null | undefined,
+  companyDefault?: string | null | undefined,
+): string {
+  return (
+    (documentTemplateId && documentTemplateId.trim()) ||
+    (companyDefault && companyDefault.trim()) ||
+    DEFAULT_TEMPLATE
+  );
+}
+
+/** Bepaalt welk Archon-sjabloon gerenderd wordt (document → Instellingen → fallback). */
+export function resolveDocumentTemplateId(
+  documentTemplateId: string | null | undefined,
+  companyDefault?: string | null | undefined,
+): string {
+  return resolveTemplateId(
+    pickStoredTemplateId(documentTemplateId, companyDefault),
+  );
 }
 
 function escapeHtml(value: string): string {

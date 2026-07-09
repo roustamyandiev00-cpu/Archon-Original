@@ -56,7 +56,7 @@ function Hero() {
       title="ArchonPro koppelt met je favoriete"
       accent="bouwsoftware"
       subtitle="Compatibel met de meeste offerte- en facturatiesoftware op de markt. Controleer hier de compatibiliteit met je bestaande tools."
-      primary={{ label: "Gratis account aanmaken", href: "/#start" }}
+      primary={{ label: "Gratis account aanmaken", href: "/register" }}
       secondary={{ label: "Bekijk onze importgidsen", href: "#software" }}
       visual={
         <div className="rounded-3xl border border-white/10 bg-zinc-900/50 p-5 backdrop-blur-xl sm:p-6">
@@ -140,7 +140,7 @@ function NotFound() {
             bouwtools, en verstuurt via Peppol. Ons team helpt je graag verder.
           </p>
           <Link
-            href="/#start"
+            href="/register"
             className="mt-7 inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
           >
             <LifeBuoy size={16} className="text-sky-400" />
@@ -167,7 +167,7 @@ function FinalCta() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                href="/#start"
+                href="/register"
                 className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
               >
                 Gratis account aanmaken

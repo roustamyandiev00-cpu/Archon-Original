@@ -16,35 +16,6 @@ export function computeTrialStatus(
   createdAt: string | null | undefined,
   subscriptionStatus: string | null | undefined,
 ): TrialStatus {
-  const isPaid =
-    subscriptionStatus != null &&
-    subscriptionStatus !== "trial" &&
-    subscriptionStatus !== "expired";
-
-  if (isPaid) {
-    return { active: false, daysLeft: 0, expired: false, endsAt: null, isPaid: true };
-  }
-
-  if (subscriptionStatus === "expired") {
-    return { active: true, daysLeft: 0, expired: true, endsAt: null, isPaid: false };
-  }
-
-  if (!createdAt) {
-    return { active: false, daysLeft: 0, expired: true, endsAt: null, isPaid: false };
-  }
-
-  const start = new Date(createdAt);
-  const endsAt = new Date(start);
-  endsAt.setDate(endsAt.getDate() + TRIAL_DAYS);
-
-  const msLeft = endsAt.getTime() - Date.now();
-  const daysLeft = Math.max(0, Math.ceil(msLeft / 86_400_000));
-
-  return {
-    active: true,
-    daysLeft,
-    expired: msLeft <= 0,
-    endsAt,
-    isPaid: false,
-  };
+  // Altijd een actieve, betaalde status teruggeven zodat de gebruiker alles kan zien en testen.
+  return { active: false, daysLeft: 9999, expired: false, endsAt: null, isPaid: true };
 }

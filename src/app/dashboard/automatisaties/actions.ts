@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
+import { executeAgentAction } from "@/lib/agents/executor";
 
 export async function decideAction(id: number, decision: "approve" | "reject") {
   const access = await requireWriteAccess();
@@ -22,6 +23,23 @@ export async function decideAction(id: number, decision: "approve" | "reject") {
 
   if (error) return { error: error.message };
 
+  if (decision === "approve") {
+    const exec = await executeAgentAction({
+      supabase,
+      companyId,
+      userId: user.id,
+      actionId: id,
+    });
+    if ("error" in exec && exec.error) {
+      return { error: exec.error };
+    }
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/offertes");
+    revalidatePath("/dashboard/facturen");
+    return { ok: true, route: exec.route };
+  }
+
   revalidatePath("/dashboard/automatisaties");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

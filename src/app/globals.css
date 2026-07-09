@@ -398,30 +398,30 @@ body {
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.45;
-  mask-image: radial-gradient(ellipse 88% 75% at 68% 40%, #000 18%, transparent 76%);
+  opacity: 0.52;
+  mask-image: radial-gradient(ellipse 90% 78% at 70% 42%, #000 20%, transparent 78%);
 }
 .hero-pane-grid::before {
   content: "";
   position: absolute;
   inset: -2%;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-  background-size: 20% 36%;
-  background-position: 62% 16%;
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 18% 34%;
+  background-position: 64% 14%;
 }
 .hero-pane-grid::after {
   content: "";
   position: absolute;
-  right: 2%;
-  top: 10%;
-  width: 48%;
-  height: 74%;
+  right: 1%;
+  top: 8%;
+  width: 50%;
+  height: 78%;
   border-radius: 1.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.035);
-  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.012);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 24px 80px rgba(0, 0, 0, 0.12);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 28px 90px rgba(0, 0, 0, 0.14);
 }

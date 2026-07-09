@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import {
@@ -9,6 +10,7 @@ import {
   lineTotals,
   isOfferteEditable,
 } from "@/lib/offertes";
+import { projectIdFromOfferteType } from "@/components/dashboard/projecten/fromOfferte";
 import GlowCard from "@/components/dashboard/GlowCard";
 import OfferteStatusActions from "@/components/dashboard/offertes/OfferteStatusActions";
 import DocumentDownload from "@/components/dashboard/documenten/DocumentDownload";
@@ -18,7 +20,35 @@ import {
   type CustomerLite,
 } from "@/lib/documentData";
 
-export const metadata = { title: "Offerte — ArchonPro" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const offerteId = Number(id);
+  const { supabase, companyId } = await getCompanyContext();
+
+  if (!companyId || Number.isNaN(offerteId)) {
+    return { title: "Offerte — ArchonPro" };
+  }
+
+  const { data } = await supabase
+    .from("offertes")
+    .select("nummer, klant")
+    .eq("id", offerteId)
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  if (!data?.nummer) return { title: "Offerte — ArchonPro" };
+
+  const klant = data.klant?.trim();
+  return {
+    title: klant
+      ? `${data.nummer} — ${klant} | ArchonPro`
+      : `${data.nummer} | ArchonPro`,
+  };
+}
 
 export default async function OfferteDetailPage({
   params,
@@ -34,7 +64,7 @@ export default async function OfferteDetailPage({
   const { data: offerte } = await supabase
     .from("offertes")
     .select(
-      "id, nummer, klant, bedrag, datum, geldig_tot, status_new, notes, created_at, sent_at, accepted_at, rejected_at, customer_id, template_id",
+      "id, nummer, klant, bedrag, datum, geldig_tot, status_new, notes, created_at, sent_at, accepted_at, rejected_at, customer_id, template_id, converted_to_invoice_id, converted_to_type",
     )
     .eq("id", offerteId)
     .eq("bedrijf_id", companyId)
@@ -58,11 +88,12 @@ export default async function OfferteDetailPage({
   const totals = lineTotals(lines);
   const meta = statusMeta(offerte.status_new);
   const editable = isOfferteEditable(offerte.status_new);
+  const gekoppeldProjectId = projectIdFromOfferteType(offerte.converted_to_type);
 
   const { data: bedrijf } = await supabase
     .from("bedrijven")
     .select(
-      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst",
+      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_quote_template",
     )
     .eq("id", companyId)
     .maybeSingle();
@@ -205,6 +236,24 @@ export default async function OfferteDetailPage({
           </div>
         )}
 
+        {gekoppeldProjectId && (
+          <Link
+            href={`/dashboard/offertes/projecten/${gekoppeldProjectId}`}
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-300 transition-colors hover:bg-violet-500/20"
+          >
+            Bekijk gekoppeld project
+          </Link>
+        )}
+
+        {offerte.converted_to_invoice_id && (
+          <Link
+            href={`/dashboard/facturen/${offerte.converted_to_invoice_id}`}
+            className="inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-2 text-sm font-medium text-teal-300 transition-colors hover:bg-teal-500/20"
+          >
+            Bekijk gekoppelde factuur
+          </Link>
+        )}
+
         <div className="mt-8 space-y-4 border-t border-white/10 pt-6">
           {editable && (
             <Link
@@ -224,6 +273,7 @@ export default async function OfferteDetailPage({
             kind="quote"
             documentId={offerte.id}
             currentTemplate={offerte.template_id ?? ""}
+            defaultTemplate={bedrijf?.default_quote_template ?? ""}
             values={docValues}
             rows={docRows}
           />

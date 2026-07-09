@@ -1,11 +1,23 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import { Euro, GripVertical, Plus, Trash2, X } from "lucide-react";
+import {
+  Calendar,
+  Euro,
+  GripVertical,
+  Pencil,
+  Phone,
+  Plus,
+  StickyNote,
+  Trash2,
+  User,
+  X,
+} from "lucide-react";
 import {
   createDeal,
   deleteDeal,
   moveDeal,
+  updateDeal,
 } from "@/app/dashboard/leads/actions";
 import { STADIA, STAGE_STYLES, type Stadium } from "./stages";
 
@@ -16,6 +28,10 @@ export type DealCard = {
   waarde: number | null;
   kans: number | null;
   deadline: string | null;
+  contactpersoon?: string | null;
+  telefoon?: string | null;
+  email?: string | null;
+  notitie?: string | null;
 };
 
 const euro = new Intl.NumberFormat("nl-NL", {
@@ -24,16 +40,48 @@ const euro = new Intl.NumberFormat("nl-NL", {
   maximumFractionDigits: 0,
 });
 
+const shortDate = new Intl.DateTimeFormat("nl-NL", {
+  day: "numeric",
+  month: "short",
+});
+
 function normalizeStadium(value: string): Stadium {
   return (STADIA as readonly string[]).includes(value)
     ? (value as Stadium)
     : "Lead";
 }
 
+type Urgency = "overdue" | "soon" | "later";
+
+function deadlineUrgency(deadline: string | null): Urgency | null {
+  if (!deadline) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(deadline);
+  d.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((d.getTime() - today.getTime()) / 86_400_000);
+  if (diffDays < 0) return "overdue";
+  if (diffDays <= 3) return "soon";
+  return "later";
+}
+
+const URGENCY_STYLES: Record<Urgency, string> = {
+  overdue: "bg-rose-500/10 text-rose-300 border-rose-500/30",
+  soon: "bg-amber-500/10 text-amber-300 border-amber-500/30",
+  later: "bg-white/5 text-zinc-400 border-white/10",
+};
+
+const URGENCY_LABEL: Record<Urgency, string> = {
+  overdue: "Te laat sinds",
+  soon: "Opvolgen op",
+  later: "Opvolgen op",
+};
+
 export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] }) {
   const [deals, setDeals] = useState<DealCard[]>(initialDeals);
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<Stadium | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -110,6 +158,21 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
     });
   }
 
+  function handleUpdate(id: number, patch: Partial<DealCard>) {
+    const snapshot = deals;
+    setDeals((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+    setEditingId(null);
+    setError(null);
+
+    startTransition(async () => {
+      const res = await updateDeal(id, patch);
+      if ("error" in res && res.error) {
+        setError(res.error);
+        setDeals(snapshot);
+      }
+    });
+  }
+
   const totalValue = deals.reduce((sum, d) => sum + (d.waarde ?? 0), 0);
 
   return (
@@ -159,7 +222,7 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
                 }
               }}
               onDrop={() => handleDrop(stadium)}
-              className={`flex w-72 shrink-0 flex-col rounded-2xl border bg-zinc-900/40 transition-colors ${
+              className={`flex w-80 shrink-0 flex-col rounded-2xl border bg-zinc-900/40 transition-colors ${
                 dragOver === stadium
                   ? `border-transparent ring-2 ${style.ring} bg-zinc-900/70`
                   : "border-white/10"
@@ -183,55 +246,30 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
               </div>
 
               <div className="flex min-h-24 flex-1 flex-col gap-2 p-3">
-                {cards.map((deal) => (
-                  <article
-                    key={deal.id}
-                    draggable
-                    onDragStart={() => setDraggingId(deal.id)}
-                    onDragEnd={() => {
-                      setDraggingId(null);
-                      setDragOver(null);
-                    }}
-                    className={`group cursor-grab rounded-xl border border-white/10 bg-zinc-800/60 p-3 shadow-sm transition-all hover:border-white/20 active:cursor-grabbing ${
-                      draggingId === deal.id ? "opacity-40" : ""
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <GripVertical
-                        size={14}
-                        className="mt-0.5 shrink-0 text-zinc-600"
-                      />
-                      <p className="flex-1 text-sm font-medium leading-snug text-zinc-100">
-                        {deal.titel}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(deal.id)}
-                        aria-label="Verwijder deal"
-                        className="shrink-0 rounded-md p-1 text-zinc-600 opacity-0 transition hover:bg-white/5 hover:text-rose-300 group-hover:opacity-100"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                    {(deal.waarde != null || deal.kans != null) && (
-                      <div className="mt-2 flex items-center gap-2 pl-6">
-                        {deal.waarde != null && (
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-xs font-medium ${style.text}`}
-                          >
-                            <Euro size={11} />
-                            {euro.format(deal.waarde).replace("€", "").trim()}
-                          </span>
-                        )}
-                        {deal.kans != null && (
-                          <span className="text-xs text-zinc-500">
-                            {deal.kans}% kans
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </article>
-                ))}
+                {cards.map((deal) =>
+                  editingId === deal.id ? (
+                    <EditCard
+                      key={deal.id}
+                      deal={deal}
+                      onSave={(patch) => handleUpdate(deal.id, patch)}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <DealArticle
+                      key={deal.id}
+                      deal={deal}
+                      style={style}
+                      dragging={draggingId === deal.id}
+                      onDragStart={() => setDraggingId(deal.id)}
+                      onDragEnd={() => {
+                        setDraggingId(null);
+                        setDragOver(null);
+                      }}
+                      onEdit={() => setEditingId(deal.id)}
+                      onDelete={() => handleDelete(deal.id)}
+                    />
+                  ),
+                )}
 
                 <AddCard
                   onAdd={(titel, waarde) =>
@@ -242,6 +280,234 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function DealArticle({
+  deal,
+  style,
+  dragging,
+  onDragStart,
+  onDragEnd,
+  onEdit,
+  onDelete,
+}: {
+  deal: DealCard;
+  style: { text: string };
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const urgency = deadlineUrgency(deal.deadline);
+
+  return (
+    <article
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      className={`group cursor-grab rounded-xl border border-white/10 bg-zinc-800/60 p-3 shadow-sm transition-all hover:border-white/20 active:cursor-grabbing ${
+        dragging ? "opacity-40" : ""
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <GripVertical size={14} className="mt-0.5 shrink-0 text-zinc-600" />
+        <p className="flex-1 text-sm font-medium leading-snug text-zinc-100">
+          {deal.titel}
+        </p>
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="Deal bewerken"
+            className="rounded-md p-1 text-zinc-600 hover:bg-white/5 hover:text-sky-300"
+          >
+            <Pencil size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label="Verwijder deal"
+            className="rounded-md p-1 text-zinc-600 hover:bg-white/5 hover:text-rose-300"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
+
+      {(deal.contactpersoon || deal.telefoon) && (
+        <div className="mt-2 flex flex-col gap-1 pl-6">
+          {deal.contactpersoon && (
+            <span className="flex items-center gap-1.5 text-xs text-zinc-300">
+              <User size={12} className="shrink-0 text-zinc-500" />
+              {deal.contactpersoon}
+            </span>
+          )}
+          {deal.telefoon && (
+            <a
+              href={`tel:${deal.telefoon.replace(/\s+/g, "")}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-sky-300"
+            >
+              <Phone size={12} className="shrink-0 text-zinc-500" />
+              {deal.telefoon}
+            </a>
+          )}
+        </div>
+      )}
+
+      {(deal.waarde != null || deal.kans != null) && (
+        <div className="mt-2 flex items-center gap-2 pl-6">
+          {deal.waarde != null && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-xs font-medium ${style.text}`}
+            >
+              <Euro size={11} />
+              {euro.format(deal.waarde).replace("€", "").trim()}
+            </span>
+          )}
+          {deal.kans != null && (
+            <span className="text-xs text-zinc-500">{deal.kans}% kans</span>
+          )}
+        </div>
+      )}
+
+      {urgency && (
+        <div className="mt-2 pl-6">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${URGENCY_STYLES[urgency]}`}
+          >
+            <Calendar size={11} />
+            {URGENCY_LABEL[urgency]} {shortDate.format(new Date(deal.deadline!))}
+          </span>
+        </div>
+      )}
+
+      {deal.notitie && (
+        <div className="mt-2 flex items-start gap-1.5 pl-6 text-xs text-zinc-500">
+          <StickyNote size={12} className="mt-0.5 shrink-0" />
+          <span className="line-clamp-2 italic">{deal.notitie}</span>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function EditCard({
+  deal,
+  onSave,
+  onCancel,
+}: {
+  deal: DealCard;
+  onSave: (patch: Partial<DealCard>) => void;
+  onCancel: () => void;
+}) {
+  const [titel, setTitel] = useState(deal.titel);
+  const [contactpersoon, setContactpersoon] = useState(deal.contactpersoon ?? "");
+  const [telefoon, setTelefoon] = useState(deal.telefoon ?? "");
+  const [email, setEmail] = useState(deal.email ?? "");
+  const [waarde, setWaarde] = useState(deal.waarde != null ? String(deal.waarde) : "");
+  const [kans, setKans] = useState(deal.kans != null ? String(deal.kans) : "");
+  const [deadline, setDeadline] = useState(deal.deadline ?? "");
+  const [notitie, setNotitie] = useState(deal.notitie ?? "");
+
+  function submit() {
+    if (!titel.trim()) return;
+    onSave({
+      titel: titel.trim(),
+      contactpersoon: contactpersoon.trim() || null,
+      telefoon: telefoon.trim() || null,
+      email: email.trim() || null,
+      waarde: waarde.trim() ? Number(waarde.replace(",", ".")) : null,
+      kans: kans.trim() ? Number(kans) : null,
+      deadline: deadline.trim() || null,
+      notitie: notitie.trim() || null,
+    });
+  }
+
+  const inputClass =
+    "w-full rounded-lg bg-zinc-900/60 px-2 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-sky-500/50";
+
+  return (
+    <div className="space-y-2 rounded-xl border border-sky-500/30 bg-zinc-800/80 p-3">
+      <input
+        value={titel}
+        onChange={(e) => setTitel(e.target.value)}
+        placeholder="Titel"
+        className={`${inputClass} font-medium`}
+      />
+      <input
+        value={contactpersoon}
+        onChange={(e) => setContactpersoon(e.target.value)}
+        placeholder="Contactpersoon"
+        className={inputClass}
+      />
+      <div className="flex gap-2">
+        <input
+          value={telefoon}
+          onChange={(e) => setTelefoon(e.target.value)}
+          placeholder="Telefoon"
+          className={inputClass}
+        />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="E-mail"
+          className={inputClass}
+        />
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={waarde}
+          onChange={(e) => setWaarde(e.target.value)}
+          placeholder="Waarde (€)"
+          inputMode="decimal"
+          className={inputClass}
+        />
+        <input
+          value={kans}
+          onChange={(e) => setKans(e.target.value)}
+          placeholder="Kans (%)"
+          inputMode="numeric"
+          className={inputClass}
+        />
+      </div>
+      <label className="block">
+        <span className="mb-1 block text-[11px] text-zinc-500">
+          Volgende opvolging
+        </span>
+        <input
+          type="date"
+          value={deadline}
+          onChange={(e) => setDeadline(e.target.value)}
+          className={inputClass}
+        />
+      </label>
+      <textarea
+        value={notitie}
+        onChange={(e) => setNotitie(e.target.value)}
+        placeholder="Notitie voor de opvolging..."
+        rows={2}
+        className={`${inputClass} resize-none`}
+      />
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg px-3 py-1 text-xs text-zinc-400 transition hover:text-zinc-200"
+        >
+          Annuleren
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          className="rounded-lg bg-sky-500 px-3 py-1 text-xs font-medium text-white transition hover:bg-sky-400"
+        >
+          Opslaan
+        </button>
       </div>
     </div>
   );

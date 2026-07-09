@@ -164,7 +164,7 @@ function Hero() {
       title="Van offerte naar factuur in"
       accent="één klik"
       subtitle="Offerte aanvaard? Nova maakt er in seconden een conforme factuur van. Voorschotten, saldo's, herinneringen — alles geautomatiseerd."
-      primary={{ label: "Gratis factureren proberen", href: "/#start" }}
+      primary={{ label: "Gratis factureren proberen", href: "/register" }}
       secondary={{ label: "Hoe maak je een factuur?", href: "#hoe" }}
       visual={
         <div>
@@ -648,7 +648,7 @@ function FinalCta() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
-                href="/#start"
+                href="/register"
                 className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
               >
                 Gratis account aanmaken

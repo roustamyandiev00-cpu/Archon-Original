@@ -21,7 +21,7 @@ const kanalen = [
     icon: MessageCircle,
     title: "Demo aanvragen",
     desc: "Wil je ArchonPro eerst zien werken voor jouw bedrijf?",
-    action: { label: "Plan een demo", href: "/#start" },
+    action: { label: "Plan een demo", href: "/register" },
   },
   {
     icon: Clock,
