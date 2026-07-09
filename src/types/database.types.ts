@@ -14,151 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      bedrijf_reviews: {
-        Row: {
-          commentaar: string
-          created_at: string
-          id: string
-          rating: number
-          reviewer_company_id: number
-          target_company_id: number
-        }
-        Insert: {
-          commentaar: string
-          created_at?: string
-          id?: string
-          rating: number
-          reviewer_company_id: number
-          target_company_id: number
-        }
-        Update: {
-          commentaar?: string
-          created_at?: string
-          id?: string
-          rating?: number
-          reviewer_company_id?: number
-          target_company_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bedrijf_reviews_reviewer_company_id_fkey"
-            columns: ["reviewer_company_id"]
-            isOneToOne: false
-            referencedRelation: "bedrijven"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bedrijf_reviews_reviewer_company_id_fkey"
-            columns: ["reviewer_company_id"]
-            isOneToOne: false
-            referencedRelation: "bedrijven_directory"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bedrijf_reviews_target_company_id_fkey"
-            columns: ["target_company_id"]
-            isOneToOne: false
-            referencedRelation: "bedrijven"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bedrijf_reviews_target_company_id_fkey"
-            columns: ["target_company_id"]
-            isOneToOne: false
-            referencedRelation: "bedrijven_directory"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      dak_bedrijven: {
-        Row: {
-          adres: string | null
-          beschrijving: string | null
-          categorie: string
-          created_at: string
-          fotos: string[]
-          id: number
-          lat: number | null
-          lng: number | null
-          naam: string
-          postcode: string | null
-          regio: string | null
-          stad: string | null
-          telefoon: string | null
-          toegevoegd_door: string | null
-          website: string | null
-        }
-        Insert: {
-          adres?: string | null
-          beschrijving?: string | null
-          categorie?: string
-          created_at?: string
-          fotos?: string[]
-          id?: number
-          lat?: number | null
-          lng?: number | null
-          naam: string
-          postcode?: string | null
-          regio?: string | null
-          stad?: string | null
-          telefoon?: string | null
-          toegevoegd_door?: string | null
-          website?: string | null
-        }
-        Update: {
-          adres?: string | null
-          beschrijving?: string | null
-          categorie?: string
-          created_at?: string
-          fotos?: string[]
-          id?: number
-          lat?: number | null
-          lng?: number | null
-          naam?: string
-          postcode?: string | null
-          regio?: string | null
-          stad?: string | null
-          telefoon?: string | null
-          toegevoegd_door?: string | null
-          website?: string | null
-        }
-        Relationships: []
-      }
-      dak_bedrijf_reviews: {
-        Row: {
-          commentaar: string
-          created_at: string
-          dak_bedrijf_id: number
-          id: string
-          naam: string
-          rating: number
-        }
-        Insert: {
-          commentaar: string
-          created_at?: string
-          dak_bedrijf_id: number
-          id?: string
-          naam?: string
-          rating: number
-        }
-        Update: {
-          commentaar?: string
-          created_at?: string
-          dak_bedrijf_id?: number
-          id?: string
-          naam?: string
-          rating?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dak_bedrijf_reviews_dak_bedrijf_id_fkey"
-            columns: ["dak_bedrijf_id"]
-            isOneToOne: false
-            referencedRelation: "dak_bedrijven"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       abonnementen: {
         Row: {
           company_id: number | null
@@ -1226,6 +1081,7 @@ export type Database = {
           logo_url: string | null
           naam: string
           owner_user_id: string | null
+          peppol_participant_id: string | null
           plan: string | null
           postcode: string | null
           slug: string | null
@@ -1256,6 +1112,7 @@ export type Database = {
           logo_url?: string | null
           naam: string
           owner_user_id?: string | null
+          peppol_participant_id?: string | null
           plan?: string | null
           postcode?: string | null
           slug?: string | null
@@ -1286,6 +1143,7 @@ export type Database = {
           logo_url?: string | null
           naam?: string
           owner_user_id?: string | null
+          peppol_participant_id?: string | null
           plan?: string | null
           postcode?: string | null
           slug?: string | null
@@ -1777,6 +1635,36 @@ export type Database = {
           },
         ]
       }
+      community_wall_posts: {
+        Row: {
+          author_name: string
+          body: string
+          company: string | null
+          created_at: string
+          id: string
+          kind: string
+          status: string
+        }
+        Insert: {
+          author_name?: string
+          body: string
+          company?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          status?: string
+        }
+        Update: {
+          author_name?: string
+          body?: string
+          company?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          status?: string
+        }
+        Relationships: []
+      }
       company_ai_credits: {
         Row: {
           auto_recharge: boolean
@@ -2146,36 +2034,6 @@ export type Database = {
           },
         ]
       }
-      community_wall_posts: {
-        Row: {
-          author_name: string
-          body: string
-          company: string | null
-          created_at: string
-          id: string
-          kind: string
-          status: string
-        }
-        Insert: {
-          author_name?: string
-          body: string
-          company?: string | null
-          created_at?: string
-          id?: string
-          kind: string
-          status?: string
-        }
-        Update: {
-          author_name?: string
-          body?: string
-          company?: string | null
-          created_at?: string
-          id?: string
-          kind?: string
-          status?: string
-        }
-        Relationships: []
-      }
       contacten: {
         Row: {
           achternaam: string
@@ -2494,8 +2352,10 @@ export type Database = {
         Row: {
           address: string | null
           btw: string | null
+          city: string | null
           company_id: number
           company_name: string | null
+          country: string | null
           created_at: string | null
           created_by: string | null
           email: string | null
@@ -2506,17 +2366,22 @@ export type Database = {
           last_name: string | null
           name: string
           notes: string | null
+          ondernemingsnummer: string | null
+          peppol_participant_id: string | null
           phone: string | null
           portal_activated_at: string | null
           portal_enabled: boolean | null
           portal_invited_at: string | null
+          postcode: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
           btw?: string | null
+          city?: string | null
           company_id: number
           company_name?: string | null
+          country?: string | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
@@ -2527,17 +2392,22 @@ export type Database = {
           last_name?: string | null
           name: string
           notes?: string | null
+          ondernemingsnummer?: string | null
+          peppol_participant_id?: string | null
           phone?: string | null
           portal_activated_at?: string | null
           portal_enabled?: boolean | null
           portal_invited_at?: string | null
+          postcode?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
           btw?: string | null
+          city?: string | null
           company_id?: number
           company_name?: string | null
+          country?: string | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
@@ -2548,10 +2418,13 @@ export type Database = {
           last_name?: string | null
           name?: string
           notes?: string | null
+          ondernemingsnummer?: string | null
+          peppol_participant_id?: string | null
           phone?: string | null
           portal_activated_at?: string | null
           portal_enabled?: boolean | null
           portal_invited_at?: string | null
+          postcode?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2570,6 +2443,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dak_bedrijf_reviews: {
+        Row: {
+          commentaar: string
+          created_at: string
+          dak_bedrijf_id: number
+          id: string
+          naam: string
+          rating: number
+        }
+        Insert: {
+          commentaar: string
+          created_at?: string
+          dak_bedrijf_id: number
+          id?: string
+          naam?: string
+          rating: number
+        }
+        Update: {
+          commentaar?: string
+          created_at?: string
+          dak_bedrijf_id?: number
+          id?: string
+          naam?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dak_bedrijf_reviews_dak_bedrijf_id_fkey"
+            columns: ["dak_bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "dak_bedrijven"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dak_bedrijven: {
+        Row: {
+          adres: string | null
+          beschrijving: string | null
+          categorie: string
+          created_at: string
+          fotos: string[]
+          id: number
+          lat: number | null
+          lng: number | null
+          naam: string
+          postcode: string | null
+          regio: string | null
+          stad: string | null
+          telefoon: string | null
+          toegevoegd_door: string | null
+          website: string | null
+        }
+        Insert: {
+          adres?: string | null
+          beschrijving?: string | null
+          categorie?: string
+          created_at?: string
+          fotos?: string[]
+          id?: never
+          lat?: number | null
+          lng?: number | null
+          naam: string
+          postcode?: string | null
+          regio?: string | null
+          stad?: string | null
+          telefoon?: string | null
+          toegevoegd_door?: string | null
+          website?: string | null
+        }
+        Update: {
+          adres?: string | null
+          beschrijving?: string | null
+          categorie?: string
+          created_at?: string
+          fotos?: string[]
+          id?: never
+          lat?: number | null
+          lng?: number | null
+          naam?: string
+          postcode?: string | null
+          regio?: string | null
+          stad?: string | null
+          telefoon?: string | null
+          toegevoegd_door?: string | null
+          website?: string | null
+        }
+        Relationships: []
       }
       deals: {
         Row: {
@@ -2835,6 +2797,7 @@ export type Database = {
           bedrag: number
           bedrijf_id: number | null
           btw_bedrag: number
+          buyer_reference: string | null
           created_at: string
           credit_nota_voor: number | null
           customer_id: number | null
@@ -2848,9 +2811,14 @@ export type Database = {
           offerte_id: number | null
           omschrijving: string | null
           paid_at: string | null
+          peppol_last_error: string | null
+          peppol_message_id: string | null
+          peppol_sent_at: string | null
+          peppol_status: string
           reminder_count: number
           sent_at: string | null
           status: string
+          structured_communication: string | null
           template_id: string
           totaal_bedrag: number
           updated_at: string
@@ -2862,6 +2830,7 @@ export type Database = {
           bedrag?: number
           bedrijf_id?: number | null
           btw_bedrag?: number
+          buyer_reference?: string | null
           created_at?: string
           credit_nota_voor?: number | null
           customer_id?: number | null
@@ -2875,9 +2844,14 @@ export type Database = {
           offerte_id?: number | null
           omschrijving?: string | null
           paid_at?: string | null
+          peppol_last_error?: string | null
+          peppol_message_id?: string | null
+          peppol_sent_at?: string | null
+          peppol_status?: string
           reminder_count?: number
           sent_at?: string | null
           status?: string
+          structured_communication?: string | null
           template_id?: string
           totaal_bedrag?: number
           updated_at?: string
@@ -2889,6 +2863,7 @@ export type Database = {
           bedrag?: number
           bedrijf_id?: number | null
           btw_bedrag?: number
+          buyer_reference?: string | null
           created_at?: string
           credit_nota_voor?: number | null
           customer_id?: number | null
@@ -2902,9 +2877,14 @@ export type Database = {
           offerte_id?: number | null
           omschrijving?: string | null
           paid_at?: string | null
+          peppol_last_error?: string | null
+          peppol_message_id?: string | null
+          peppol_sent_at?: string | null
+          peppol_status?: string
           reminder_count?: number
           sent_at?: string | null
           status?: string
+          structured_communication?: string | null
           template_id?: string
           totaal_bedrag?: number
           updated_at?: string
@@ -3900,6 +3880,67 @@ export type Database = {
           voorraad?: string | null
         }
         Relationships: []
+      }
+      peppol_transmissions: {
+        Row: {
+          access_point: string | null
+          bedrijf_id: number
+          created_at: string
+          direction: string
+          error_message: string | null
+          factuur_id: number
+          id: number
+          message_id: string | null
+          status: string
+          ubl_hash: string | null
+        }
+        Insert: {
+          access_point?: string | null
+          bedrijf_id: number
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          factuur_id: number
+          id?: never
+          message_id?: string | null
+          status: string
+          ubl_hash?: string | null
+        }
+        Update: {
+          access_point?: string | null
+          bedrijf_id?: number
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          factuur_id?: number
+          id?: never
+          message_id?: string | null
+          status?: string
+          ubl_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peppol_transmissions_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peppol_transmissions_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peppol_transmissions_factuur_id_fkey"
+            columns: ["factuur_id"]
+            isOneToOne: false
+            referencedRelation: "facturen"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_ai_token_limits: {
         Row: {

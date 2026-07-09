@@ -78,8 +78,13 @@ export const ENTITY_FIELDS: Record<ImportEntity, ImportField[]> = {
     { key: "email", label: "E-mail" },
     { key: "phone", label: "Telefoon" },
     { key: "address", label: "Adres" },
+    { key: "postcode", label: "Postcode" },
+    { key: "city", label: "Stad" },
+    { key: "country", label: "Land (ISO)", hint: "Bv. BE" },
     { key: "kvk", label: "Ondernemingsnummer / KvK" },
+    { key: "ondernemingsnummer", label: "KBO-nummer" },
     { key: "btw", label: "BTW-nummer" },
+    { key: "peppol_participant_id", label: "Peppol-ID", hint: "0208:0123456789" },
     { key: "notes", label: "Notities" },
   ],
   offertes: [
@@ -146,10 +151,22 @@ export const COLUMN_ALIASES: Record<
       adres: "address",
       address: "address",
       straat: "address",
+      postcode: "postcode",
+      postal_code: "postcode",
+      zip: "postcode",
+      stad: "city",
+      city: "city",
+      gemeente: "city",
+      land: "country",
+      country: "country",
       kvk: "kvk",
-      ondernemingsnummer: "kvk",
+      ondernemingsnummer: "ondernemingsnummer",
+      kbo: "ondernemingsnummer",
       btw: "btw",
       vat: "btw",
+      peppol: "peppol_participant_id",
+      peppol_id: "peppol_participant_id",
+      peppol_participant_id: "peppol_participant_id",
       notities: "notes",
       notes: "notes",
       opmerkingen: "notes",
@@ -385,7 +402,7 @@ export function csvTemplate(entity: ImportEntity): string {
   const headers = ENTITY_FIELDS[entity].map((f) => f.key).join(",");
   const sample: Record<ImportEntity, string> = {
     customers:
-      "Jan Janssen,Bouwbedrijf Janssen,Jan,Janssen,jan@janssen.be,+32470123456,Stationsstraat 1,0123456789,BE0123456789,VIP klant",
+      "Jan Janssen,Bouwbedrijf Janssen,Jan,Janssen,jan@janssen.be,+32470123456,Stationsstraat 1,2000,Antwerpen,BE,0123456789,0123456789,BE0123456789,0208:0123456789,VIP klant",
     offertes:
       "OFF-2026-0001,Bouwbedrijf Janssen,jan@janssen.be,12500,2026-07-01,2026-08-01,verzonden,Badkamerrenovatie",
     facturen:

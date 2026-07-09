@@ -1,11 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { untyped } from "@/lib/integraties";
+import {
+  normalizeBelgianVat,
+  normalizeStructuredCommunication,
+  peppolEndpointFromParty,
+} from "@/lib/peppol/be";
 import type { UblInvoice, UblParty } from "@/lib/peppol/ubl";
+import { validatePeppolInvoice } from "@/lib/peppol/validate";
 
 export type PeppolConfig = {
   accessPoint: string;
   participantId: string;
   apiKey: string;
+  legalEntityId?: string;
 } | null;
 
 /** Haalt de Peppol access point-configuratie van het bedrijf op (indien verbonden). */
@@ -25,20 +32,46 @@ export async function getPeppolConfig(
     accessPoint: c.accessPoint ?? "",
     participantId: c.participantId ?? "",
     apiKey: c.apiKey ?? "",
+    legalEntityId: c.legalEntityId,
   };
 }
 
-function splitParticipant(
-  participantId: string | undefined,
-): { scheme: string | null; value: string | null } {
-  if (!participantId) return { scheme: null, value: null };
-  const idx = participantId.indexOf(":");
-  if (idx === -1) return { scheme: "0208", value: participantId.trim() };
+function partyFromRecord(
+  record: {
+    name: string;
+    vat?: string | null;
+    address?: string | null;
+    city?: string | null;
+    postalZone?: string | null;
+    country?: string | null;
+    peppolParticipantId?: string | null;
+    kbo?: string | null;
+  },
+): UblParty {
+  const ep = peppolEndpointFromParty({
+    peppolParticipantId: record.peppolParticipantId,
+    kbo: record.kbo,
+    vat: record.vat,
+  });
   return {
-    scheme: participantId.slice(0, idx).trim(),
-    value: participantId.slice(idx + 1).trim(),
+    name: record.name,
+    vat: normalizeBelgianVat(record.vat),
+    address: record.address ?? null,
+    city: record.city ?? null,
+    postalZone: record.postalZone ?? null,
+    country: record.country ?? "BE",
+    endpointScheme: ep?.scheme ?? null,
+    endpointValue: ep?.value ?? null,
   };
 }
+
+export type BuiltFactuurUbl = {
+  ubl: UblInvoice;
+  nummer: string;
+  factuurId: number;
+  readiness: ReturnType<typeof validatePeppolInvoice>;
+  isCreditNote: boolean;
+};
 
 /**
  * Bouwt de UBL-factuurstructuur voor één factuur op basis van bedrijfs-,
@@ -49,16 +82,20 @@ export async function buildFactuurUbl(
   companyId: number,
   factuurId: number,
   peppol: PeppolConfig,
-): Promise<{ ubl: UblInvoice; nummer: string } | null> {
+): Promise<BuiltFactuurUbl | null> {
   const supabase = untyped(supabaseClient) as SupabaseClient;
 
   const { data: factuur } = await supabase
     .from("facturen")
-    .select("id, nummer, klant, datum, vervaldatum, customer_id")
+    .select(
+      "id, nummer, klant, datum, vervaldatum, customer_id, document_type, buyer_reference, structured_communication, omschrijving",
+    )
     .eq("id", factuurId)
     .eq("bedrijf_id", companyId)
     .maybeSingle();
   if (!factuur) return null;
+
+  const isCreditNote = factuur.document_type === "creditnota";
 
   const { data: lijnen } = await supabase
     .from("factuur_lijnen")
@@ -68,7 +105,7 @@ export async function buildFactuurUbl(
 
   const { data: bedrijf } = await supabase
     .from("bedrijven")
-    .select("naam, adres, postcode, stad, btw, iban")
+    .select("naam, adres, postcode, stad, btw, iban, kvk, peppol_participant_id")
     .eq("id", companyId)
     .maybeSingle();
 
@@ -77,40 +114,66 @@ export async function buildFactuurUbl(
     company_name: string | null;
     address: string | null;
     btw: string | null;
+    postcode: string | null;
+    city: string | null;
+    country: string | null;
+    ondernemingsnummer: string | null;
+    peppol_participant_id: string | null;
   } | null = null;
   if (factuur.customer_id) {
     const { data } = await supabase
       .from("customers")
-      .select("name, company_name, address, btw")
+      .select(
+        "name, company_name, address, btw, kvk, postcode, city, country, ondernemingsnummer, peppol_participant_id",
+      )
       .eq("id", factuur.customer_id)
       .eq("company_id", companyId)
       .maybeSingle();
     customer = data;
   }
 
-  const supplierEndpoint = splitParticipant(peppol?.participantId || undefined);
-  const supplier: UblParty = {
+  const supplierParticipant =
+    peppol?.participantId ||
+    bedrijf?.peppol_participant_id ||
+    null;
+
+  const supplier = partyFromRecord({
     name: bedrijf?.naam ?? "Onbekend",
-    vat: bedrijf?.btw ?? null,
-    address: bedrijf?.adres ?? null,
-    city: bedrijf?.stad ?? null,
-    postalZone: bedrijf?.postcode ?? null,
+    vat: bedrijf?.btw,
+    address: bedrijf?.adres,
+    city: bedrijf?.stad,
+    postalZone: bedrijf?.postcode,
     country: "BE",
-    endpointScheme: supplierEndpoint.scheme,
-    endpointValue: supplierEndpoint.value,
-  };
+    peppolParticipantId: supplierParticipant,
+    kbo: bedrijf?.kvk,
+  });
 
   const customerName =
     customer?.company_name?.trim() ||
     customer?.name?.trim() ||
     factuur.klant ||
     "Klant";
-  const buyer: UblParty = {
+
+  const buyer = partyFromRecord({
     name: customerName,
-    vat: customer?.btw ?? null,
-    address: customer?.address ?? null,
-    country: "BE",
-  };
+    vat: customer?.btw,
+    address: customer?.address,
+    city: customer?.city,
+    postalZone: customer?.postcode,
+    country: customer?.country ?? "BE",
+    peppolParticipantId: customer?.peppol_participant_id,
+    kbo: customer?.ondernemingsnummer ?? customer?.kvk,
+  });
+
+  const buyerReference =
+    factuur.buyer_reference?.trim() ||
+    factuur.omschrijving?.trim() ||
+    factuur.nummer ||
+    String(factuur.id);
+
+  const structuredCommunication = normalizeStructuredCommunication(
+    factuur.structured_communication,
+  );
 
   const ubl: UblInvoice = {
     id: factuur.nummer ?? String(factuur.id),
@@ -120,6 +183,10 @@ export async function buildFactuurUbl(
     supplier,
     customer: buyer,
     iban: bedrijf?.iban ?? null,
+    buyerReference,
+    structuredCommunication,
+    invoiceTypeCode: isCreditNote ? "381" : "380",
+    note: factuur.omschrijving,
     lines: (lijnen ?? []).map((l) => ({
       name: l.omschrijving ?? "",
       quantity: Number(l.aantal ?? 0),
@@ -129,5 +196,58 @@ export async function buildFactuurUbl(
     })),
   };
 
-  return { ubl, nummer: factuur.nummer ?? String(factuur.id) };
+  const readiness = validatePeppolInvoice(ubl, {
+    isCreditNote,
+    structuredCommunication,
+  });
+
+  return {
+    ubl,
+    nummer: factuur.nummer ?? String(factuur.id),
+    factuurId: factuur.id,
+    readiness,
+    isCreditNote,
+  };
+}
+
+/** Synchroniseer bedrijfsgegevens naar company_legal_entities (EN16931 BT-27..). */
+export async function syncCompanyLegalEntity(
+  supabaseClient: unknown,
+  companyId: number,
+) {
+  const supabase = untyped(supabaseClient) as SupabaseClient;
+  const { data: bedrijf } = await supabase
+    .from("bedrijven")
+    .select("naam, kvk, btw, iban, adres, postcode, stad")
+    .eq("id", companyId)
+    .maybeSingle();
+  if (!bedrijf?.kvk?.trim() || !bedrijf?.btw?.trim()) return;
+
+  const payload = {
+    bedrijf_id: companyId,
+    legal_name: bedrijf.naam,
+    enterprise_number: bedrijf.kvk.trim(),
+    vat_number: normalizeBelgianVat(bedrijf.btw) ?? bedrijf.btw.trim(),
+    iban: bedrijf.iban,
+    street: bedrijf.adres,
+    postal_code: bedrijf.postcode,
+    city: bedrijf.stad,
+    country_code: "BE",
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: existing } = await supabase
+    .from("company_legal_entities")
+    .select("id")
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  if (existing?.id) {
+    await supabase
+      .from("company_legal_entities")
+      .update(payload)
+      .eq("bedrijf_id", companyId);
+  } else {
+    await supabase.from("company_legal_entities").insert(payload);
+  }
 }

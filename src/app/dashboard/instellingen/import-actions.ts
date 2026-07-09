@@ -212,6 +212,9 @@ export async function executeDataImport(
         }
       }
 
+      const kbo =
+        row.ondernemingsnummer?.trim() || row.kvk?.trim() || null;
+
       const { error } = await supabase.from("customers").insert({
         company_id: companyId,
         created_by: user.id,
@@ -222,8 +225,13 @@ export async function executeDataImport(
         email: row.email || null,
         phone: row.phone || null,
         address: row.address || null,
-        kvk: row.kvk || null,
+        postcode: row.postcode || null,
+        city: row.city || null,
+        country: row.country?.trim() || "BE",
+        ondernemingsnummer: kbo,
+        kvk: kbo,
         btw: row.btw || null,
+        peppol_participant_id: row.peppol_participant_id || null,
         notes: row.notes || null,
         is_active: true,
       });

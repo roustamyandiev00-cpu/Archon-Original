@@ -66,6 +66,7 @@ export function StatCard({
   positive = true,
   href,
   size = "default",
+  sublabel,
 }: {
   label: string;
   value: string;
@@ -75,6 +76,8 @@ export function StatCard({
   positive?: boolean;
   href?: string;
   size?: "default" | "lg" | "compact";
+  /** Korte waarschuwing onder de waarde, bv. "3 vervallen". */
+  sublabel?: string;
 }) {
   const Icon = statIcons[icon];
   const stroke = positive ? "#38bdf8" : "#e85a6b";
@@ -115,6 +118,15 @@ export function StatCard({
           >
             {value}
           </p>
+          {sublabel && (
+            <p
+              className={`mt-0.5 font-medium text-rose-400 ${
+                compact ? "text-[10px]" : "text-xs"
+              }`}
+            >
+              {sublabel}
+            </p>
+          )}
         </div>
         <span
           className={`grid shrink-0 place-items-center text-sky-400/80 ${

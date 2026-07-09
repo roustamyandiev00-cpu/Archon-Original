@@ -31,6 +31,7 @@ export type SettingsInput = {
   kvk: string;
   btw: string;
   iban: string;
+  peppol_participant_id: string;
   logo_url: string;
   // Offerte- & factuurgegevens
   betaalterm: number;

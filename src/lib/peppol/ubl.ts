@@ -32,6 +32,11 @@ export type UblInvoice = {
   customer: UblParty;
   iban?: string | null;
   note?: string | null;
+  /** BT-10 — verplicht in België */
+  buyerReference?: string | null;
+  /** Belgische gestructureerde mededeling */
+  structuredCommunication?: string | null;
+  invoiceTypeCode?: string; // 380 factuur, 381 creditnota
   lines: UblLine[];
 };
 
@@ -188,12 +193,28 @@ export function buildInvoiceUBL(inv: UblInvoice): string {
     ? [
         `  <cac:PaymentMeans>`,
         `    <cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>`,
+        inv.structuredCommunication
+          ? `    <cbc:PaymentID>${esc(inv.structuredCommunication)}</cbc:PaymentID>`
+          : "",
         `    <cac:PayeeFinancialAccount>`,
         `      <cbc:ID>${esc(inv.iban.replace(/\s+/g, ""))}</cbc:ID>`,
         `    </cac:PayeeFinancialAccount>`,
         `  </cac:PaymentMeans>`,
-      ].join("\n")
+      ]
+        .filter(Boolean)
+        .join("\n")
     : "";
+
+  const paymentTerms =
+    inv.dueDate
+      ? [
+          `  <cac:PaymentTerms>`,
+          `    <cbc:Note>Betaalbaar tot ${isoDate(inv.dueDate)}</cbc:Note>`,
+          `  </cac:PaymentTerms>`,
+        ].join("\n")
+      : "";
+
+  const typeCode = inv.invoiceTypeCode || "380";
 
   return [
     `<?xml version="1.0" encoding="UTF-8"?>`,
@@ -205,12 +226,16 @@ export function buildInvoiceUBL(inv: UblInvoice): string {
     `  <cbc:ID>${esc(inv.id)}</cbc:ID>`,
     `  <cbc:IssueDate>${isoDate(inv.issueDate)}</cbc:IssueDate>`,
     inv.dueDate ? `  <cbc:DueDate>${isoDate(inv.dueDate)}</cbc:DueDate>` : "",
-    `  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>`,
+    `  <cbc:InvoiceTypeCode>${typeCode}</cbc:InvoiceTypeCode>`,
+    inv.buyerReference
+      ? `  <cbc:BuyerReference>${esc(inv.buyerReference)}</cbc:BuyerReference>`
+      : "",
     inv.note ? `  <cbc:Note>${esc(inv.note)}</cbc:Note>` : "",
     `  <cbc:DocumentCurrencyCode>${currency}</cbc:DocumentCurrencyCode>`,
     party("AccountingSupplierParty", inv.supplier),
     party("AccountingCustomerParty", inv.customer),
     paymentMeans,
+    paymentTerms,
     `  <cac:TaxTotal>`,
     `    <cbc:TaxAmount currencyID="${currency}">${money(taxTotal)}</cbc:TaxAmount>`,
     subtotals,

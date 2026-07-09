@@ -134,6 +134,7 @@ function ConnectModal({
   const cfg = current?.config ?? {};
   const connected = current?.status === "connected";
   const isOAuthFlow = provider.auth === "oauth" && hasOAuth(provider.id);
+  const isConnectFlow = provider.auth === "connect";
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [configured, setConfigured] = useState(
@@ -162,6 +163,14 @@ function ConnectModal({
   const [legalEntityId, setLegalEntityId] = useState(
     (cfg.legalEntityId as string) ?? "",
   );
+  const [connectorUid, setConnectorUid] = useState(
+    (cfg.connectorUid as string) ?? "",
+  );
+  const [notificationChannel, setNotificationChannel] = useState(
+    (cfg.notificationChannel as string) ?? "",
+  );
+  const workspaceName =
+    typeof cfg.workspaceName === "string" ? cfg.workspaceName : null;
 
   const redirectUri = origin
     ? `${origin}/dashboard/integraties/${provider.id}/callback`
@@ -177,6 +186,11 @@ function ConnectModal({
         apiKey: apiKey.trim(),
         legalEntityId: legalEntityId.trim(),
       };
+    } else if (isConnectFlow) {
+      config = {
+        connectorUid: connectorUid.trim(),
+        notificationChannel: notificationChannel.trim(),
+      };
     } else if (isOAuthFlow) {
       config = { clientId: clientId.trim(), clientSecret: clientSecret.trim() };
     } else {
@@ -188,8 +202,8 @@ function ConnectModal({
         setError(res.error);
         return;
       }
-      // OAuth-flow: modal openhouden zodat de gebruiker kan autoriseren.
-      if (isOAuthFlow) {
+      // OAuth- of Connect-flow: modal openhouden zodat de gebruiker kan autoriseren.
+      if (isOAuthFlow || isConnectFlow) {
         setConfigured(true);
         return;
       }
@@ -313,6 +327,87 @@ function ConnectModal({
                     className={inputClass}
                   />
                 </div>
+              )}
+            </>
+          ) : isConnectFlow ? (
+            <>
+              <p className="text-xs text-zinc-500">
+                Tokens komen via{" "}
+                <a
+                  href="https://vercel.com/docs/connect"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-400 hover:underline"
+                >
+                  Vercel Connect
+                </a>
+                . Geen bot-token in je omgeving.
+              </p>
+              <div>
+                <label className={labelClass}>Connector-UID</label>
+                <input
+                  value={connectorUid}
+                  onChange={(e) => setConnectorUid(e.target.value)}
+                  placeholder="slack/archon"
+                  className={inputClass}
+                />
+                <p className="mt-1 text-xs text-zinc-500">
+                  Optioneel als <code>SLACK_CONNECTOR</code> al in de omgeving
+                  staat.
+                </p>
+              </div>
+              <div>
+                <label className={labelClass}>Meldingenkanaal (optioneel)</label>
+                <input
+                  value={notificationChannel}
+                  onChange={(e) => setNotificationChannel(e.target.value)}
+                  placeholder="#facturen of C01234567"
+                  className={inputClass}
+                />
+              </div>
+              {connected && workspaceName && (
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+                  Workspace: <b>{workspaceName}</b>
+                </p>
+              )}
+              {(configured || connected) && (
+                <a
+                  href="/dashboard/integraties/slack/authorize"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-400"
+                >
+                  <ExternalLink size={15} />
+                  {connected
+                    ? "Opnieuw koppelen"
+                    : "Slack-workspace koppelen"}
+                </a>
+              )}
+              {connected && (
+                <button
+                  type="button"
+                  onClick={runTest}
+                  disabled={testing}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
+                >
+                  {testing ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" /> Testen…
+                    </>
+                  ) : (
+                    <>
+                      <Link2 size={15} /> Test verbinding
+                    </>
+                  )}
+                </button>
+              )}
+              {testMsg && (
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+                  {testMsg}
+                </p>
+              )}
+              {testErr && (
+                <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+                  {testErr}
+                </p>
               )}
             </>
           ) : isOAuthFlow ? (
@@ -444,7 +539,7 @@ function ConnectModal({
                 <Check size={15} />{" "}
                 {connected
                   ? "Bijwerken"
-                  : isOAuthFlow
+                  : isOAuthFlow || isConnectFlow
                     ? "Opslaan"
                     : "Verbinden"}
               </>

@@ -6,6 +6,7 @@ import { euro } from "@/components/dashboard/mission-data";
 import type { ActionItem } from "@/components/dashboard/ActionItems";
 import type {
   AgentFleetMember,
+  ChartsData,
   DoneItem,
   MissionTask,
   NovaBriefing,
@@ -26,18 +27,21 @@ export type DashboardHomeProps = {
     klantenCount: number;
     gefactureerd: number;
     openstaand: number;
+    overdueFacturenCount: number;
     actionItems: ActionItem[];
     tasks: MissionTask[];
     important: MissionTask[];
     activity: DoneItem[];
     nova: NovaBriefing;
   };
+  charts: ChartsData;
 };
 
 export default function DashboardHome({
   companyId,
   agentName,
   mission,
+  charts,
 }: DashboardHomeProps) {
   const activeAgents = mission.agents.filter((a) => a.pending > 0).length;
 
@@ -124,6 +128,11 @@ export default function DashboardHome({
             positive={false}
             size="compact"
             href="/dashboard/facturen"
+            sublabel={
+              mission.overdueFacturenCount > 0
+                ? `${mission.overdueFacturenCount} vervallen`
+                : undefined
+            }
           />
         </div>
       </section>
@@ -152,7 +161,7 @@ export default function DashboardHome({
         isDemo={mission.isDemo}
       />
 
-      <DashboardChartsSection />
+      <DashboardChartsSection charts={charts} />
     </div>
   );
 }

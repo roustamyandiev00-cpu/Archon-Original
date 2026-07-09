@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
 import { saveUserAgentName } from "@/lib/agents/userAi";
 import { DEFAULT_TEMPLATE, parseExtras, type Extras, type SettingsInput } from "./settings";
+import { syncCompanyLegalEntity } from "@/lib/peppol/build";
 
 const num = (v: number, fallback = 0) =>
   Number.isFinite(v) && v >= 0 ? v : fallback;
@@ -68,6 +69,7 @@ export async function updateSettings(input: SettingsInput) {
     kvk: input.kvk.trim() || null,
     btw: input.btw.trim() || null,
     iban: input.iban.trim() || null,
+    peppol_participant_id: input.peppol_participant_id.trim() || null,
     logo_url: input.logo_url.trim() || null,
     betaalterm: num(input.betaalterm, 30),
     algemene_voorwaarden: input.algemene_voorwaarden.trim() || null,
@@ -84,6 +86,8 @@ export async function updateSettings(input: SettingsInput) {
     .eq("id", companyId);
 
   if (error) return { error: error.message };
+
+  await syncCompanyLegalEntity(supabase, companyId);
 
   revalidatePath("/dashboard/instellingen");
   revalidatePath("/dashboard");

@@ -1,9 +1,98 @@
 "use server";
 
+import { createHash } from "crypto";
+import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
-import { getPeppolConfig, buildFactuurUbl } from "@/lib/peppol/build";
+import {
+  getPeppolConfig,
+  buildFactuurUbl,
+  syncCompanyLegalEntity,
+} from "@/lib/peppol/build";
 import { buildInvoiceUBL } from "@/lib/peppol/ubl";
 import { sendViaAccessPoint } from "@/lib/peppol/send";
+import { normalizeStructuredCommunication } from "@/lib/peppol/be";
+import { untyped } from "@/lib/integraties";
+
+function hashXml(xml: string) {
+  return createHash("sha256").update(xml, "utf8").digest("hex");
+}
+
+async function logTransmission(
+  supabase: unknown,
+  input: {
+    companyId: number;
+    factuurId: number;
+    status: string;
+    accessPoint?: string;
+    messageId?: string;
+    error?: string;
+    ublHash?: string;
+  },
+) {
+  await untyped(supabase).from("peppol_transmissions").insert({
+    bedrijf_id: input.companyId,
+    factuur_id: input.factuurId,
+    direction: "outbound",
+    status: input.status,
+    access_point: input.accessPoint ?? null,
+    message_id: input.messageId ?? null,
+    error_message: input.error ?? null,
+    ubl_hash: input.ublHash ?? null,
+  });
+}
+
+/** Sla Peppol-specifieke factuurvelden op (kopersreferentie, gestructureerde mededeling). */
+export async function updateFactuurPeppolFields(
+  factuurId: number,
+  fields: {
+    buyerReference?: string;
+    structuredCommunication?: string;
+  },
+) {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const patch: Record<string, string | null> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (fields.buyerReference !== undefined) {
+    patch.buyer_reference = fields.buyerReference.trim() || null;
+  }
+  if (fields.structuredCommunication !== undefined) {
+    patch.structured_communication = normalizeStructuredCommunication(
+      fields.structuredCommunication,
+    );
+  }
+
+  const { error } = await untyped(supabase)
+    .from("facturen")
+    .update(patch)
+    .eq("id", factuurId)
+    .eq("bedrijf_id", companyId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/facturen/${factuurId}`);
+  return { ok: true };
+}
+
+/** Valideer of een factuur klaar is voor Peppol (zonder te versturen). */
+export async function checkFactuurPeppolReadiness(factuurId: number) {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const peppol = await getPeppolConfig(supabase, companyId);
+  const built = await buildFactuurUbl(supabase, companyId, factuurId, peppol);
+  if (!built) return { error: "Factuur niet gevonden." };
+
+  return {
+    ok: built.readiness.ok,
+    issues: built.readiness.issues,
+    peppolConnected: Boolean(peppol),
+  };
+}
 
 /** Verstuurt een factuur als e-factuur via het geconfigureerde Peppol access point. */
 export async function sendFactuurViaPeppol(factuurId: number) {
@@ -22,11 +111,81 @@ export async function sendFactuurViaPeppol(factuurId: number) {
   const built = await buildFactuurUbl(supabase, companyId, factuurId, peppol);
   if (!built) return { error: "Factuur niet gevonden." };
 
+  if (!built.readiness.ok) {
+    const first = built.readiness.issues.find((i) => i.severity === "error");
+    return {
+      error:
+        first?.message ??
+        "Factuur voldoet niet aan de Peppol-vereisten. Los de openstaande punten op.",
+      issues: built.readiness.issues,
+    };
+  }
+
   const xml = buildInvoiceUBL(built.ubl);
+  const ublHash = hashXml(xml);
+
   const result = await sendViaAccessPoint(peppol, xml, {
     vat: built.ubl.customer.vat,
   });
 
-  if (!result.ok) return { error: result.error };
+  const now = new Date().toISOString();
+
+  if (!result.ok) {
+    await untyped(supabase)
+      .from("facturen")
+      .update({
+        peppol_status: "fout",
+        peppol_last_error: result.error,
+        updated_at: now,
+      })
+      .eq("id", factuurId)
+      .eq("bedrijf_id", companyId);
+
+    await logTransmission(supabase, {
+      companyId,
+      factuurId,
+      status: "fout",
+      accessPoint: peppol.accessPoint,
+      error: result.error,
+      ublHash,
+    });
+
+    revalidatePath(`/dashboard/facturen/${factuurId}`);
+    return { error: result.error };
+  }
+
+  await untyped(supabase)
+    .from("facturen")
+    .update({
+      peppol_status: "verzonden",
+      peppol_sent_at: now,
+      peppol_message_id: result.id,
+      peppol_last_error: null,
+      sent_at: now,
+      status: "verzonden",
+      updated_at: now,
+    })
+    .eq("id", factuurId)
+    .eq("bedrijf_id", companyId);
+
+  await logTransmission(supabase, {
+    companyId,
+    factuurId,
+    status: "verzonden",
+    accessPoint: result.accessPoint,
+    messageId: result.id,
+    ublHash,
+  });
+
+  revalidatePath(`/dashboard/facturen/${factuurId}`);
+  revalidatePath("/dashboard/facturen");
   return { ok: true, id: result.id };
+}
+
+/** Synchroniseer bedrijfsgegevens naar company_legal_entities na instellingen-wijziging. */
+export async function syncPeppolCompanyProfile() {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  await syncCompanyLegalEntity(access.supabase, access.companyId);
+  return { ok: true };
 }

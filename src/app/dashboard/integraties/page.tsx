@@ -59,8 +59,8 @@ export default async function IntegratiesPage({
           <div>
             <h1 className="text-xl font-semibold text-zinc-50">Integraties</h1>
             <p className="mt-0.5 text-sm text-zinc-500">
-              Koppel je boekhoud- en bouwsoftware en sluit aan op het
-              Peppol-netwerk voor e-facturatie.
+              Koppel je boekhoud- en bouwsoftware, sluit aan op Peppol en
+              ontvang meldingen in Slack.
             </p>
           </div>
         </div>

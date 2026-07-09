@@ -3,11 +3,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ActionItem } from "@/components/dashboard/ActionItems";
 import { DEMO_DASHBOARD } from "@/lib/demo";
 import { relTime } from "@/components/dashboard/mission";
+import { STADIA } from "@/components/dashboard/leads/stages";
 import {
   capabilityHref,
   type AgentCapability,
   type CustomAgent,
 } from "@/components/dashboard/agents/config";
+
+/** Actieve pipeline-stadia — alles behalve gesloten deals. */
+const OPEN_STADIA = STADIA.filter(
+  (s) => s !== "Gewonnen" && s !== "Verloren",
+);
+
+/** Stadia die in de sales-funnel getoond worden (verloren deals tellen niet mee). */
+const FUNNEL_STAGES = STADIA.filter((s) => s !== "Verloren");
 
 type PendingActionRow = {
   id: number;
@@ -142,6 +151,25 @@ function daysSince(iso: string | null | undefined) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 864e5);
 }
 
+const shortDateFmt = new Intl.DateTimeFormat("nl-NL", {
+  day: "numeric",
+  month: "short",
+});
+
+function dealDeadlineUrgency(
+  deadline: string | null,
+): "overdue" | "soon" | null {
+  if (!deadline) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(deadline);
+  d.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((d.getTime() - today.getTime()) / 86_400_000);
+  if (diffDays < 0) return "overdue";
+  if (diffDays <= 3) return "soon";
+  return null;
+}
+
 export async function loadNavBadges(
   supabase: SupabaseClient,
   companyId: number | null,
@@ -159,7 +187,7 @@ export async function loadNavBadges(
       .from("deals")
       .select("id", { count: "exact", head: true })
       .eq("bedrijf_id", companyId)
-      .in("stadium", ["Nieuw", "Gekwalificeerd", "Offerte verzonden"]),
+      .in("stadium", OPEN_STADIA),
   ]);
 
   return {
@@ -252,6 +280,7 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
   let klantenCount = 0;
   let gefactureerd = 0;
   let openstaand = 0;
+  let overdueFacturenCount = 0;
   let actionItems: ActionItem[] = [];
   let activity: DoneItem[] = [];
   let tasks: MissionTask[] = [];
@@ -322,9 +351,9 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
         .from("deals")
         .select("id, titel, stadium, waarde, deadline")
         .eq("bedrijf_id", companyId)
-        .in("stadium", ["Nieuw", "Gekwalificeerd", "Offerte verzonden"])
-        .order("created_at", { ascending: false })
-        .limit(4),
+        .in("stadium", OPEN_STADIA)
+        .order("deadline", { ascending: true, nullsFirst: false })
+        .limit(8),
       supabase
         .from("offertes")
         .select("id, nummer, klant, accepted_at")
@@ -344,6 +373,7 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
     const overdueFacturen = openFacturen.filter(
       (f) => f.vervaldatum && f.vervaldatum < today,
     );
+    overdueFacturenCount = overdueFacturen.length;
     const openFacturenTasks = openFacturen.slice(0, 5);
 
     offertesCount = offertesRes.count ?? 0;
@@ -418,15 +448,38 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
     }
 
     for (const d of deals.data ?? []) {
-      tasks.push({
-        id: `deal-${d.id}`,
-        title: d.titel,
-        detail: `${d.stadium} — pipeline ${euro(Number(d.waarde ?? 0))}`,
-        kind: "opvolging",
-        href: "/dashboard/leads",
-        priority: "medium",
-        label: "Lead",
-      });
+      const urgency = dealDeadlineUrgency(d.deadline);
+      if (urgency === "overdue") {
+        important.push({
+          id: `deal-${d.id}`,
+          title: `${d.titel} opvolgen`,
+          detail: `Opvolging gepland op ${shortDateFmt.format(new Date(d.deadline!))} — nu te laat`,
+          kind: "opvolging",
+          href: "/dashboard/leads",
+          priority: "high",
+          label: "Opvolgen",
+        });
+      } else if (urgency === "soon") {
+        tasks.push({
+          id: `deal-${d.id}`,
+          title: `${d.titel} opvolgen`,
+          detail: `Opvolgen op ${shortDateFmt.format(new Date(d.deadline!))} — ${d.stadium}`,
+          kind: "opvolging",
+          href: "/dashboard/leads",
+          priority: "medium",
+          label: "Opvolgen",
+        });
+      } else {
+        tasks.push({
+          id: `deal-${d.id}`,
+          title: d.titel,
+          detail: `${d.stadium} — pipeline ${euro(Number(d.waarde ?? 0))}`,
+          kind: "opvolging",
+          href: "/dashboard/leads",
+          priority: "low",
+          label: "Lead",
+        });
+      }
     }
 
     if (offertesCount === 0 && klantenCount > 0) {
@@ -493,6 +546,7 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
     klantenCount = DEMO_DASHBOARD.klantenCount;
     gefactureerd = DEMO_DASHBOARD.gefactureerd;
     openstaand = DEMO_DASHBOARD.openstaand;
+    overdueFacturenCount = 1;
     actionItems = DEMO_DASHBOARD.actionItems;
     activity = DEMO_DASHBOARD.activity.map((a) => ({
       id: String(a.id),
@@ -523,6 +577,7 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
     klantenCount,
     gefactureerd,
     openstaand,
+    overdueFacturenCount,
     actionItems,
     activity,
     tasks,
@@ -542,6 +597,7 @@ export function assembleMissionOverview(
     klantenCount,
     gefactureerd,
     openstaand,
+    overdueFacturenCount,
     actionItems,
     activity,
     tasks,
@@ -579,6 +635,7 @@ export function assembleMissionOverview(
     klantenCount,
     gefactureerd,
     openstaand,
+    overdueFacturenCount,
     actionItems,
     activity: activity.slice(0, 8),
     tasks,
@@ -878,5 +935,137 @@ function buildAgentFleet(input: {
     };
   });
 }
+
+export type ChartWeek = { week: string; omzet: number; offertes: number };
+export type FunnelStage = { label: string; value: number };
+export type ChartsData = {
+  trend: ChartWeek[];
+  funnel: FunnelStage[];
+  isDemo: boolean;
+};
+
+const FALLBACK_TREND: ChartWeek[] = [
+  { week: "W1", omzet: 42, offertes: 18 },
+  { week: "W2", omzet: 48, offertes: 22 },
+  { week: "W3", omzet: 45, offertes: 20 },
+  { week: "W4", omzet: 58, offertes: 27 },
+  { week: "W5", omzet: 61, offertes: 25 },
+  { week: "W6", omzet: 70, offertes: 31 },
+  { week: "W7", omzet: 66, offertes: 29 },
+  { week: "W8", omzet: 78, offertes: 34 },
+  { week: "W9", omzet: 84, offertes: 38 },
+  { week: "W10", omzet: 92, offertes: 41 },
+  { week: "W11", omzet: 88, offertes: 39 },
+  { week: "W12", omzet: 101, offertes: 44 },
+];
+
+const FALLBACK_FUNNEL: FunnelStage[] = [
+  { label: "Lead", value: 148 },
+  { label: "Gekwalificeerd", value: 96 },
+  { label: "Voorstel", value: 61 },
+  { label: "Onderhandeling", value: 34 },
+  { label: "Gewonnen", value: 21 },
+];
+
+function bucketByWeek(
+  facturen: { totaal_bedrag: number | null; paid_at: string | null }[],
+  offertes: { created_at: string | null }[],
+  start: Date,
+): ChartWeek[] {
+  const weeks = Array.from({ length: 12 }, (_, i) => {
+    const s = new Date(start);
+    s.setDate(s.getDate() + i * 7);
+    const e = new Date(s);
+    e.setDate(e.getDate() + 7);
+    return {
+      week: `W${i + 1}`,
+      omzet: 0,
+      offertes: 0,
+      start: s.getTime(),
+      end: e.getTime(),
+    };
+  });
+
+  for (const f of facturen) {
+    if (!f.paid_at) continue;
+    const t = new Date(f.paid_at).getTime();
+    const bucket = weeks.find((w) => t >= w.start && t < w.end);
+    if (bucket) bucket.omzet += Number(f.totaal_bedrag ?? 0) / 1000;
+  }
+  for (const o of offertes) {
+    if (!o.created_at) continue;
+    const t = new Date(o.created_at).getTime();
+    const bucket = weeks.find((w) => t >= w.start && t < w.end);
+    if (bucket) bucket.offertes += 1;
+  }
+
+  return weeks.map((w) => ({
+    week: w.week,
+    omzet: Math.round(w.omzet * 10) / 10,
+    offertes: w.offertes,
+  }));
+}
+
+/** Echte omzettrend + sales-funnel voor de Overzicht-charts (i.p.v. hardcoded demo-cijfers). */
+export const fetchChartsData = cache(async function fetchChartsData(
+  supabase: SupabaseClient,
+  companyId: number | null,
+): Promise<ChartsData> {
+  if (!companyId) {
+    return { trend: FALLBACK_TREND, funnel: FALLBACK_FUNNEL, isDemo: true };
+  }
+
+  const start = new Date();
+  start.setDate(start.getDate() - 12 * 7);
+  const sinceIso = start.toISOString();
+
+  const [paidFacturenRes, offertesRes, dealsRes] = await Promise.all([
+    supabase
+      .from("facturen")
+      .select("totaal_bedrag, paid_at")
+      .eq("bedrijf_id", companyId)
+      .not("paid_at", "is", null)
+      .gte("paid_at", sinceIso),
+    supabase
+      .from("offertes")
+      .select("created_at")
+      .eq("bedrijf_id", companyId)
+      .gte("created_at", sinceIso),
+    supabase
+      .from("deals")
+      .select("stadium")
+      .eq("bedrijf_id", companyId)
+      .neq("stadium", "Verloren"),
+  ]);
+
+  const trend = bucketByWeek(
+    paidFacturenRes.data ?? [],
+    offertesRes.data ?? [],
+    start,
+  );
+
+  const counts = new Map<string, number>();
+  for (const stage of FUNNEL_STAGES) counts.set(stage, 0);
+  for (const d of dealsRes.data ?? []) {
+    const stadium = (FUNNEL_STAGES as readonly string[]).includes(d.stadium)
+      ? d.stadium
+      : "Lead";
+    counts.set(stadium, (counts.get(stadium) ?? 0) + 1);
+  }
+  const funnel: FunnelStage[] = FUNNEL_STAGES.map((label) => ({
+    label,
+    value: counts.get(label) ?? 0,
+  }));
+
+  const isDemo =
+    trend.every((w) => w.omzet === 0 && w.offertes === 0) &&
+    funnel.every((f) => f.value === 0);
+
+  return {
+    trend: isDemo ? FALLBACK_TREND : trend,
+    funnel: isDemo ? FALLBACK_FUNNEL : funnel,
+    isDemo,
+  };
+});
 
 export { euro };

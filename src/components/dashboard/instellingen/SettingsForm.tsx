@@ -561,6 +561,17 @@ export default function SettingsForm({
                   className={inputClass}
                 />
               </Field>
+              <Field
+                label="Peppol-identificatie"
+                hint="Verplicht voor e-facturatie. Gebruik 0208:KBO-nummer of 9925:BE0xxx (BTW)."
+              >
+                <input
+                  value={form.peppol_participant_id}
+                  onChange={(e) => set("peppol_participant_id", e.target.value)}
+                  placeholder="0208:0123456789"
+                  className={inputClass}
+                />
+              </Field>
               <LogoField
                 value={form.logo_url}
                 onChange={(v) => set("logo_url", v)}

@@ -41,8 +41,7 @@ async function sendViaStorecove(
   ublXml: string,
   recipient: PeppolRecipient,
 ): Promise<SendResult> {
-  const legalEntityId = (config as unknown as { legalEntityId?: string })
-    .legalEntityId;
+  const legalEntityId = config.legalEntityId;
   if (!legalEntityId) {
     return {
       ok: false,

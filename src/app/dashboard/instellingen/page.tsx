@@ -25,7 +25,7 @@ export default async function InstellingenPage() {
   const { data } = await supabase
     .from("bedrijven")
     .select(
-      "naam, adres, postcode, stad, telefoon, email, kvk, btw, iban, logo_url, betaalterm, algemene_voorwaarden, footer_tekst, default_quote_template, default_invoice_template, ai_assistant",
+      "naam, adres, postcode, stad, telefoon, email, kvk, btw, iban, peppol_participant_id, logo_url, betaalterm, algemene_voorwaarden, footer_tekst, default_quote_template, default_invoice_template, ai_assistant",
     )
     .eq("id", companyId)
     .maybeSingle();
@@ -61,6 +61,7 @@ export default async function InstellingenPage() {
     kvk: data?.kvk ?? "",
     btw: data?.btw ?? "",
     iban: data?.iban ?? "",
+    peppol_participant_id: data?.peppol_participant_id ?? "",
     logo_url: data?.logo_url ?? "",
     betaalterm: data?.betaalterm ?? 30,
     standaardBtw: extras.standaardBtw,

@@ -59,7 +59,7 @@ export default async function FactuurDetailPage({
   const { data: factuur } = await supabase
     .from("facturen")
     .select(
-      "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, paid_at, customer_id, template_id, offerte_id",
+      "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, paid_at, customer_id, template_id, offerte_id, buyer_reference, structured_communication, peppol_status, peppol_last_error",
     )
     .eq("id", factuurId)
     .eq("bedrijf_id", companyId)
@@ -276,6 +276,10 @@ export default async function FactuurDetailPage({
           <PeppolActions
             factuurId={factuur.id}
             peppolConnected={peppolConnected}
+            buyerReference={factuur.buyer_reference}
+            structuredCommunication={factuur.structured_communication}
+            peppolStatus={factuur.peppol_status}
+            peppolLastError={factuur.peppol_last_error}
           />
         </div>
       </GlowCard>

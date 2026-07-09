@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
+import type { ChartsData } from "@/components/dashboard/mission-data";
 
 const DashboardHomeCharts = dynamic(
   () => import("@/components/dashboard/DashboardHomeCharts"),
@@ -17,10 +18,14 @@ function ChartsSkeleton() {
   );
 }
 
-export default function DashboardChartsSection() {
+export default function DashboardChartsSection({
+  charts,
+}: {
+  charts: ChartsData;
+}) {
   return (
     <Suspense fallback={<ChartsSkeleton />}>
-      <DashboardHomeCharts />
+      <DashboardHomeCharts trend={charts.trend} funnel={charts.funnel} />
     </Suspense>
   );
 }

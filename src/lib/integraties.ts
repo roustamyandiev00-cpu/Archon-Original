@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Manier waarop een provider gekoppeld wordt. */
-export type IntegrationAuth = "oauth" | "apikey" | "peppol";
+export type IntegrationAuth = "oauth" | "apikey" | "peppol" | "connect";
 
 export type ProviderMeta = {
   id: string;
@@ -128,6 +128,14 @@ export const INTEGRATION_PROVIDERS: ProviderMeta[] = [
     category: "E-facturatie",
     auth: "peppol",
     description: "Verstuur en ontvang e-facturen via het Peppol-netwerk.",
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    category: "Meldingen",
+    auth: "connect",
+    description:
+      "Ontvang meldingen in Slack via Vercel Connect — geen bot-token in je omgeving.",
   },
 ];
 
