@@ -153,10 +153,10 @@ function Row({
 function Hero() {
   return (
     <PageHero
-      variant="panel"
+      variant="violet"
       kicker={
         <>
-          <ShieldCheck size={13} className="text-emerald-300" /> Conform
+          <ShieldCheck size={13} className="text-violet-300" /> Conform
           e-facturatie · Peppol
         </>
       }

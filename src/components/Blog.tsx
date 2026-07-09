@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ArrowUpRight, Newspaper } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,11 +11,19 @@ function formatDate(iso: string | null) {
   });
 }
 
+const fallbackAfbeeldingen: Record<string, string> = {
+  "sneller-offertes-met-ai": "/blog/sneller-offertes-met-ai.png",
+  "e-facturatie-peppol": "/blog/e-facturatie-peppol.png",
+  "5-tips-snellere-betalingen": "/blog/5-tips-snellere-betalingen.png",
+};
+
 export default async function Blog() {
   const supabase = await createClient();
   const { data: artikelen } = await supabase
     .from("artikelen")
-    .select("id, titel, slug, samenvatting, type, auteur, published_at")
+    .select(
+      "id, titel, slug, samenvatting, type, auteur, published_at, afbeelding_url, thumbnail_url",
+    )
     .eq("status", "published")
     .order("published_at", { ascending: false })
     .limit(3);
@@ -39,15 +48,28 @@ export default async function Blog() {
         </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {artikelen.map((a) => (
+          {artikelen.map((a) => {
+            const afbeelding =
+              a.afbeelding_url ?? a.thumbnail_url ?? fallbackAfbeeldingen[a.slug] ?? null;
+            return (
             <a
               key={a.id}
               href={`/blog/${a.slug}`}
               className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 transition-colors hover:border-white/20"
             >
-              <div className="relative flex h-40 items-center justify-center bg-gradient-to-br from-sky-500/20 via-indigo-500/15 to-transparent">
-                <Newspaper size={28} className="text-sky-300/70" />
-                <span className="absolute left-3 top-3 rounded-full bg-zinc-950/60 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-300 backdrop-blur">
+              <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-sky-500/20 via-indigo-500/15 to-transparent">
+                {afbeelding ? (
+                  <Image
+                    src={afbeelding}
+                    alt={a.titel}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <Newspaper size={28} className="text-sky-300/70" />
+                )}
+                <span className="absolute left-3 top-3 z-10 rounded-full bg-zinc-950/60 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-300 backdrop-blur">
                   {a.type ?? "blog"}
                 </span>
               </div>
@@ -73,7 +95,8 @@ export default async function Blog() {
                 </span>
               </div>
             </a>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

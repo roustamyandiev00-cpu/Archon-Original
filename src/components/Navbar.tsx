@@ -15,7 +15,8 @@ const links = [
   { label: "Welkom", href: "/" },
   { label: "Functies", href: "/#features", children: functies },
   { label: "Over", href: "/#resultaten" },
-  { label: "Prijzen", href: "/#prijzen" },
+  { label: "Bouwnetwerk", href: "/bouwnetwerk" },
+  { label: "Prijzen", href: "/prijzen" },
   { label: "Blog", href: "/#blog" },
 ];
 

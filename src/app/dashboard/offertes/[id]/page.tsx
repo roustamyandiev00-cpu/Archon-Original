@@ -12,7 +12,11 @@ import {
 import GlowCard from "@/components/dashboard/GlowCard";
 import OfferteStatusActions from "@/components/dashboard/offertes/OfferteStatusActions";
 import DocumentDownload from "@/components/dashboard/documenten/DocumentDownload";
-import type { DocumentRow } from "@/components/dashboard/documenten/documentTemplate";
+import {
+  buildDocumentValues,
+  buildDocumentRows,
+  type CustomerLite,
+} from "@/lib/documentData";
 
 export const metadata = { title: "Offerte — ArchonPro" };
 
@@ -30,7 +34,7 @@ export default async function OfferteDetailPage({
   const { data: offerte } = await supabase
     .from("offertes")
     .select(
-      "id, nummer, klant, bedrag, datum, geldig_tot, status_new, notes, created_at, sent_at, accepted_at, rejected_at",
+      "id, nummer, klant, bedrag, datum, geldig_tot, status_new, notes, created_at, sent_at, accepted_at, rejected_at, customer_id, template_id",
     )
     .eq("id", offerteId)
     .eq("bedrijf_id", companyId)
@@ -58,41 +62,36 @@ export default async function OfferteDetailPage({
   const { data: bedrijf } = await supabase
     .from("bedrijven")
     .select(
-      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_quote_template",
+      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst",
     )
     .eq("id", companyId)
     .maybeSingle();
 
-  const btwTarieven = Array.from(new Set(lines.map((l) => l.btw_percentage)));
-  const docValues: Record<string, string> = {
-    bedrijf_naam: bedrijf?.naam ?? "",
-    bedrijf_adres: bedrijf?.adres ?? "",
-    bedrijf_postcode_gemeente: [bedrijf?.postcode, bedrijf?.stad]
-      .filter(Boolean)
-      .join(" "),
-    bedrijf_btw: bedrijf?.btw ?? "",
-    bedrijf_email: bedrijf?.email ?? "",
-    bedrijf_telefoon: bedrijf?.telefoon ?? "",
-    iban: bedrijf?.iban ?? "",
-    klant_naam: offerte.klant ?? "",
-    offerte_nummer: offerte.nummer ?? `#${offerte.id}`,
-    offerte_datum: formatDate(offerte.datum),
-    geldig_tot: formatDate(offerte.geldig_tot),
-    project_omschrijving: offerte.notes ?? "",
-    offerte_voorwaarden:
-      bedrijf?.algemene_voorwaarden ?? bedrijf?.footer_tekst ?? "",
-    subtotaal: formatEuro(totals.subtotaal),
-    btw_bedrag: formatEuro(totals.btw),
-    totaal: formatEuro(totals.totaal),
-    btw_tarief: btwTarieven.length === 1 ? `${btwTarieven[0]}%` : "",
-  };
-  const docRows: DocumentRow[] = lines.map((l) => ({
-    omschrijving: l.omschrijving,
-    aantal: String(l.aantal),
-    eenheid: l.eenheid,
-    eenheidsprijs: formatEuro(l.prijs_per_eenheid),
-    regel_totaal: formatEuro(l.aantal * l.prijs_per_eenheid),
-  }));
+  let customer: CustomerLite = null;
+  if (offerte.customer_id) {
+    const { data } = await supabase
+      .from("customers")
+      .select("name, company_name, first_name, last_name, address, email, phone, btw")
+      .eq("id", offerte.customer_id)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    customer = data;
+  }
+
+  const docValues = buildDocumentValues(
+    {
+      kind: "quote",
+      nummer: offerte.nummer ?? `#${offerte.id}`,
+      datum: offerte.datum,
+      geldig_tot: offerte.geldig_tot,
+      notes: offerte.notes,
+      klant: offerte.klant,
+    },
+    bedrijf,
+    customer,
+    lines,
+  );
+  const docRows = buildDocumentRows(lines);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -223,7 +222,8 @@ export default async function OfferteDetailPage({
 
           <DocumentDownload
             kind="quote"
-            defaultTemplate={bedrijf?.default_quote_template ?? ""}
+            documentId={offerte.id}
+            currentTemplate={offerte.template_id ?? ""}
             values={docValues}
             rows={docRows}
           />

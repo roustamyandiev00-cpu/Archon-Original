@@ -22,7 +22,10 @@ export default function AuthPreview() {
         </div>
 
         <div className="flex flex-1 items-center justify-center py-10">
-          <AuthVideo fallback={<PreviewCard />} />
+          <AuthVideo
+            src="/ArchonPro_CRM_logo_intro_202607080214.mp4"
+            fallback={<PreviewCard />}
+          />
         </div>
 
         <div className="max-w-sm">

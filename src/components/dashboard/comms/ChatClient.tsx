@@ -1,9 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Loader2, MessageCircle, HardHat } from "lucide-react";
+import {
+  Send,
+  Loader2,
+  MessageCircle,
+  HardHat,
+  Paperclip,
+  FileText,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { sendMessage } from "@/app/dashboard/comms/actions";
+import { sendMessage, sendAttachments } from "@/app/dashboard/comms/actions";
+
+type Attachment = {
+  url: string;
+  name: string;
+  mime?: string;
+  size?: number;
+  isImage?: boolean;
+};
 
 export type ChannelSummary = {
   id: string;
@@ -19,8 +34,18 @@ type MessageRow = {
   channel_id: string | null;
   sender_company_id: number | null;
   content: string | null;
+  type: string | null;
+  attachments: unknown;
   created_at: string | null;
 };
+
+function parseAttachments(value: unknown): Attachment[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (a): a is Attachment =>
+      Boolean(a) && typeof a === "object" && "url" in (a as object),
+  );
+}
 
 export default function ChatClient({
   channels,
@@ -37,6 +62,9 @@ export default function ChatClient({
   const loading = selectedId !== null && loadedChannelId !== selectedId;
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,7 +74,9 @@ export default function ChatClient({
 
     supabase
       .from("bouwnetwerk_messages")
-      .select("id, channel_id, sender_company_id, content, created_at")
+      .select(
+        "id, channel_id, sender_company_id, content, type, attachments, created_at",
+      )
       .eq("channel_id", selectedId)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
@@ -89,6 +119,23 @@ export default function ChatClient({
     const res = await sendMessage(selectedId, text);
     setSending(false);
     if (!("error" in res && res.error)) setText("");
+  }
+
+  async function handleFiles(list: FileList | null) {
+    if (!selectedId || !list || list.length === 0) return;
+    setUploadError(null);
+    setUploading(true);
+    const fd = new FormData();
+    for (const file of Array.from(list)) fd.append("files", file);
+    if (text.trim()) fd.append("content", text.trim());
+    const res = await sendAttachments(selectedId, fd);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+    if ("error" in res && res.error) {
+      setUploadError(res.error);
+    } else {
+      setText("");
+    }
   }
 
   const selected = channels.find((c) => c.id === selectedId);
@@ -167,19 +214,58 @@ export default function ChatClient({
           ) : (
             messages.map((m) => {
               const isMine = m.sender_company_id === companyId;
+              const attachments = parseAttachments(m.attachments);
               return (
                 <div
                   key={m.id}
                   className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
+                    className={`max-w-[75%] space-y-2 rounded-2xl px-3.5 py-2 text-sm ${
                       isMine
                         ? "bg-sky-500 text-zinc-950"
                         : "bg-white/[0.06] text-zinc-100"
                     }`}
                   >
-                    {m.content}
+                    {attachments.length > 0 && (
+                      <div className="space-y-2">
+                        {attachments.map((att, i) =>
+                          att.isImage ? (
+                            <a
+                              key={`${att.url}-${i}`}
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block overflow-hidden rounded-lg"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={att.url}
+                                alt={att.name}
+                                loading="lazy"
+                                className="max-h-48 w-full object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              key={`${att.url}-${i}`}
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium ${
+                                isMine
+                                  ? "bg-zinc-950/15 text-zinc-900"
+                                  : "bg-white/[0.06] text-zinc-100"
+                              }`}
+                            >
+                              <FileText size={14} />
+                              <span className="truncate">{att.name}</span>
+                            </a>
+                          ),
+                        )}
+                      </div>
+                    )}
+                    {m.content && <p>{m.content}</p>}
                   </div>
                 </div>
               );
@@ -188,10 +274,36 @@ export default function ChatClient({
           <div ref={bottomRef} />
         </div>
 
+        {uploadError && (
+          <p className="border-t border-white/10 px-4 py-2 text-xs text-rose-400">
+            {uploadError}
+          </p>
+        )}
         <form
           onSubmit={handleSend}
           className="flex items-center gap-2 border-t border-white/10 px-4 py-3"
         >
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading || !selectedId}
+            aria-label="Bijlage toevoegen"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-zinc-300 transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {uploading ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <Paperclip size={15} />
+            )}
+          </button>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}

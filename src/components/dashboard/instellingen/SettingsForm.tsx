@@ -15,8 +15,11 @@ import {
   FileUp,
   X,
   ExternalLink,
+  KeyRound,
 } from "lucide-react";
 import GlowCard from "@/components/dashboard/GlowCard";
+import ApiKeysManager from "@/components/dashboard/instellingen/ApiKeysManager";
+import type { ApiKeyInfo } from "@/lib/apiResources";
 import {
   updateSettings,
   uploadTemplate,
@@ -34,13 +37,25 @@ import {
   archonTemplateMeta,
   archonTemplatePreviewHtml,
 } from "@/components/dashboard/instellingen/templatePreview";
+import { resolveTemplateId } from "@/components/dashboard/documenten/documentTemplate";
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
 const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
 const hintClass = "mt-1 text-xs text-zinc-500";
 
-type Tab = "bedrijf" | "documenten" | "ai";
+type Section = "bedrijf" | "documenten" | "ai" | "api";
+
+const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
+  { id: "bedrijf", label: "Bedrijfsgegevens", icon: <Building2 size={15} /> },
+  {
+    id: "documenten",
+    label: "Offertes & facturen",
+    icon: <FileText size={15} />,
+  },
+  { id: "ai", label: "AI-agent", icon: <Bot size={15} /> },
+  { id: "api", label: "API", icon: <KeyRound size={15} /> },
+];
 
 function Field({
   label,
@@ -133,12 +148,15 @@ function TemplatePicker({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const uploaded = isUploadedTemplate(value);
-  const archon = isArchonTemplate(value);
-  const archonMeta = archonTemplateMeta(value);
-  const thumbHtml = archon ? archonTemplatePreviewHtml(value, soort) : null;
+  // Bepaal welk ontwerp er écht gerenderd wordt (basis-presets vallen terug op
+  // een ArchonPro-stijl) zodat de preview altijd klopt met de echte output.
+  const renderId = resolveTemplateId(value);
+  const renderMeta = archonTemplateMeta(renderId);
+  const thumbHtml = uploaded ? null : archonTemplatePreviewHtml(renderId, soort);
+  const mappedFromLegacy = !uploaded && !isArchonTemplate(value);
 
   function openFullPreview() {
-    const html = archonTemplatePreviewHtml(value, "both");
+    const html = archonTemplatePreviewHtml(renderId, "both");
     if (!html) return;
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
@@ -200,15 +218,17 @@ function TemplatePicker({
         </div>
       )}
 
-      {archon && thumbHtml && (
+      {thumbHtml && (
         <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60">
           <ArchonThumb
             html={thumbHtml}
-            title={`Voorbeeld ${archonMeta?.label ?? value}`}
+            title={`Voorbeeld ${renderMeta?.label ?? value}`}
           />
           <div className="flex items-center justify-between gap-2 border-t border-white/10 px-3 py-2">
             <span className="min-w-0 truncate text-xs text-zinc-400">
-              {archonMeta?.description}
+              {mappedFromLegacy
+                ? `Wordt weergegeven als “${renderMeta?.label}”`
+                : renderMeta?.description}
             </span>
             <button
               type="button"
@@ -250,12 +270,24 @@ function TemplatePicker({
   );
 }
 
-export default function SettingsForm({ initial }: { initial: SettingsInput }) {
-  const [tab, setTab] = useState<Tab>("bedrijf");
+export default function SettingsForm({
+  initial,
+  apiKeys,
+}: {
+  initial: SettingsInput;
+  apiKeys: ApiKeyInfo[];
+}) {
   const [form, setForm] = useState<SettingsInput>(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  function scrollToSection(id: Section) {
+    document.getElementById(`settings-${id}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
 
   function set<K extends keyof SettingsInput>(key: K, value: SettingsInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -283,30 +315,18 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
     });
   }
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "bedrijf", label: "Bedrijfsgegevens", icon: <Building2 size={15} /> },
-    {
-      id: "documenten",
-      label: "Offertes & facturen",
-      icon: <FileText size={15} />,
-    },
-    { id: "ai", label: "AI-agent", icon: <Bot size={15} /> },
-  ];
+  const tabs: { id: Section; label: string; icon: React.ReactNode }[] = sections;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Tabs */}
+      {/* Snel naar sectie — alles staat op één pagina */}
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
-            onClick={() => setTab(t.id)}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.id
-                ? "bg-sky-500 text-zinc-950"
-                : "border border-white/10 text-zinc-300 hover:bg-white/5"
-            }`}
+            onClick={() => scrollToSection(t.id)}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-white/20 hover:bg-white/5 hover:text-zinc-100"
           >
             {t.icon}
             {t.label}
@@ -314,10 +334,9 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
         ))}
       </div>
 
-      <GlowCard innerClassName="p-5 sm:p-7">
+      <GlowCard innerClassName="divide-y divide-white/10 p-0 sm:p-0">
         {/* VAK 1 — BEDRIJFSGEGEVENS */}
-        {tab === "bedrijf" && (
-          <div className="space-y-6">
+        <section id="settings-bedrijf" className="scroll-mt-24 space-y-6 p-5 sm:p-7">
             <SectionHeader
               icon={<Building2 size={18} />}
               title="Bedrijfsgegevens"
@@ -407,12 +426,10 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
                 />
               </Field>
             </div>
-          </div>
-        )}
+        </section>
 
         {/* VAK 2 — OFFERTES & FACTUREN */}
-        {tab === "documenten" && (
-          <div className="space-y-6">
+        <section id="settings-documenten" className="scroll-mt-24 space-y-6 p-5 sm:p-7">
             <SectionHeader
               icon={<FileText size={18} />}
               title="Gegevens op offertes & facturen"
@@ -497,12 +514,10 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
                 />
               </div>
             </div>
-          </div>
-        )}
+        </section>
 
         {/* VAK 3 — AI-AGENT */}
-        {tab === "ai" && (
-          <div className="space-y-6">
+        <section id="settings-ai" className="scroll-mt-24 space-y-6 p-5 sm:p-7">
             <SectionHeader
               icon={<Bot size={18} />}
               title="AI-agent instellingen"
@@ -646,9 +661,15 @@ export default function SettingsForm({ initial }: { initial: SettingsInput }) {
                 vragen), hoe scherper de AI jouw offertes en berichten opstelt.
               </p>
             </div>
-          </div>
-        )}
+        </section>
       </GlowCard>
+
+      {/* VAK 4 — API & INTEGRATIES */}
+      <section id="settings-api" className="scroll-mt-24">
+        <GlowCard innerClassName="p-5 sm:p-7">
+          <ApiKeysManager initialKeys={apiKeys} />
+        </GlowCard>
+      </section>
 
       {/* Actiebalk */}
       <div className="flex items-center justify-end gap-3">

@@ -131,10 +131,10 @@ function Bullet({ children }: { children: React.ReactNode }) {
 function Hero() {
   return (
     <PageHero
-      variant="spotlight"
+      variant="amber"
       kicker={
         <>
-          <Sparkles size={13} className="text-sky-300" /> Offertes · ArchonPro
+          <Sparkles size={13} className="text-amber-300" /> Offertes · ArchonPro
         </>
       }
       title="Nova maakt je offertes"

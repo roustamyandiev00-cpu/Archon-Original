@@ -151,6 +151,7 @@ export type WerkpostRow = {
   tarief_per_uur: number | null;
   tarief_type: string | null;
   vereiste_vaardigheden: string[] | null;
+  fotos: string[] | null;
   company_id: number;
   company_naam: string | null;
   created_by_user_id: string | null;

@@ -3,6 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { getCompanyContext } from "@/lib/company";
 
+const WERKPOST_MEDIA_BUCKET = "werkpost-media";
+const MAX_FOTO_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_FOTOS = 8;
+
+const slugify = (name: string) =>
+  name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w.\- ]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 50) || "foto";
+
 export type CreateWerkpostInput = {
   titel: string;
   beschrijving: string;
@@ -77,6 +90,132 @@ export async function createWerkpost(input: CreateWerkpostInput) {
   revalidatePath("/bouwnetwerk");
   revalidatePath("/dashboard/werkposts");
   return { id: data.id as string };
+}
+
+/**
+ * Uploadt foto's voor een werkpost naar de publieke bucket `werkpost-media`
+ * (map <company_id>/<werkpost_id>/...) en zet de publieke URL's op
+ * werkposts.fotos. Retourneert de nieuwe URL's.
+ */
+export async function uploadWerkpostFotos(
+  werkpostId: string,
+  formData: FormData,
+) {
+  const { supabase, user, companyId } = await getCompanyContext();
+  if (!user || !companyId) {
+    return { error: "Je account is nog niet aan een bedrijf gekoppeld." };
+  }
+
+  const { data: post } = await supabase
+    .from("werkposts")
+    .select("id, company_id, fotos")
+    .eq("id", werkpostId)
+    .maybeSingle();
+
+  if (!post || post.company_id !== companyId) {
+    return { error: "Je mag deze werkpost niet bewerken." };
+  }
+
+  const files = formData
+    .getAll("fotos")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+
+  if (files.length === 0) return { urls: [] as string[] };
+  if (files.length > MAX_FOTOS) {
+    return { error: `Maximaal ${MAX_FOTOS} foto's per post.` };
+  }
+
+  const urls: string[] = [];
+  for (const file of files) {
+    if (file.size > MAX_FOTO_BYTES) {
+      return { error: `"${file.name}" is te groot (max. 10 MB).` };
+    }
+    const path = `${companyId}/${werkpostId}/${Date.now()}-${slugify(file.name)}`;
+    const { error: uploadError } = await supabase.storage
+      .from(WERKPOST_MEDIA_BUCKET)
+      .upload(path, file, {
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
+    if (uploadError) {
+      return { error: `Uploaden mislukt: ${uploadError.message}` };
+    }
+    const { data: pub } = supabase.storage
+      .from(WERKPOST_MEDIA_BUCKET)
+      .getPublicUrl(path);
+    urls.push(pub.publicUrl);
+  }
+
+  const existing = (post.fotos ?? []) as string[];
+  const { error: updateError } = await supabase
+    .from("werkposts")
+    .update({ fotos: [...existing, ...urls] })
+    .eq("id", werkpostId)
+    .eq("company_id", companyId);
+
+  if (updateError) return { error: updateError.message };
+
+  revalidatePath("/bouwnetwerk");
+  revalidatePath(`/dashboard/werkposts/${werkpostId}`);
+  return { urls };
+}
+
+/**
+ * Zet of verwijdert een like op een werkpost voor de ingelogde gebruiker.
+ * Werkt voor elke geregistreerde gebruiker, ook zonder gekoppeld bedrijf.
+ */
+export async function toggleLike(werkpostId: string) {
+  const { supabase, user } = await getCompanyContext();
+  if (!user) {
+    return { error: "Log in om een werkpost te liken." };
+  }
+
+  const { data: bestaand } = await supabase
+    .from("werkpost_likes")
+    .select("id")
+    .eq("werkpost_id", werkpostId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (bestaand) {
+    const { error } = await supabase
+      .from("werkpost_likes")
+      .delete()
+      .eq("id", bestaand.id);
+    if (error) return { error: error.message };
+    revalidatePath("/bouwnetwerk");
+    return { liked: false };
+  }
+
+  const { error } = await supabase.from("werkpost_likes").insert({
+    werkpost_id: werkpostId,
+    user_id: user.id,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/bouwnetwerk");
+  return { liked: true };
+}
+
+/**
+ * Maakt voor de ingelogde gebruiker (zonder gekoppeld bedrijf) een bedrijf aan
+ * via de SECURITY DEFINER-RPC en koppelt hem als admin. Idempotent: bestaat er
+ * al een bedrijf, dan wordt dat teruggegeven.
+ */
+export async function provisionCompany(naam: string) {
+  const { supabase, user } = await getCompanyContext();
+  if (!user) return { error: "Log in om een bedrijf aan te maken." };
+  if (!naam.trim()) return { error: "Vul een bedrijfsnaam in." };
+
+  const { data, error } = await supabase.rpc(
+    "provision_company_for_current_user",
+    { company_name: naam.trim() },
+  );
+  if (error) return { error: error.message };
+
+  revalidatePath("/bouwnetwerk");
+  revalidatePath("/dashboard/werkposts");
+  revalidatePath("/dashboard/comms");
+  return { companyId: data as number };
 }
 
 export async function sluitWerkpost(werkpostId: string, reden?: string) {

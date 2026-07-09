@@ -1,118 +1,81 @@
-import { ArrowRight, Sparkles, FileText, Receipt, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CreditCard, Clock, ShieldCheck } from "lucide-react";
+import HeroDashboard from "@/components/HeroDashboard";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden pt-40 pb-24 sm:pt-48">
-      <div className="aurora-glow" />
-      <div className="grid-fade absolute inset-0" />
+    <section className="relative overflow-x-hidden pt-28 pb-20 sm:pb-24 lg:pt-36 lg:pb-28">
+      {/* Achtergrond: donker met subtiele bouw-/premium-sfeer */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-sky-950/40"
+      />
+      <div className="aurora-glow opacity-50" />
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_70%_40%,rgba(14,165,233,0.12),transparent_60%)]"
+      />
+      <div className="grid-fade absolute inset-0 opacity-40" />
 
-      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
-        <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-          <Sparkles size={14} className="text-sky-400" />
-          Nieuw: AI die je offertes en facturen opvolgt
-        </div>
-
-        <h1 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
-          Beheer je bouwbedrijf{" "}
-          <span className="text-gradient">zonder gedoe</span>
-        </h1>
-
-        <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-8 text-zinc-400">
-          Offertes, projecten, klanten en facturen op één plek. Geen losse
-          WhatsApp-berichten of Excel-lijsten meer. Simpel. Snel. En nooit saai.
-        </p>
-
-        <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <a
-            href="#start"
-            className="group inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
-          >
-            Start gratis
-            <ArrowRight
-              size={16}
-              className="transition-transform group-hover:translate-x-0.5"
-            />
-          </a>
-          <a
-            href="#features"
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
-          >
-            Bekijk demo
-          </a>
-        </div>
-
-        <p className="mt-5 text-xs text-zinc-500">
-          Gratis starten · Geen creditcard · Werkt op je gsm
-        </p>
-      </div>
-
-      <HeroCard />
-    </section>
-  );
-}
-
-function HeroCard() {
-  return (
-    <div className="relative z-10 mx-auto mt-16 max-w-5xl px-6">
-      <div className="rounded-3xl border border-white/10 bg-zinc-900/60 p-2 shadow-2xl shadow-sky-500/10 backdrop-blur-xl">
-        <div className="rounded-2xl border border-white/5 bg-zinc-950/80 p-6 sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm text-zinc-400">Gefactureerd deze maand</p>
-              <p className="mt-1 text-3xl font-semibold text-zinc-50">
-                € 42.980
-              </p>
+      <div className="relative z-10 mx-auto max-w-7xl px-6">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-14 xl:gap-20">
+          {/* LINKS — info & knoppen */}
+          <div className="text-center lg:text-left">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-1.5 text-xs font-medium text-sky-300">
+              N°1 CRM voor bouwbedrijven in België
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
-              <Receipt size={13} /> 12 facturen verstuurd
-            </span>
+
+            <h1 className="text-balance text-4xl font-semibold leading-[1.1] tracking-tight text-zinc-50 sm:text-5xl lg:text-[3.25rem]">
+              Het complete platform voor{" "}
+              <span className="text-sky-400">bouwbedrijven</span>
+            </h1>
+
+            <p className="mx-auto mt-6 max-w-xl text-pretty text-lg leading-8 text-zinc-400 lg:mx-0">
+              Offertes, projecten, facturen, planning en AI-assistenten. Alles
+              wat je nodig hebt om meer te doen in minder tijd.
+            </p>
+
+            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
+              <Link
+                href="/register"
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-7 py-3.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 sm:w-auto"
+              >
+                Gratis 14 dagen proberen
+                <ArrowRight
+                  size={16}
+                  className="transition-transform group-hover:translate-x-0.5"
+                />
+              </Link>
+              <Link
+                href="#features"
+                className="inline-flex w-full items-center justify-center rounded-full border border-white/20 bg-white/5 px-7 py-3.5 text-sm font-semibold text-zinc-100 transition-colors hover:bg-white/10 sm:w-auto"
+              >
+                Plan een demo
+              </Link>
+            </div>
+
+            <ul className="mt-8 flex flex-col items-center gap-3 text-sm text-zinc-500 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start lg:gap-x-6 lg:gap-y-2">
+              <li className="flex items-center gap-2">
+                <CreditCard size={15} className="shrink-0 text-sky-400/80" />
+                Geen creditcard vereist
+              </li>
+              <li className="flex items-center gap-2">
+                <Clock size={15} className="shrink-0 text-sky-400/80" />
+                Setup in 2 minuten
+              </li>
+              <li className="flex items-center gap-2">
+                <ShieldCheck size={15} className="shrink-0 text-sky-400/80" />
+                Annuleer wanneer je wilt
+              </li>
+            </ul>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <StatCard
-              icon={<FileText size={16} />}
-              label="Openstaande offertes"
-              value="8"
-              hint="3 wachten op reactie"
-            />
-            <StatCard
-              icon={<Receipt size={16} />}
-              label="Te innen"
-              value="€ 6.240"
-              hint="2 herinneringen klaar"
-            />
-            <StatCard
-              icon={<Users size={16} />}
-              label="Actieve klanten"
-              value="34"
-              hint="+5 deze maand"
-            />
+          {/* RECHTS — dashboard + smartphone */}
+          <div className="overflow-visible pb-16 pr-2 sm:pb-20 sm:pr-4 lg:pl-2 lg:pr-8">
+            <HeroDashboard />
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.03] p-4 text-left">
-      <div className="flex items-center gap-2 text-zinc-400">
-        <span className="text-sky-400">{icon}</span>
-        <span className="text-sm">{label}</span>
-      </div>
-      <p className="mt-2 text-xl font-semibold text-zinc-50">{value}</p>
-      <p className="mt-0.5 text-xs text-zinc-500">{hint}</p>
-    </div>
+    </section>
   );
 }

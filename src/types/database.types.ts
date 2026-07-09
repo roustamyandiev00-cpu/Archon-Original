@@ -1500,7 +1500,7 @@ export type Database = {
           {
             foreignKeyName: "bouwnetwerk_channels_werkpost_reactie_id_fkey"
             columns: ["werkpost_reactie_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "werkpost_reacties"
             referencedColumns: ["id"]
           },
@@ -1748,6 +1748,60 @@ export type Database = {
           },
           {
             foreignKeyName: "company_ai_tokens_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_api_keys: {
+        Row: {
+          company_id: number
+          created_at: string
+          created_by: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[]
+        }
+        Insert: {
+          company_id: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Update: {
+          company_id?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_api_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_api_keys_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "bedrijven_directory"
@@ -3122,6 +3176,54 @@ export type Database = {
           },
         ]
       }
+      integraties: {
+        Row: {
+          bedrijf_id: number
+          config: Json
+          connected_at: string | null
+          created_at: string
+          id: number
+          provider: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bedrijf_id: number
+          config?: Json
+          connected_at?: string | null
+          created_at?: string
+          id?: never
+          provider: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bedrijf_id?: number
+          config?: Json
+          connected_at?: string | null
+          created_at?: string
+          id?: never
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integraties_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integraties_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_events: {
         Row: {
           actor_id: string | null
@@ -4298,6 +4400,35 @@ export type Database = {
           },
         ]
       }
+      werkpost_likes: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          werkpost_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          werkpost_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          werkpost_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "werkpost_likes_werkpost_id_fkey"
+            columns: ["werkpost_id"]
+            isOneToOne: false
+            referencedRelation: "werkposts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       werkpost_reacties: {
         Row: {
           bericht: string
@@ -4736,6 +4867,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      api_v1_fetch: {
+        Args: {
+          p_hash: string
+          p_limit?: number
+          p_offset?: number
+          p_resource: string
+        }
+        Returns: Json
+      }
       auth_user_id: { Args: never; Returns: string }
       calculate_days_overdue: {
         Args: { p_vervaldatum: string }
@@ -4822,6 +4962,10 @@ export type Database = {
         Returns: number
       }
       mark_expired_werkposts: { Args: never; Returns: undefined }
+      provision_company_for_current_user: {
+        Args: { company_name: string }
+        Returns: number
+      }
       provision_landing_workspace: {
         Args: { p_company_name?: string; p_user_name?: string }
         Returns: number

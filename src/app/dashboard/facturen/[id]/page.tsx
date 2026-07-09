@@ -6,7 +6,13 @@ import { formatEuro, formatDate, lineTotals } from "@/lib/offertes";
 import { factuurStatusMeta, documentTypeMeta } from "@/lib/facturen";
 import GlowCard from "@/components/dashboard/GlowCard";
 import DocumentDownload from "@/components/dashboard/documenten/DocumentDownload";
-import type { DocumentRow } from "@/components/dashboard/documenten/documentTemplate";
+import PeppolActions from "@/components/dashboard/documenten/PeppolActions";
+import {
+  buildDocumentValues,
+  buildDocumentRows,
+  type CustomerLite,
+} from "@/lib/documentData";
+import { untyped } from "@/lib/integraties";
 
 export const metadata = { title: "Factuur — ArchonPro" };
 
@@ -24,7 +30,7 @@ export default async function FactuurDetailPage({
   const { data: factuur } = await supabase
     .from("facturen")
     .select(
-      "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, paid_at",
+      "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, paid_at, customer_id, template_id",
     )
     .eq("id", factuurId)
     .eq("bedrijf_id", companyId)
@@ -53,41 +59,45 @@ export default async function FactuurDetailPage({
   const { data: bedrijf } = await supabase
     .from("bedrijven")
     .select(
-      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_invoice_template",
+      "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst",
     )
     .eq("id", companyId)
     .maybeSingle();
 
-  const btwTarieven = Array.from(new Set(lines.map((l) => l.btw_percentage)));
-  const docValues: Record<string, string> = {
-    bedrijf_naam: bedrijf?.naam ?? "",
-    bedrijf_adres: bedrijf?.adres ?? "",
-    bedrijf_postcode_gemeente: [bedrijf?.postcode, bedrijf?.stad]
-      .filter(Boolean)
-      .join(" "),
-    bedrijf_btw: bedrijf?.btw ?? "",
-    bedrijf_email: bedrijf?.email ?? "",
-    bedrijf_telefoon: bedrijf?.telefoon ?? "",
-    iban: bedrijf?.iban ?? "",
-    klant_naam: factuur.klant ?? "",
-    factuur_nummer: factuur.nummer ?? `#${factuur.id}`,
-    factuur_datum: formatDate(factuur.datum),
-    vervaldatum: isProforma ? "—" : formatDate(factuur.vervaldatum),
-    project_omschrijving: factuur.omschrijving ?? "",
-    factuur_voorwaarden:
-      bedrijf?.algemene_voorwaarden ?? bedrijf?.footer_tekst ?? "",
-    subtotaal: formatEuro(totals.subtotaal),
-    btw_bedrag: formatEuro(totals.btw),
-    totaal: formatEuro(totals.totaal),
-    btw_tarief: btwTarieven.length === 1 ? `${btwTarieven[0]}%` : "",
-  };
-  const docRows: DocumentRow[] = lines.map((l) => ({
-    omschrijving: l.omschrijving,
-    aantal: String(l.aantal),
-    eenheid: l.eenheid,
-    eenheidsprijs: formatEuro(l.prijs_per_eenheid),
-    regel_totaal: formatEuro(l.aantal * l.prijs_per_eenheid),
-  }));
+  let customer: CustomerLite = null;
+  if (factuur.customer_id) {
+    const { data } = await supabase
+      .from("customers")
+      .select("name, company_name, first_name, last_name, address, email, phone, btw")
+      .eq("id", factuur.customer_id)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    customer = data;
+  }
+
+  const docValues = buildDocumentValues(
+    {
+      kind: "invoice",
+      nummer: factuur.nummer ?? `#${factuur.id}`,
+      datum: factuur.datum,
+      vervaldatum: factuur.vervaldatum,
+      omschrijving: factuur.omschrijving,
+      klant: factuur.klant,
+      isProforma,
+    },
+    bedrijf,
+    customer,
+    lines,
+  );
+  const docRows = buildDocumentRows(lines);
+
+  const { data: peppolRow } = await untyped(supabase)
+    .from("integraties")
+    .select("status")
+    .eq("bedrijf_id", companyId)
+    .eq("provider", "peppol")
+    .maybeSingle();
+  const peppolConnected = peppolRow?.status === "connected";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -216,12 +226,17 @@ export default async function FactuurDetailPage({
           </div>
         )}
 
-        <div className="mt-6 border-t border-white/10 pt-6">
+        <div className="mt-6 space-y-4 border-t border-white/10 pt-6">
           <DocumentDownload
             kind="invoice"
-            defaultTemplate={bedrijf?.default_invoice_template ?? ""}
+            documentId={factuur.id}
+            currentTemplate={factuur.template_id ?? ""}
             values={docValues}
             rows={docRows}
+          />
+          <PeppolActions
+            factuurId={factuur.id}
+            peppolConnected={peppolConnected}
           />
         </div>
       </GlowCard>

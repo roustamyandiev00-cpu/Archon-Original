@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HardHat, Plus, MessageSquare, Eye } from "lucide-react";
+import { HardHat, Plus, MessageSquare, Eye, Handshake } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { typeMeta, statusMeta, formatDate, type WerkpostRow } from "@/lib/werkposts";
 import GlowCard from "@/components/dashboard/GlowCard";
@@ -40,6 +40,12 @@ export default async function WerkpostsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/werkposts/samenwerkingen"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"
+          >
+            <Handshake size={16} /> Samenwerkingen
+          </Link>
           <Link
             href="/bouwnetwerk"
             className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/5"

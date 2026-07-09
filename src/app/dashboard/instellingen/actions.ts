@@ -100,6 +100,44 @@ export async function saveDefaultTemplate(
   return { ok: true };
 }
 
+/**
+ * Slaat het gekozen sjabloon op bij één specifieke offerte of factuur
+ * (kolom `template_id`), zodat dat document dit sjabloon blijft gebruiken.
+ */
+export async function saveDocumentTemplate(
+  kind: "quote" | "invoice",
+  id: number,
+  value: string,
+) {
+  const { supabase, user, companyId } = await getCompanyContext();
+  if (!user || !companyId) {
+    return { error: "Geen actief bedrijf gevonden." };
+  }
+  if (kind !== "quote" && kind !== "invoice") {
+    return { error: "Ongeldig documenttype." };
+  }
+  if (!Number.isFinite(id)) {
+    return { error: "Ongeldig document." };
+  }
+  const clean = (value || "").trim() || DEFAULT_TEMPLATE;
+  const table = kind === "quote" ? "offertes" : "facturen";
+
+  const { error } = await supabase
+    .from(table)
+    .update({ template_id: clean, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("bedrijf_id", companyId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(
+    kind === "quote"
+      ? `/dashboard/offertes/${id}`
+      : `/dashboard/facturen/${id}`,
+  );
+  return { ok: true };
+}
+
 const slugify = (name: string) =>
   name
     .toLowerCase()

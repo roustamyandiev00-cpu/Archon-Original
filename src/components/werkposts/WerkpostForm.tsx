@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { createWerkpost } from "@/app/dashboard/werkposts/actions";
+import { ImagePlus, Loader2, X } from "lucide-react";
+import {
+  createWerkpost,
+  uploadWerkpostFotos,
+} from "@/app/dashboard/werkposts/actions";
 import { REGIOS } from "@/lib/werkposts";
 
 const inputClass =
@@ -35,8 +38,20 @@ export default function WerkpostForm({
   const [budgetMax, setBudgetMax] = useState("");
   const [tariefPerUur, setTariefPerUur] = useState("");
   const [vaardigheden, setVaardigheden] = useState("");
+  const [fotos, setFotos] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function addFiles(list: FileList | null) {
+    if (!list) return;
+    const picked = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    setFotos((prev) => [...prev, ...picked].slice(0, 8));
+  }
+
+  function removeFoto(index: number) {
+    setFotos((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,16 +82,31 @@ export default function WerkpostForm({
         .filter(Boolean),
     });
 
-    setLoading(false);
     if ("error" in res && res.error) {
+      setLoading(false);
       setError(res.error);
       return;
     }
     if ("id" in res && res.id) {
+      if (fotos.length > 0) {
+        const fd = new FormData();
+        for (const file of fotos) fd.append("fotos", file);
+        const uploadRes = await uploadWerkpostFotos(res.id, fd);
+        if ("error" in uploadRes && uploadRes.error) {
+          setLoading(false);
+          setError(
+            `Werkpost geplaatst, maar foto's uploaden mislukte: ${uploadRes.error}`,
+          );
+          return;
+        }
+      }
+      setLoading(false);
       if (onCreated) onCreated(res.id);
       else router.push(`/dashboard/werkposts/${res.id}`);
       router.refresh();
+      return;
     }
+    setLoading(false);
   }
 
   return (
@@ -254,6 +284,57 @@ export default function WerkpostForm({
             placeholder="bijv. metselen, betonstorten, VCA"
             className={inputClass}
           />
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className={labelClass}>Foto&apos;s van het werk (optioneel)</label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-200 transition-colors hover:bg-white/5"
+          >
+            <ImagePlus size={15} /> Foto&apos;s toevoegen
+          </button>
+          <p className="mt-1.5 text-xs text-zinc-500">
+            Max. 8 foto&apos;s, tot 10 MB per stuk.
+          </p>
+
+          {fotos.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-3">
+              {fotos.map((file, i) => (
+                <div
+                  key={`${file.name}-${i}`}
+                  className="group relative h-20 w-20 overflow-hidden rounded-xl border border-white/10"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeFoto(i)}
+                    className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-zinc-950/80 text-zinc-200 opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-label="Foto verwijderen"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

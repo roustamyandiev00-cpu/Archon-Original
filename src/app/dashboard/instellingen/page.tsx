@@ -3,6 +3,7 @@ import { getCompanyContext } from "@/lib/company";
 import SettingsForm from "@/components/dashboard/instellingen/SettingsForm";
 import PlaceholderPage from "@/components/dashboard/PlaceholderPage";
 import { parseExtras, DEFAULT_TEMPLATE, type SettingsInput } from "./settings";
+import type { ApiKeyInfo } from "@/lib/apiResources";
 
 export const metadata = { title: "Instellingen — ArchonPro" };
 
@@ -27,6 +28,22 @@ export default async function InstellingenPage() {
     )
     .eq("id", companyId)
     .maybeSingle();
+
+  const { data: keyRows } = await supabase
+    .from("company_api_keys")
+    .select("id, name, key_prefix, scopes, last_used_at, created_at, revoked_at")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  const apiKeys: ApiKeyInfo[] = (keyRows ?? []).map((k) => ({
+    id: k.id,
+    name: k.name,
+    keyPrefix: k.key_prefix,
+    scopes: k.scopes ?? [],
+    lastUsedAt: k.last_used_at,
+    createdAt: k.created_at,
+    revokedAt: k.revoked_at,
+  }));
 
   const extras = parseExtras(data?.ai_assistant ?? null);
 
@@ -65,7 +82,7 @@ export default async function InstellingenPage() {
         </div>
       </header>
 
-      <SettingsForm initial={initial} />
+      <SettingsForm initial={initial} apiKeys={apiKeys} />
     </div>
   );
 }

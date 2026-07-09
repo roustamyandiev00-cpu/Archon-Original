@@ -24,7 +24,7 @@ export default function AuthVideo({
   return (
     <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/70 p-2 shadow-2xl shadow-sky-500/10 backdrop-blur-xl">
       <video
-        className="aspect-[9/16] w-full rounded-2xl object-cover sm:aspect-video"
+        className="aspect-[9/16] w-full rounded-2xl object-cover sm:aspect-[2/3]"
         src={src}
         poster={poster}
         autoPlay

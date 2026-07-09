@@ -14,6 +14,7 @@ import {
 } from "@/lib/werkposts";
 import GlowCard from "@/components/dashboard/GlowCard";
 import ReactieActions from "@/components/werkposts/ReactieActions";
+import LikeButton from "@/components/werkposts/LikeButton";
 import { sluitWerkpost } from "@/app/dashboard/werkposts/actions";
 
 export const metadata = { title: "Werkpost — ArchonPro" };
@@ -24,14 +25,14 @@ export default async function WerkpostDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { supabase, companyId } = await getCompanyContext();
+  const { supabase, user, companyId } = await getCompanyContext();
 
   if (!companyId) notFound();
 
   const { data: post } = await supabase
     .from("werkposts")
     .select(
-      "id, titel, beschrijving, aard_van_werk, type, status, urgentie, regio, stad, postcode, adres, aantal_personen, startdatum, einddatum, geschatte_duur_dagen, budget_min, budget_max, tarief_per_uur, tarief_type, vereiste_vaardigheden, company_id, company_naam, created_by_user_id, aantal_reacties, aantal_views, created_at",
+      "id, titel, beschrijving, aard_van_werk, type, status, urgentie, regio, stad, postcode, adres, aantal_personen, startdatum, einddatum, geschatte_duur_dagen, budget_min, budget_max, tarief_per_uur, tarief_type, vereiste_vaardigheden, fotos, company_id, company_naam, created_by_user_id, aantal_reacties, aantal_views, created_at",
     )
     .eq("id", id)
     .eq("company_id", companyId)
@@ -49,6 +50,15 @@ export default async function WerkpostDetailPage({
     .order("created_at", { ascending: false });
 
   const reacties = (reactiesData ?? []) as WerkpostReactieRow[];
+
+  const { data: likeRows } = await supabase
+    .from("werkpost_likes")
+    .select("user_id")
+    .eq("werkpost_id", id);
+  const likeCount = likeRows?.length ?? 0;
+  const likedByMe = Boolean(
+    user && (likeRows ?? []).some((l) => l.user_id === user.id),
+  );
 
   const companyIds = [...new Set(reacties.map((r) => r.company_id))];
   const naamMap = new Map<number, string>();
@@ -139,6 +149,37 @@ export default async function WerkpostDetailPage({
           </span>
           <span>{formatTarief(werkpost)}</span>
         </div>
+
+        <div className="mt-4">
+          <LikeButton
+            werkpostId={werkpost.id}
+            initialLiked={likedByMe}
+            initialCount={likeCount}
+            isLoggedIn={Boolean(user)}
+          />
+        </div>
+
+        {werkpost.fotos && werkpost.fotos.length > 0 && (
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {werkpost.fotos.map((url, i) => (
+              <a
+                key={`${url}-${i}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block overflow-hidden rounded-xl border border-white/10"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`Foto ${i + 1} bij ${werkpost.titel}`}
+                  loading="lazy"
+                  className="aspect-[4/3] w-full object-cover transition-transform hover:scale-105"
+                />
+              </a>
+            ))}
+          </div>
+        )}
       </GlowCard>
 
       <GlowCard innerClassName="overflow-hidden">

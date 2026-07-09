@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, User, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  User,
+  Loader2,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "register";
@@ -48,6 +57,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [showPassword, setShowPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [name, setName] = useState("");
+  const [bedrijf, setBedrijf] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,7 +77,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           email,
           password,
           options: {
-            data: { full_name: name },
+            data: {
+              full_name: name,
+              ...(bedrijf.trim() ? { company_name: bedrijf.trim() } : {}),
+            },
             emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
           },
         });
@@ -112,13 +125,8 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-[28px]">
-        {t.title}
-      </h1>
-      <p className="mt-2 text-sm leading-6 text-zinc-400">{t.subtitle}</p>
-
       {/* Social buttons */}
-      <div className="mt-8 grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <SocialButton
           label="Google"
           icon={<GoogleIcon />}
@@ -149,6 +157,21 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Je volledige naam"
+              className={inputClass}
+            />
+          </Field>
+        )}
+
+        {isRegister && (
+          <Field label="Bedrijfsnaam">
+            <InputIcon icon={<Building2 size={16} />} />
+            <input
+              type="text"
+              autoComplete="organization"
+              required
+              value={bedrijf}
+              onChange={(e) => setBedrijf(e.target.value)}
+              placeholder="Je bedrijfsnaam"
               className={inputClass}
             />
           </Field>

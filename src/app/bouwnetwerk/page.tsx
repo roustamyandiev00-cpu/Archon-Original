@@ -15,6 +15,8 @@ import {
 } from "@/lib/werkposts";
 import ReactieForm from "@/components/werkposts/ReactieForm";
 import WerkpostForm from "@/components/werkposts/WerkpostForm";
+import LikeButton from "@/components/werkposts/LikeButton";
+import CompanySetupCard from "@/components/werkposts/CompanySetupCard";
 
 export const metadata: Metadata = {
   title: "Bouwnetwerk — Personeel voor onderaanneming | ArchonPro",
@@ -37,7 +39,7 @@ export default async function BouwnetwerkPage({
   let query = supabase
     .from("werkposts")
     .select(
-      "id, titel, beschrijving, aard_van_werk, type, status, urgentie, regio, stad, postcode, adres, aantal_personen, startdatum, einddatum, geschatte_duur_dagen, budget_min, budget_max, tarief_per_uur, tarief_type, vereiste_vaardigheden, company_id, company_naam, created_by_user_id, aantal_reacties, aantal_views, created_at",
+      "id, titel, beschrijving, aard_van_werk, type, status, urgentie, regio, stad, postcode, adres, aantal_personen, startdatum, einddatum, geschatte_duur_dagen, budget_min, budget_max, tarief_per_uur, tarief_type, vereiste_vaardigheden, fotos, company_id, company_naam, created_by_user_id, aantal_reacties, aantal_views, created_at",
     )
     .eq("status", "open")
     .eq("is_actief", true)
@@ -51,6 +53,24 @@ export default async function BouwnetwerkPage({
   const posts = (data ?? []) as WerkpostRow[];
 
   const { companyId } = user ? await getCompanyContext() : { companyId: null };
+
+  // Likes ophalen voor de getoonde posts (tellingen + of ik zelf geliket heb).
+  const likeCountByPost = new Map<string, number>();
+  const likedByMe = new Set<string>();
+  const postIds = posts.map((p) => p.id);
+  if (postIds.length > 0) {
+    const { data: likeRows } = await supabase
+      .from("werkpost_likes")
+      .select("werkpost_id, user_id")
+      .in("werkpost_id", postIds);
+    for (const l of likeRows ?? []) {
+      likeCountByPost.set(
+        l.werkpost_id,
+        (likeCountByPost.get(l.werkpost_id) ?? 0) + 1,
+      );
+      if (user && l.user_id === user.id) likedByMe.add(l.werkpost_id);
+    }
+  }
 
   return (
     <>
@@ -118,16 +138,66 @@ export default async function BouwnetwerkPage({
                 Geen openstaande posts gevonden voor deze filters.
               </div>
             ) : (
-              <div className="space-y-4">
-                {posts.map((post) => {
+              <div className="space-y-6">
+                {posts.map((post, i) => {
                   const isOwnPost = companyId === post.company_id;
                   const tMeta = typeMeta(post.type);
                   const uMeta = urgentieMeta(post.urgentie);
+                  const cardRight = i % 2 === 1;
                   return (
                     <div
                       key={post.id}
-                      className="rounded-2xl border border-white/10 bg-zinc-900/50 p-5 sm:p-6"
+                      className="grid items-center gap-6 md:grid-cols-2 md:gap-10"
                     >
+                      <aside
+                        className={`hidden flex-col justify-center gap-4 md:flex ${cardRight ? "md:order-1 md:items-end md:pr-2 md:text-right" : "md:order-2 md:pl-2"}`}
+                      >
+                        <div
+                          className={`flex flex-wrap items-center gap-2 ${cardRight ? "md:justify-end" : ""}`}
+                        >
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${tMeta.tone}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${tMeta.dot}`} />
+                            {tMeta.label}
+                          </span>
+                          {post.urgentie !== "normaal" && (
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${uMeta.tone}`}
+                            >
+                              {uMeta.label}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-3xl font-semibold tracking-tight text-zinc-50">
+                          {formatTarief(post)}
+                        </p>
+                        <dl className="space-y-2 text-sm text-zinc-400">
+                          <div
+                            className={`flex items-center gap-2 ${cardRight ? "md:justify-end" : ""}`}
+                          >
+                            <MapPin size={14} className="text-sky-400" />
+                            {post.regio}
+                            {post.stad ? ` · ${post.stad}` : ""}
+                          </div>
+                          <div
+                            className={`flex items-center gap-2 ${cardRight ? "md:justify-end" : ""}`}
+                          >
+                            <Users size={14} className="text-sky-400" />
+                            {post.aantal_personen} persoon
+                            {post.aantal_personen === 1 ? "" : "en"}
+                          </div>
+                          <div
+                            className={`flex items-center gap-2 ${cardRight ? "md:justify-end" : ""}`}
+                          >
+                            <Clock size={14} className="text-sky-400" />
+                            Start {formatDate(post.startdatum)}
+                          </div>
+                        </dl>
+                      </aside>
+                      <div
+                        className={`rounded-2xl border border-white/10 bg-zinc-900/50 p-5 sm:p-6 ${cardRight ? "md:order-2" : "md:order-1"}`}
+                      >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -173,6 +243,41 @@ export default async function BouwnetwerkPage({
                         </span>
                       </div>
 
+                      {post.fotos && post.fotos.length > 0 && (
+                        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          {post.fotos.slice(0, 4).map((url, i) => (
+                            <a
+                              key={`${url}-${i}`}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block overflow-hidden rounded-xl border border-white/10"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt={`Foto ${i + 1} bij ${post.titel}`}
+                                loading="lazy"
+                                className="aspect-[4/3] w-full object-cover transition-transform hover:scale-105"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex items-center gap-3">
+                        <LikeButton
+                          werkpostId={post.id}
+                          initialLiked={likedByMe.has(post.id)}
+                          initialCount={likeCountByPost.get(post.id) ?? 0}
+                          isLoggedIn={Boolean(user)}
+                        />
+                        <span className="text-xs text-zinc-500">
+                          {post.aantal_reacties ?? 0} reactie
+                          {(post.aantal_reacties ?? 0) === 1 ? "" : "s"}
+                        </span>
+                      </div>
+
                       {!isOwnPost && (
                         <div className="mt-5 border-t border-white/10 pt-4">
                           {user ? (
@@ -197,6 +302,7 @@ export default async function BouwnetwerkPage({
                           </Link>
                         </div>
                       )}
+                      </div>
                     </div>
                   );
                 })}
@@ -218,10 +324,12 @@ export default async function BouwnetwerkPage({
               </p>
             </div>
 
-            {user ? (
+            {user && companyId ? (
               <div className="rounded-3xl border border-white/10 bg-zinc-900/50 p-6 sm:p-8">
                 <WerkpostForm />
               </div>
+            ) : user && !companyId ? (
+              <CompanySetupCard />
             ) : (
               <div className="rounded-3xl border border-white/10 bg-zinc-900/50 p-8 text-center">
                 <p className="text-zinc-300">

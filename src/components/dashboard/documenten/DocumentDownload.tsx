@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Download, FileText, Loader2, Star } from "lucide-react";
-import { saveDefaultTemplate } from "@/app/dashboard/instellingen/actions";
+import { Check, Download, Eye, FileText, Loader2, Save } from "lucide-react";
+import { saveDocumentTemplate } from "@/app/dashboard/instellingen/actions";
 import {
   buildDocumentHtml,
   resolveTemplateId,
@@ -16,25 +16,44 @@ const selectClass =
 
 export default function DocumentDownload({
   kind,
-  defaultTemplate,
+  documentId,
+  currentTemplate,
   values,
   rows,
 }: {
   kind: DocumentKind;
-  defaultTemplate: string;
+  documentId: number;
+  currentTemplate: string;
   values: Record<string, string>;
   rows: DocumentRow[];
 }) {
-  const [template, setTemplate] = useState(resolveTemplateId(defaultTemplate));
+  const [template, setTemplate] = useState(resolveTemplateId(currentTemplate));
   const [pending, startTransition] = useTransition();
+  const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function openDocument(autoPrint: boolean) {
-    const html = buildDocumentHtml(template, kind, values, rows, { autoPrint });
+  const label = kind === "quote" ? "offerte" : "factuur";
+  const pdfBase =
+    kind === "quote"
+      ? `/dashboard/offertes/${documentId}/pdf`
+      : `/dashboard/facturen/${documentId}/pdf`;
+
+  function downloadPdf() {
+    setError(null);
+    setDownloading(true);
+    const url = `${pdfBase}?template=${encodeURIComponent(template)}`;
+    // De route stuurt Content-Disposition: attachment, dus dit start de download.
+    window.location.href = url;
+    // Reset de status kort daarna (de navigatie blijft op dezelfde pagina).
+    setTimeout(() => setDownloading(false), 4000);
+  }
+
+  function preview() {
+    const html = buildDocumentHtml(template, kind, values, rows);
     const w = window.open("", "_blank");
     if (!w) {
-      setError("Sta pop-ups toe om het document te openen.");
+      setError("Sta pop-ups toe om het voorbeeld te openen.");
       return;
     }
     setError(null);
@@ -43,11 +62,11 @@ export default function DocumentDownload({
     w.document.close();
   }
 
-  function saveAsDefault() {
+  function saveTemplate() {
     setError(null);
     setSaved(false);
     startTransition(async () => {
-      const res = await saveDefaultTemplate(kind, template);
+      const res = await saveDocumentTemplate(kind, documentId, template);
       if (res && "error" in res && res.error) {
         setError(res.error);
         return;
@@ -55,8 +74,6 @@ export default function DocumentDownload({
       setSaved(true);
     });
   }
-
-  const label = kind === "quote" ? "offerte" : "factuur";
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
@@ -92,17 +109,26 @@ export default function DocumentDownload({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => openDocument(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
+            onClick={downloadPdf}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
           >
-            <Download size={15} /> Download PDF
+            {downloading ? (
+              <>
+                <Loader2 size={15} className="animate-spin" /> PDF maken…
+              </>
+            ) : (
+              <>
+                <Download size={15} /> Download PDF
+              </>
+            )}
           </button>
           <button
             type="button"
-            onClick={() => openDocument(false)}
+            onClick={preview}
             className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
           >
-            Voorbeeld
+            <Eye size={15} /> Voorbeeld
           </button>
         </div>
       </div>
@@ -110,7 +136,7 @@ export default function DocumentDownload({
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={saveAsDefault}
+          onClick={saveTemplate}
           disabled={pending}
           className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-sky-500/40 hover:bg-sky-500/10 disabled:opacity-60"
         >
@@ -120,22 +146,17 @@ export default function DocumentDownload({
             </>
           ) : (
             <>
-              <Star size={13} /> Als standaard opslaan
+              <Save size={13} /> Sjabloon opslaan voor deze {label}
             </>
           )}
         </button>
         {saved && (
           <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
-            <Check size={13} /> Opgeslagen als standaard
+            <Check size={13} /> Opgeslagen
           </span>
         )}
         {error && <span className="text-xs text-rose-400">{error}</span>}
       </div>
-
-      <p className="mt-3 text-[11px] text-zinc-500">
-        Tip: kies bij het afdrukvenster “Opslaan als PDF”. Zet marges op “Geen”
-        voor het beste resultaat.
-      </p>
     </div>
   );
 }

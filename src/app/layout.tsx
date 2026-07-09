@@ -10,6 +10,14 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://archonpro.be"),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/logo-tile.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/logo-tile.png", type: "image/png", sizes: "512x512" }],
+    shortcut: "/favicon.ico",
+  },
   title: "ArchonPro — CRM voor zelfstandige vakmensen",
   description:
     "Offertes, projecten, klanten en facturen op één plek. Geen losse WhatsApp-berichten of Excel-lijsten meer. Simpel. Snel. En nooit saai.",
