@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FileText, Send, CheckCircle2, Euro } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 import { statusMeta, formatEuro, formatDate } from "@/lib/offertes";
 import { DEMO_OFFERTES } from "@/lib/demo";
 import GlowCard from "@/components/dashboard/GlowCard";
@@ -10,6 +12,7 @@ import NieuweOfferteActions from "@/components/dashboard/offertes/NieuweOfferteA
 export const metadata = { title: "Offertes — ArchonPro" };
 
 export default async function OffertesPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   const now = new Date();
@@ -77,8 +80,7 @@ export default async function OffertesPage() {
     });
   }
 
-  // Toon demovoorbeeld zolang er nog geen echte offertes zijn.
-  const isDemo = offertes.length === 0;
+  const isDemo = showDemoData(preview, offertes.length === 0);
   if (isDemo) offertes = DEMO_OFFERTES;
 
   const totaalMaand = offertes.filter(

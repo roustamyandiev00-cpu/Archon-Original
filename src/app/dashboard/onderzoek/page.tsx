@@ -11,6 +11,8 @@ import {
 } from "@/components/dashboard/mission";
 import { demoSignals, demoSignalTypes } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 
 export const metadata = { title: "Onderzoek — ArchonPro" };
 
@@ -28,6 +30,7 @@ export default async function OnderzoekPage({
 }: {
   searchParams: Promise<{ type?: string }>;
 }) {
+  const preview = await isActivePreviewMode();
   const { type } = await searchParams;
   const { supabase, companyId } = await getCompanyContext();
 
@@ -58,7 +61,7 @@ export default async function OnderzoekPage({
     ).sort();
   }
 
-  const isDemo = signals.length === 0 && !type;
+  const isDemo = showDemoData(preview, signals.length === 0 && !type);
   if (isDemo) {
     signals = demoSignals;
     types = demoSignalTypes;

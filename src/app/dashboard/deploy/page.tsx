@@ -9,6 +9,8 @@ import {
 } from "@/components/dashboard/mission";
 import { demoRuntimeLog } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 
 export const metadata = { title: "Deploy — ArchonPro" };
 
@@ -24,6 +26,7 @@ function hostFromUrl(url?: string) {
 }
 
 export default async function DeployPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   let dbOk = false;
@@ -52,7 +55,7 @@ export default async function DeployPage() {
     activity = data ?? [];
   }
 
-  const isDemo = activity.length === 0;
+  const isDemo = showDemoData(preview, activity.length === 0);
   if (isDemo) activity = demoRuntimeLog;
 
   const dbHost = hostFromUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);

@@ -9,6 +9,8 @@ import {
 } from "@/components/dashboard/mission";
 import { demoKpiFill } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 
 export const metadata = { title: "KPI's — ArchonPro" };
 
@@ -40,6 +42,7 @@ type WeekRow = {
 };
 
 export default async function KpiPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   const thisMonday = mondayOf(new Date());
@@ -116,8 +119,11 @@ export default async function KpiPage() {
     }
   }
 
-  const isDemo = weeks.every(
-    (w) => w.offertes + w.omzet + w.klanten + w.facturen + w.afspraken === 0,
+  const isDemo = showDemoData(
+    preview,
+    weeks.every(
+      (w) => w.offertes + w.omzet + w.klanten + w.facturen + w.afspraken === 0,
+    ),
   );
   if (isDemo) weeks = demoKpiFill(weeks);
 

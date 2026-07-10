@@ -16,6 +16,8 @@ import {
   demoMemoryTypeBreakdown,
 } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 
 export const metadata = { title: "Geheugen — ArchonPro" };
 
@@ -29,6 +31,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default async function GeheugenPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   let memories: {
@@ -93,7 +96,7 @@ export default async function GeheugenPage() {
       .sort((a, b) => b.value - a.value);
   }
 
-  const isDemo = memTotal === 0 && kbTotal === 0;
+  const isDemo = showDemoData(preview, memTotal === 0 && kbTotal === 0);
   if (isDemo) {
     memories = demoMemories;
     knowledge = demoKnowledge;

@@ -26,6 +26,8 @@ import {
   demoAutomationSummary,
 } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 import ApprovalActions from "./ApprovalActions";
 
 export const metadata = { title: "Automatisaties — ArchonPro" };
@@ -46,6 +48,7 @@ function labelForAction(t: string) {
 }
 
 export default async function AutomatisatiesPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   const now = new Date();
@@ -130,11 +133,13 @@ export default async function AutomatisatiesPage() {
     hourly = Array.from(hourMap.entries()).map(([hour, count]) => ({ hour, count }));
   }
 
-  const isDemo =
+  const isDemo = showDemoData(
+    preview,
     pendingApprovals.length === 0 &&
-    executions30d === 0 &&
-    scheduledJobs === 0 &&
-    skillCounts.length === 0;
+      executions30d === 0 &&
+      scheduledJobs === 0 &&
+      skillCounts.length === 0,
+  );
 
   if (isDemo) {
     pendingApprovals = demoApprovals;

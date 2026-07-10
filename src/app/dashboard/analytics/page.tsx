@@ -22,6 +22,8 @@ import {
   demoAnalyticsTotals,
 } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 
 export const metadata = { title: "Analytics — ArchonPro" };
 
@@ -36,6 +38,7 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ period?: string }>;
 }) {
+  const preview = await isActivePreviewMode();
   const { period = "30d" } = await searchParams;
   const days = PERIODS.find((p) => p.key === period)?.days ?? 30;
   const { supabase, companyId } = await getCompanyContext();
@@ -103,8 +106,10 @@ export default async function AnalyticsPage({
     aiActies = aiRes.count ?? 0;
   }
 
-  const isDemo =
-    offertesCount === 0 && omzet === 0 && klantenCount === 0 && aiActies === 0;
+  const isDemo = showDemoData(
+    preview,
+    offertesCount === 0 && omzet === 0 && klantenCount === 0 && aiActies === 0,
+  );
   if (isDemo) {
     series = demoAnalyticsFill(series);
     const t = demoAnalyticsTotals(series);

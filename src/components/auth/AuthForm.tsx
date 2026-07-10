@@ -128,6 +128,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               (user.user_metadata?.referred_by as string | undefined) ?? undefined,
           });
         }
+        await finalizeNewAccount();
         redirectAfterAuth(redirectTo);
         return;
       }

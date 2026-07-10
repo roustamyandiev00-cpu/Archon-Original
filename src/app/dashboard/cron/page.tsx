@@ -10,6 +10,8 @@ import {
 } from "@/components/dashboard/mission";
 import { demoCronJobs } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 
 function scheduleBounds() {
   const now = Date.now();
@@ -39,6 +41,7 @@ function fmtWhen(ms: number | null) {
 }
 
 export default async function CronPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   let jobs: Job[] = [];
@@ -96,7 +99,7 @@ export default async function CronPage() {
     }
   }
 
-  const isDemo = jobs.length === 0;
+  const isDemo = showDemoData(preview, jobs.length === 0);
   if (isDemo) jobs = demoCronJobs();
 
   const { now, endOfToday } = scheduleBounds();

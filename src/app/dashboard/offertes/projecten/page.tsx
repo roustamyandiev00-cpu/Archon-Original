@@ -16,6 +16,7 @@ import {
   projectStatusMeta,
   type ProjectRow,
 } from "@/components/dashboard/projecten/projecten";
+import { showDemoData } from "@/lib/demo-mode";
 
 export const metadata = { title: "Projecten — ArchonPro" };
 
@@ -35,7 +36,7 @@ export default async function ProjectenPage() {
     projecten = (data ?? []) as ProjectRow[];
   }
 
-  const isDemo = projecten.length === 0;
+  const isDemo = showDemoData(preview, projecten.length === 0);
   if (isDemo) projecten = DEMO_PROJECTEN;
 
   const actief = projecten.filter((p) => p.status === "actief").length;

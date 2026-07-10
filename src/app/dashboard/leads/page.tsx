@@ -6,6 +6,7 @@ import LeadsBoard, {
 } from "@/components/dashboard/leads/LeadsBoard";
 import CompanySetupCard from "@/components/werkposts/CompanySetupCard";
 import { DEMO_LEADS } from "@/lib/demo";
+import { showDemoData } from "@/lib/demo-mode";
 
 export const metadata = { title: "Leads / CRM — ArchonPro" };
 
@@ -34,7 +35,7 @@ export default async function LeadsPage() {
       .order("created_at", { ascending: true });
 
     deals = (data ?? []) as DealCard[];
-    isDemo = deals.length === 0;
+    isDemo = showDemoData(preview, deals.length === 0);
   }
 
   if (isDemo) deals = DEMO_LEADS;

@@ -11,6 +11,8 @@ import {
 } from "@/components/dashboard/mission";
 import { demoActivity, demoActivityTypes } from "@/components/dashboard/demo";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 
 export const metadata = { title: "Activiteit — ArchonPro" };
 
@@ -45,6 +47,7 @@ export default async function ActiviteitPage({
 }: {
   searchParams: Promise<{ action?: string }>;
 }) {
+  const preview = await isActivePreviewMode();
   const { action } = await searchParams;
   const { supabase, companyId } = await getCompanyContext();
 
@@ -75,7 +78,7 @@ export default async function ActiviteitPage({
     ).sort();
   }
 
-  const isDemo = entries.length === 0 && !action;
+  const isDemo = showDemoData(preview, entries.length === 0 && !action);
   if (isDemo) {
     entries = demoActivity;
     types = demoActivityTypes;
