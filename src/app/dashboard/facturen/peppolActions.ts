@@ -11,7 +11,9 @@ import {
 import { buildInvoiceUBL } from "@/lib/peppol/ubl";
 import { sendViaAccessPoint } from "@/lib/peppol/send";
 import { normalizeStructuredCommunication } from "@/lib/peppol/be";
+import { validateMercuriusInvoice } from "@/lib/peppol/mercurius";
 import { untyped } from "@/lib/integraties";
+import { notifySlackFactuurVerzonden } from "@/components/dashboard/integraties/slackNotify";
 
 function hashXml(xml: string) {
   return createHash("sha256").update(xml, "utf8").digest("hex");
@@ -177,6 +179,16 @@ export async function sendFactuurViaPeppol(factuurId: number) {
     ublHash,
   });
 
+  void notifySlackFactuurVerzonden(supabase, companyId, {
+    id: factuurId,
+    nummer: built.nummer,
+    klant: built.ubl.customer.name,
+    totaal: built.ubl.lines.reduce((sum, line) => {
+      const net = line.quantity * line.unitPrice;
+      return sum + net * (1 + line.vatPercent / 100);
+    }, 0),
+  });
+
   revalidatePath(`/dashboard/facturen/${factuurId}`);
   revalidatePath("/dashboard/facturen");
   return { ok: true, id: result.id };
@@ -187,5 +199,116 @@ export async function syncPeppolCompanyProfile() {
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
   await syncCompanyLegalEntity(access.supabase, access.companyId);
+  return { ok: true };
+}
+
+async function loadMercuriusCustomer(
+  supabase: unknown,
+  companyId: number,
+  customerId: number | null,
+) {
+  if (!customerId) return { is_overheid: false, mercurius_entiteit_id: null as string | null };
+  const { data } = await untyped(supabase)
+    .from("customers")
+    .select("is_overheid, mercurius_entiteit_id")
+    .eq("id", customerId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  return {
+    is_overheid: Boolean(data?.is_overheid),
+    mercurius_entiteit_id: (data?.mercurius_entiteit_id as string | null) ?? null,
+  };
+}
+
+/** Valideer Mercurius/B2G-gereedheid zonder te versturen. */
+export async function checkFactuurMercuriusReadiness(factuurId: number) {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const peppol = await getPeppolConfig(supabase, companyId);
+  const built = await buildFactuurUbl(supabase, companyId, factuurId, peppol);
+  if (!built) return { error: "Factuur niet gevonden." };
+
+  const { data: factuur } = await untyped(supabase)
+    .from("facturen")
+    .select("customer_id")
+    .eq("id", factuurId)
+    .maybeSingle();
+
+  const customer = await loadMercuriusCustomer(
+    supabase,
+    companyId,
+    factuur?.customer_id ?? null,
+  );
+
+  const readiness = validateMercuriusInvoice({
+    ubl: built.ubl,
+    customerIsOverheid: customer.is_overheid,
+    mercuriusEntiteitId: customer.mercurius_entiteit_id,
+  });
+
+  return {
+    ok: readiness.ok && built.readiness.ok,
+    mercuriusIssues: readiness.issues,
+    peppolIssues: built.readiness.issues,
+    peppolConnected: Boolean(peppol),
+  };
+}
+
+/** Verstuur factuur naar Belgische overheid via Mercurius/Peppol B2G. */
+export async function sendFactuurViaMercurius(factuurId: number) {
+  const readiness = await checkFactuurMercuriusReadiness(factuurId);
+  if ("error" in readiness && readiness.error) return readiness;
+  if (!readiness.ok) {
+    const first = [
+      ...(readiness.mercuriusIssues ?? []),
+      ...(readiness.peppolIssues ?? []),
+    ].find((i) => i.severity === "error");
+    return {
+      error:
+        first?.message ??
+        "Factuur voldoet niet aan Mercurius/B2G-vereisten.",
+    };
+  }
+  if (!readiness.peppolConnected) {
+    return {
+      error: "Peppol is niet verbonden — Mercurius vereist een access point.",
+    };
+  }
+
+  const result = await sendFactuurViaPeppol(factuurId);
+  if ("error" in result && result.error) {
+    const access = await requireWriteAccess();
+    if (!("error" in access)) {
+      await untyped(access.supabase)
+        .from("facturen")
+        .update({
+          mercurius_status: "fout",
+          mercurius_last_error: result.error,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", factuurId)
+        .eq("bedrijf_id", access.companyId);
+    }
+    return result;
+  }
+
+  const access = await requireWriteAccess();
+  if ("error" in access) return { ok: true };
+  const now = new Date().toISOString();
+  await untyped(access.supabase)
+    .from("facturen")
+    .update({
+      mercurius_status: "verzonden",
+      mercurius_sent_at: now,
+      mercurius_last_error: null,
+      updated_at: now,
+    })
+    .eq("id", factuurId)
+    .eq("bedrijf_id", access.companyId);
+
+  revalidatePath("/dashboard/e-facturen");
+  revalidatePath(`/dashboard/facturen/${factuurId}`);
   return { ok: true };
 }

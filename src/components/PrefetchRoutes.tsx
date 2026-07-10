@@ -15,6 +15,7 @@ const ROUTES = [
   "/functies/ai-metgezel",
   "/functies/schatting",
   "/functies/facturen",
+  "/functies/peppol",
   "/functies/integraties",
 ];
 

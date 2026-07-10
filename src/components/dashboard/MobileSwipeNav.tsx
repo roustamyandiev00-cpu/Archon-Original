@@ -1,23 +1,41 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  type TouchEvent,
+} from "react";
 import {
   getMobileDetailParent,
   getMobileSwipeTabIndex,
   MOBILE_SWIPE_TABS,
 } from "@/components/dashboard/nav-config";
 
-const SWIPE_THRESHOLD = 72;
-const MAX_VERTICAL_DRIFT = 96;
+const SWIPE_THRESHOLD = 64;
+const MAX_VERTICAL_DRIFT = 88;
+
+type SlideDirection = "from-left" | "from-right" | null;
 
 export default function MobileSwipeNav({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const touchStart = useRef<{ x: number; y: number; pointerId?: number } | null>(
+    null,
+  );
+  const prevTabIndex = useRef(-1);
   const [dragX, setDragX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
+
+  const tabIndex = getMobileSwipeTabIndex(pathname);
+  const detailParent = getMobileDetailParent(pathname);
+  const isDetailPage = detailParent !== null;
+  const canSwipe = tabIndex >= 0;
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -27,10 +45,23 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
     return () => media.removeEventListener("change", update);
   }, []);
 
-  const tabIndex = getMobileSwipeTabIndex(pathname);
-  const detailParent = getMobileDetailParent(pathname);
-  const isDetailPage = detailParent !== null;
-  const canSwipe = tabIndex >= 0;
+  useEffect(() => {
+    if (tabIndex < 0 || prevTabIndex.current < 0) {
+      prevTabIndex.current = tabIndex;
+      return;
+    }
+    if (tabIndex === prevTabIndex.current) return;
+
+    if (!reduceMotion) {
+      setSlideDirection(
+        tabIndex > prevTabIndex.current ? "from-right" : "from-left",
+      );
+    }
+    prevTabIndex.current = tabIndex;
+
+    const timer = window.setTimeout(() => setSlideDirection(null), 320);
+    return () => window.clearTimeout(timer);
+  }, [tabIndex, pathname, reduceMotion]);
 
   function resetTouch() {
     touchStart.current = null;
@@ -38,40 +69,37 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
     setDragX(0);
   }
 
-  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+  function beginGesture(x: number, y: number, pointerId?: number) {
     if (!canSwipe) return;
-    const touch = event.touches[0];
-    touchStart.current = { x: touch.clientX, y: touch.clientY };
+    touchStart.current = { x, y, pointerId };
     setSwiping(true);
     setDragX(0);
   }
 
-  function handleTouchMove(event: TouchEvent<HTMLDivElement>) {
+  function moveGesture(x: number, y: number) {
     if (!canSwipe || !touchStart.current) return;
-    const touch = event.touches[0];
-    const dx = touch.clientX - touchStart.current.x;
-    const dy = touch.clientY - touchStart.current.y;
-    if (Math.abs(dy) > Math.abs(dx)) return;
+    const dx = x - touchStart.current.x;
+    const dy = y - touchStart.current.y;
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 12) return;
 
     const atStart = tabIndex === 0 && dx > 0 && !isDetailPage;
     const atEnd =
       tabIndex === MOBILE_SWIPE_TABS.length - 1 && dx < 0 && !isDetailPage;
     if (atStart || atEnd) {
-      setDragX(dx * 0.18);
+      setDragX(dx * 0.22);
       return;
     }
-    setDragX(dx * 0.35);
+    setDragX(dx * 0.42);
   }
 
-  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+  function endGesture(x: number, y: number) {
     if (!canSwipe || !touchStart.current) {
       resetTouch();
       return;
     }
 
-    const touch = event.changedTouches[0];
-    const dx = touch.clientX - touchStart.current.x;
-    const dy = touch.clientY - touchStart.current.y;
+    const dx = x - touchStart.current.x;
+    const dy = y - touchStart.current.y;
     touchStart.current = null;
     setSwiping(false);
     setDragX(0);
@@ -95,6 +123,47 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
     }
   }
 
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0];
+    beginGesture(touch.clientX, touch.clientY);
+  }
+
+  function handleTouchMove(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0];
+    moveGesture(touch.clientX, touch.clientY);
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const touch = event.changedTouches[0];
+    endGesture(touch.clientX, touch.clientY);
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "touch") return;
+    beginGesture(event.clientX, event.clientY, event.pointerId);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "touch") return;
+    if (touchStart.current?.pointerId !== event.pointerId) return;
+    moveGesture(event.clientX, event.clientY);
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "touch") return;
+    if (touchStart.current?.pointerId !== event.pointerId) return;
+    endGesture(event.clientX, event.clientY);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  const slideClass =
+    slideDirection === "from-right"
+      ? "mobile-page-from-right"
+      : slideDirection === "from-left"
+        ? "mobile-page-from-left"
+        : "";
+
   return (
     <div className="lg:contents">
       <div
@@ -103,9 +172,28 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={resetTouch}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={resetTouch}
       >
+        {canSwipe && Math.abs(dragX) > 8 && (
+          <div className="mobile-swipe-edge-hints" aria-hidden>
+            {dragX > 0 && tabIndex > 0 && (
+              <span className="mobile-swipe-edge-hint mobile-swipe-edge-hint--left">
+                {MOBILE_SWIPE_TABS[tabIndex - 1].label}
+              </span>
+            )}
+            {dragX < 0 && tabIndex < MOBILE_SWIPE_TABS.length - 1 && (
+              <span className="mobile-swipe-edge-hint mobile-swipe-edge-hint--right">
+                {MOBILE_SWIPE_TABS[tabIndex + 1].label}
+              </span>
+            )}
+          </div>
+        )}
+
         <div
-          className="mobile-swipe-content"
+          className={`mobile-swipe-content ${slideClass}`}
           style={{
             transform:
               !reduceMotion && dragX
@@ -120,28 +208,22 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
       </div>
 
       {canSwipe && (
-        <div className="mt-4 space-y-2 lg:hidden">
-          <div
-            className="flex items-center justify-center gap-1.5"
-            aria-hidden
-          >
-            {MOBILE_SWIPE_TABS.map((tab, index) => (
-              <span
-                key={tab.id}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  index === tabIndex
-                    ? "w-5 bg-sky-400"
-                    : "w-1.5 bg-white/15"
-                }`}
-              />
-            ))}
-          </div>
-          {isDetailPage && (
-            <p className="text-center text-[11px] text-zinc-600">
-              Swipe rechts voor overzicht · links voor volgende sectie
-            </p>
-          )}
+        <div className="mobile-swipe-dots lg:hidden" aria-hidden>
+          {MOBILE_SWIPE_TABS.map((tab, index) => (
+            <span
+              key={tab.id}
+              className={`mobile-swipe-dot ${
+                index === tabIndex ? "mobile-swipe-dot--active" : ""
+              }`}
+            />
+          ))}
         </div>
+      )}
+
+      {canSwipe && isDetailPage && (
+        <p className="mt-2 text-center text-[11px] text-zinc-600 lg:hidden">
+          Swipe rechts voor overzicht · links voor volgende sectie
+        </p>
       )}
     </div>
   );

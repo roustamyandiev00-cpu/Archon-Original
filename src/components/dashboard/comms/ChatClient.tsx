@@ -50,13 +50,25 @@ function parseAttachments(value: unknown): Attachment[] {
 export default function ChatClient({
   channels,
   companyId,
+  selectedId: controlledSelectedId,
+  onSelectChannel,
+  showChannelList = true,
 }: {
   channels: ChannelSummary[];
   companyId: number;
+  selectedId?: string | null;
+  onSelectChannel?: (id: string) => void;
+  /** Verberg de ingebouwde kanalenlijst (bv. bij Bouwnetwerk-hub met externe sidebar). */
+  showChannelList?: boolean;
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(
+  const [internalSelectedId, setInternalSelectedId] = useState<string | null>(
     channels[0]?.id ?? null,
   );
+  const selectedId = controlledSelectedId ?? internalSelectedId;
+  const setSelectedId = (id: string) => {
+    onSelectChannel?.(id);
+    if (controlledSelectedId === undefined) setInternalSelectedId(id);
+  };
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loadedChannelId, setLoadedChannelId] = useState<string | null>(null);
   const loading = selectedId !== null && loadedChannelId !== selectedId;
@@ -146,57 +158,30 @@ export default function ChatClient({
 
   const selected = channels.find((c) => c.id === selectedId);
 
-  if (channels.length === 0) {
-    return (
-      <div className="grid place-items-center rounded-2xl border border-dashed border-white/10 bg-zinc-900/40 px-6 py-16 text-center">
-        <div className="max-w-md space-y-2">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-sky-500/10 text-sky-400">
-            <MessageCircle size={22} />
-          </span>
-          <h3 className="text-base font-semibold text-zinc-100">
-            Nog geen gesprekken
-          </h3>
-          <p className="text-sm text-zinc-500">
-            Zodra je een reactie op een werkpost accepteert in{" "}
-            <span className="text-zinc-300">Bouwnetwerk</span>, verschijnt de
-            chat met die tegenpartij hier.
-          </p>
-        </div>
+  const emptyChannels = (
+    <div className="grid place-items-center rounded-2xl border border-dashed border-white/10 bg-zinc-900/40 px-6 py-16 text-center">
+      <div className="max-w-md space-y-2">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-sky-500/10 text-sky-400">
+          <MessageCircle size={22} />
+        </span>
+        <h3 className="text-base font-semibold text-zinc-100">
+          Nog geen gesprekken
+        </h3>
+        <p className="text-sm text-zinc-500">
+          Zodra je een reactie op een werkpost accepteert in{" "}
+          <span className="text-zinc-300">Bouwnetwerk</span>, verschijnt de
+          chat met die tegenpartij hier.
+        </p>
       </div>
-    );
+    </div>
+  );
+
+  if (channels.length === 0) {
+    return emptyChannels;
   }
 
-  return (
-    <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 sm:grid-cols-[260px_1fr]">
-      <div className="border-b border-white/10 sm:border-b-0 sm:border-r">
-        <div className="border-b border-white/10 px-4 py-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-            Gesprekken
-          </h2>
-        </div>
-        <div className="max-h-[420px] overflow-y-auto">
-          {channels.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setSelectedId(c.id)}
-              className={`flex w-full flex-col gap-0.5 border-b border-white/5 px-4 py-3 text-left transition-colors last:border-0 hover:bg-white/[0.04] ${
-                selectedId === c.id ? "bg-white/[0.06]" : ""
-              }`}
-            >
-              <span className="truncate text-sm font-medium text-zinc-100">
-                {c.counterpartNaam}
-              </span>
-              {c.werkpostTitel && (
-                <span className="flex items-center gap-1 truncate text-xs text-zinc-500">
-                  <HardHat size={11} /> {c.werkpostTitel}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex min-h-[420px] flex-col">
+  const chatPane = (
+    <div className={`flex min-h-[420px] flex-col ${showChannelList ? "" : "h-full min-h-[480px] rounded-2xl border border-white/10 bg-zinc-900/50"}`}>
         {selected && (
           <div className="border-b border-white/10 px-5 py-3">
             <p className="text-sm font-medium text-zinc-100">
@@ -335,6 +320,59 @@ export default function ChatClient({
           </button>
         </form>
       </div>
+  );
+
+  if (!showChannelList) {
+    if (!selectedId) {
+      return (
+        <div className="grid h-full min-h-[480px] place-items-center rounded-2xl border border-white/10 bg-zinc-900/50 px-6 text-center">
+          <div className="max-w-md space-y-3">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-sky-500/10 text-sky-400">
+              <MessageCircle size={26} />
+            </span>
+            <h3 className="text-lg font-semibold text-zinc-100">
+              Welkom bij BouwNetwerk
+            </h3>
+            <p className="text-sm text-zinc-500">
+              Selecteer een kanaal om te beginnen met chatten
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return chatPane;
+  }
+
+  return (
+    <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/50 sm:grid-cols-[260px_1fr]">
+      <div className="border-b border-white/10 sm:border-b-0 sm:border-r">
+        <div className="border-b border-white/10 px-4 py-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+            Gesprekken
+          </h2>
+        </div>
+        <div className="max-h-[420px] overflow-y-auto">
+          {channels.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setSelectedId(c.id)}
+              className={`flex w-full flex-col gap-0.5 border-b border-white/5 px-4 py-3 text-left transition-colors last:border-0 hover:bg-white/[0.04] ${
+                selectedId === c.id ? "bg-white/[0.06]" : ""
+              }`}
+            >
+              <span className="truncate text-sm font-medium text-zinc-100">
+                {c.counterpartNaam}
+              </span>
+              {c.werkpostTitel && (
+                <span className="flex items-center gap-1 truncate text-xs text-zinc-500">
+                  <HardHat size={11} /> {c.werkpostTitel}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+      {chatPane}
     </div>
   );
 }

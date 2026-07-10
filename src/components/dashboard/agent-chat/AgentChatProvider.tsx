@@ -15,6 +15,15 @@ import {
   loadCompanyAgents,
   saveCompanyAgents,
 } from "@/components/dashboard/agents/storage";
+import type { CustomAgent } from "@/components/dashboard/agents/config";
+import { rememberChatInsight } from "@/app/dashboard/geheugen/actions";
+import { sendAgentChatMessage } from "@/app/dashboard/agent-chat/actions";
+import {
+  detectNavigationIntent,
+  detectQuickAction,
+} from "@/components/dashboard/agent-navigation/routes";
+import { useAgentNavigation } from "@/components/dashboard/agent-navigation/AgentNavigationProvider";
+import { dispatchOpenControlCenter } from "@/components/dashboard/DashboardSidePanel";
 
 export type AgentChatMessage = {
   id: string;
@@ -70,7 +79,7 @@ const STORAGE_POSITION_KEY = "archon.agent-chat.position";
 
 function starterFor(agent: ChatAgent): AgentChatMessage[] {
   const intros: Record<string, string> = {
-    nova: "Ik ben Nova, je AI-metgezel. Vraag me om offertes, facturen of opvolging — ik zet acties klaar ter goedkeuring.",
+    nova: "Ik ben Nova, je AI-metgezel. Vraag me om offertes, facturen of opvolging — ik zet acties klaar ter goedkeuring. Via het AI Control Center zie je live agent-status en recente acties.",
     schatter:
       "Ik ben Schatter en regel je offertes. Geef me een taak — bijvoorbeeld een offerte opstellen of een verzonden offerte opvolgen.",
     facturatie:
@@ -80,7 +89,7 @@ function starterFor(agent: ChatAgent): AgentChatMessage[] {
   };
 
   const optionsMap: Record<string, string[]> = {
-    nova: ["🤖 Maak nieuwe AI-agent", "📄 Verstuur een offerte", "💡 Ben ik iets vergeten?"],
+    nova: ["🤖 Maak nieuwe AI-agent", "📄 Verstuur een offerte", "📊 Toon AI Control Center", "💡 Ben ik iets vergeten?"],
     schatter: ["✍️ Nieuwe offerte opstellen", "📈 Verzonden offerte opvolgen"],
     facturatie: ["✉️ Betalingsherinnering klaarzetten", "💰 Facturen controleren"],
     opvolger: ["📞 Nieuwe leads opvolgen", "🤝 Lead status bekijken"],
@@ -104,7 +113,8 @@ function replyFor(agent: ChatAgent, input: string): { text: string; options?: st
   if (agent.id === "schatter") {
     if (q.includes("nieuw") || q.includes("opstel") || q.includes("maak")) {
       return {
-        text: "Prima — ik zet een concept-offerte klaar. Open 'Nieuwe offerte' en ik vul de regels alvast voor je in op basis van je laatste projecten.",
+        text: "Ik open **Nieuwe offerte** — daar vul ik de regels alvast voor je in op basis van je geheugen en laatste projecten.",
+        options: ["Open nieuwe offerte", "Bekijk offertelijst"],
       };
     }
     return {
@@ -215,8 +225,9 @@ export function AgentChatProvider({
   companyId: number | null;
 }) {
   const router = useRouter();
+  const { navigateTo } = useAgentNavigation();
   const [view, setView] = useState<AgentChatView>("minimized");
-  const [position, setPositionState] = useState({ x: 0, y: 0 });
+  const [position, setPositionState] = useState({ x: 16, y: 72 });
   const [positionReady, setPositionReady] = useState(false);
   const [activeAgent, setActiveAgent] = useState<ChatAgent>(NOVA_AGENT);
   const [historyByAgent, setHistoryByAgent] = useState<
@@ -224,7 +235,6 @@ export function AgentChatProvider({
   >({ nova: starterFor(NOVA_AGENT) });
   const [isTyping, setIsTyping] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
 
   // Stateful Dialog Flow
   const [chatState, setChatState] = useState<{
@@ -236,27 +246,22 @@ export function AgentChatProvider({
   const messages = historyByAgent[activeAgent.id] ?? starterFor(activeAgent);
 
   useEffect(() => {
-    const storedView = readStoredView();
+    setView(readStoredView());
     const storedPosition = readStoredPosition();
-    setView(storedView);
-    if (storedPosition) {
-      setPositionState(clampChatPosition(storedPosition));
-      setPositionReady(true);
-    } else {
-      setPositionState(defaultChatPosition());
-      setPositionReady(true);
-    }
-    setHydrated(true);
+    setPositionState(
+      storedPosition ? clampChatPosition(storedPosition) : defaultChatPosition(),
+    );
+    setPositionReady(true);
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!positionReady) return;
     try {
       sessionStorage.setItem(STORAGE_VIEW_KEY, view);
     } catch {
       /* negeer */
     }
-  }, [view, hydrated]);
+  }, [view, positionReady]);
 
   const setPosition = useCallback((next: { x: number; y: number }) => {
     const clamped = clampChatPosition(next);
@@ -408,21 +413,84 @@ export function AgentChatProvider({
 
       const supabase = createClient();
 
+      const priorMessages = historyByAgent[agent.id] ?? starterFor(agent);
+
       window.setTimeout(async () => {
         let replyText = "";
         let replyOptions: string[] | undefined = undefined;
         const q = trimmed.toLowerCase();
 
+        if (companyId && !chatState) {
+          const history = [...priorMessages, userMessage]
+            .filter((m) => !m.id.startsWith("welcome-"))
+            .slice(-10)
+            .map((m) => ({
+              role: m.role,
+              text: m.text,
+            }));
+
+          const llm = await sendAgentChatMessage({
+            agentId: agent.id,
+            history,
+            message: trimmed,
+          });
+
+          if ("ok" in llm && llm.ok) {
+            replyText = llm.text;
+            replyOptions = llm.options;
+            if (llm.navigateTo) {
+              navigateTo(llm.navigateTo, { minimizeChat: true });
+            }
+            if (llm.openControlCenter) {
+              dispatchOpenControlCenter();
+            }
+            if (llm.remembered) {
+              replyText += "\n\n_Ik heb dit opgeslagen in je geheugen._";
+            }
+
+            setHistoryByAgent((prev) => ({
+              ...prev,
+              [agent.id]: [
+                ...(prev[agent.id] ?? starterFor(agent)),
+                {
+                  id: `a-${Date.now()}`,
+                  role: "agent",
+                  text: replyText,
+                  time: "Nu",
+                  options: replyOptions,
+                },
+              ],
+            }));
+            setIsTyping(false);
+            setView((current) => {
+              if (current !== "open") setHasUnread(true);
+              return current;
+            });
+            return;
+          }
+        }
+
         if (
           q.includes("bekijk goedkeuring") ||
           q.includes("goedkeuringen") ||
-          q === "goedkeuren"
+          q === "goedkeuren" ||
+          q.includes("toon automatisaties")
         ) {
-          router.push("/dashboard/automatisaties");
+          navigateTo("/dashboard/automatisaties", { minimizeChat: true });
           replyText =
             q === "goedkeuren"
               ? "Ik open **Automatisaties** — klik daar op **Goedkeuren** bij het voorstel dat je wilt uitvoeren."
               : "Ik open **Automatisaties** — daar zie je alle voorstellen die op je wachten.";
+        } else if (q === "open nieuwe offerte") {
+          navigateTo("/dashboard/offertes/nieuw", { minimizeChat: true });
+          replyText =
+            "Ik open **Nieuwe offerte**. Beschrijf de werken en ik gebruik je geheugen voor realistische prijzen.";
+        } else if (q === "bekijk offertelijst" || q === "open offertelijst") {
+          navigateTo("/dashboard/offertes", { minimizeChat: true });
+          replyText = "Ik open je **offertelijst**.";
+        } else if (q === "bekijk geheugen") {
+          navigateTo("/dashboard/geheugen", { minimizeChat: true });
+          replyText = "Ik open je **geheugen** — daar zie je wat ik over je werkwijze en prijzen heb geleerd.";
         } else if (
           q.includes("andere instructie") ||
           q.includes("reageren op het wachtende")
@@ -471,15 +539,15 @@ export function AgentChatProvider({
               if (companyId) {
                 try {
                   const currentAgents = await loadCompanyAgents(supabase, companyId);
-                  const newAgent = {
+                  const newAgent: CustomAgent = {
                     id: `agent-${Date.now().toString(36)}`,
                     name: name,
                     role: role,
                     instructies: trigger,
-                    capabilities: ["automatisaties"] as any[],
+                    capabilities: ["automatisaties"],
                     gradient: "from-rose-400 to-pink-500",
                     enabled: true,
-                    toestemming: "voorstellen" as any,
+                    toestemming: "voorstellen",
                   };
                   await saveCompanyAgents(supabase, companyId, [...currentAgents, newAgent]);
 
@@ -492,6 +560,7 @@ export function AgentChatProvider({
                   });
 
                   setTimeout(() => {
+                    dispatchOpenControlCenter();
                     setHistoryByAgent((prev) => ({
                       ...prev,
                       [agent.id]: [
@@ -513,6 +582,7 @@ export function AgentChatProvider({
               } else {
                 // Mock success for preview mode
                 setTimeout(() => {
+                  dispatchOpenControlCenter();
                   setHistoryByAgent((prev) => ({
                     ...prev,
                     [agent.id]: [
@@ -555,7 +625,7 @@ export function AgentChatProvider({
                 await supabase.from("agent_actions").insert({
                   company_id: companyId,
                   agent_name: "Schatter",
-                  action_type: "verstuur_offerte",
+                  action_type: "send_offerte",
                   title: `Offerte verzenden naar ${email}`,
                   reason: `Gevraagd via Nova AI-metgezel voor ${target}`,
                   payload_json: { email, target },
@@ -658,9 +728,38 @@ export function AgentChatProvider({
               replyOptions = ["Ja, bereid opvolging voor", "Nee, overslaan"];
             }
           } else {
-            const standardReply = replyFor(agent, trimmed);
-            replyText = standardReply.text;
-            replyOptions = standardReply.options;
+            const navIntent =
+              detectNavigationIntent(trimmed, agent.id) ??
+              detectQuickAction(trimmed, agent.id);
+
+            if (navIntent) {
+              navigateTo(navIntent.route, { minimizeChat: true });
+              if ("openControlCenter" in navIntent && navIntent.openControlCenter) {
+                dispatchOpenControlCenter();
+              }
+              replyText =
+                "openControlCenter" in navIntent && navIntent.openControlCenter
+                  ? `Ik open het **AI Control Center** — daar zie je live agent-status en het recente logboek.`
+                  : `Ik open **${navIntent.label}** voor je.`;
+            } else if (companyId) {
+              const remembered = await rememberChatInsight({
+                text: trimmed,
+                agentName: agent.name,
+              });
+              if (remembered.ok) {
+                replyText =
+                  "Genoteerd in je **geheugen** — ik gebruik dit voortaan bij offertes en suggesties.";
+                replyOptions = ["Bekijk geheugen", "Dank je"];
+              } else {
+                const standardReply = replyFor(agent, trimmed);
+                replyText = standardReply.text;
+                replyOptions = standardReply.options;
+              }
+            } else {
+              const standardReply = replyFor(agent, trimmed);
+              replyText = standardReply.text;
+              replyOptions = standardReply.options;
+            }
           }
         }
 
@@ -685,7 +784,7 @@ export function AgentChatProvider({
         });
       }, 700);
     },
-    [activeAgent, chatState, companyId, router],
+    [activeAgent, chatState, companyId, router, navigateTo, historyByAgent],
   );
 
   useEffect(() => {

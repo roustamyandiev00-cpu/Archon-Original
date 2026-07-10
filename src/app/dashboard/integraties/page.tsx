@@ -7,6 +7,10 @@ import {
   untyped,
   type Integratie,
 } from "@/lib/integraties";
+import {
+  isSlackPlatformReady,
+  loadSlackSetupStatus,
+} from "@/components/dashboard/integraties/slackSetup";
 import PlaceholderPage from "@/components/dashboard/PlaceholderPage";
 import IntegrationsGrid from "@/components/dashboard/integraties/IntegrationsGrid";
 
@@ -49,6 +53,11 @@ export default async function IntegratiesPage({
     );
   }
 
+  const slackSetup =
+    companyId != null
+      ? await loadSlackSetupStatus(supabase, companyId)
+      : null;
+
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -78,7 +87,19 @@ export default async function IntegratiesPage({
         </div>
       )}
 
-      <IntegrationsGrid providers={INTEGRATION_PROVIDERS} connections={byProvider} />
+      {slackSetup?.platformReady && !slackSetup.ready && (
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-200">
+          <b>Slack-setup onvolledig.</b> Elke klant koppelt een eigen
+          workspace en kanaal — rond de stappen bij Slack af om meldingen te
+          ontvangen.
+        </div>
+      )}
+
+      <IntegrationsGrid
+        providers={INTEGRATION_PROVIDERS}
+        connections={byProvider}
+        slackPlatformReady={isSlackPlatformReady()}
+      />
     </div>
   );
 }

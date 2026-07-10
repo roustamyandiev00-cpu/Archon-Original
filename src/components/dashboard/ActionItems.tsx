@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileText, Receipt, Send, Check, X, Loader2 } from "lucide-react";
 import { decideAction } from "@/app/dashboard/automatisaties/actions";
+import { useAgentNavigation } from "@/components/dashboard/agent-navigation/AgentNavigationProvider";
 
 export type ActionItem = {
   id: number;
@@ -27,6 +28,7 @@ export default function ActionItems({
   demoMode?: boolean;
 }) {
   const router = useRouter();
+  const { navigateTo, markActionNavigated } = useAgentNavigation();
   const [actions, setActions] = useState(items);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,16 @@ export default function ActionItems({
     }
     setActions((a) => a.filter((x) => x.id !== id));
     if (status === "approved" && "route" in result && result.route) {
-      router.push(result.route);
+      if ("actionId" in result && typeof result.actionId === "number") {
+        markActionNavigated(result.actionId);
+      }
+      if ("mailto" in result && typeof result.mailto === "string") {
+        window.open(result.mailto, "_blank");
+      }
+      if ("bailiffMailto" in result && typeof result.bailiffMailto === "string") {
+        window.open(result.bailiffMailto, "_blank");
+      }
+      navigateTo(result.route, { minimizeChat: true });
     } else {
       router.refresh();
     }

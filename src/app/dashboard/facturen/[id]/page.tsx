@@ -14,6 +14,7 @@ import {
   type CustomerLite,
 } from "@/lib/documentData";
 import { untyped } from "@/lib/integraties";
+import { getPeppolConfig } from "@/lib/peppol/build";
 
 export async function generateMetadata({
   params,
@@ -120,13 +121,12 @@ export default async function FactuurDetailPage({
   );
   const docRows = buildDocumentRows(lines);
 
-  const { data: peppolRow } = await untyped(supabase)
-    .from("integraties")
-    .select("status")
-    .eq("bedrijf_id", companyId)
-    .eq("provider", "peppol")
-    .maybeSingle();
-  const peppolConnected = peppolRow?.status === "connected";
+  const peppol = await getPeppolConfig(supabase, companyId);
+  const peppolConnected = Boolean(peppol);
+  const peppolCanSend =
+    peppolConnected &&
+    (peppol?.accessPoint === "storecove" || peppol?.accessPoint === "billit") &&
+    Boolean(peppol?.apiKey);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -276,6 +276,7 @@ export default async function FactuurDetailPage({
           <PeppolActions
             factuurId={factuur.id}
             peppolConnected={peppolConnected}
+            peppolCanSend={peppolCanSend}
             buyerReference={factuur.buyer_reference}
             structuredCommunication={factuur.structured_communication}
             peppolStatus={factuur.peppol_status}

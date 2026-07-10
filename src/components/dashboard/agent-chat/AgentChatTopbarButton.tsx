@@ -12,6 +12,7 @@ export default function AgentChatTopbarButton() {
   return (
     <button
       type="button"
+      data-tour="dash-nova"
       onClick={toggle}
       aria-label={
         isOpen

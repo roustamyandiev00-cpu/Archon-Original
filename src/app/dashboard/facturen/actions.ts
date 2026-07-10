@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
+import { notifySlackNewFactuur } from "@/components/dashboard/integraties/slackNotify";
 import { lineTotals, type OfferteLijnInput } from "@/lib/offertes";
 import { documentTypeMeta, type FactuurDocumentType } from "@/lib/facturen";
 import { loadCompanyDefaultTemplate } from "@/components/dashboard/documenten/documentTemplate";
@@ -58,7 +59,7 @@ export async function createFactuur(input: CreateFactuurInput) {
 
   // Insert met retry: bij een uniek-conflict op het nummer schuiven we op
   // naar het volgende vrije nummer (unique constraint op nummer is globaal).
-  let factuur: { id: number } | null = null;
+  let factuur: { id: number; nummer: string } | null = null;
   let lastError: { message: string; code?: string } | null = null;
   for (let attempt = 0; attempt < 25; attempt++) {
     const nummer = `${prefix}-${year}-${String(seq).padStart(4, "0")}`;
@@ -81,11 +82,11 @@ export async function createFactuur(input: CreateFactuurInput) {
         status: "concept",
         template_id: templateId,
       })
-      .select("id")
+      .select("id, nummer")
       .single();
 
     if (!res.error && res.data) {
-      factuur = res.data as { id: number };
+      factuur = res.data as { id: number; nummer: string };
       lastError = null;
       break;
     }
@@ -119,6 +120,14 @@ export async function createFactuur(input: CreateFactuurInput) {
   if (lineError) {
     return { error: lineError.message };
   }
+
+  void notifySlackNewFactuur(supabase, companyId, {
+    id: factuur.id,
+    nummer: factuur.nummer,
+    klant: input.klant || "Onbekende klant",
+    totaal,
+    documentType: input.documentType,
+  });
 
   revalidatePath("/dashboard/facturen");
   return { id: factuur.id as number };

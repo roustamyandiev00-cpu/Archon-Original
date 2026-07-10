@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Building2,
@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { REFERRAL_REWARDS } from "@/components/ReferralProgram";
+import { redirectAfterAuth } from "@/lib/auth/redirect-after-auth";
+import { finalizeNewAccount } from "@/app/register/actions";
 
 type Mode = "login" | "register";
 
@@ -52,10 +54,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const t = copy[mode];
   const isRegister = mode === "register";
 
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "/dashboard";
-  const refCode = searchParams.get("ref")?.trim() ?? "";
+  const refFromUrl = searchParams.get("ref")?.trim() ?? "";
   const prefillEmail = searchParams.get("email") ?? "";
 
   const [showPassword, setShowPassword] = useState(false);
@@ -63,6 +64,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [name, setName] = useState("");
   const [bedrijf, setBedrijf] = useState("");
   const [email, setEmail] = useState(prefillEmail);
+  const [referralCode, setReferralCode] = useState(refFromUrl);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,15 +86,25 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             data: {
               full_name: name,
               ...(bedrijf.trim() ? { company_name: bedrijf.trim() } : {}),
-              ...(refCode ? { referred_by: refCode } : {}),
+              ...(referralCode.trim()
+                ? { referred_by: referralCode.trim().toUpperCase() }
+                : {}),
             },
             emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
           },
         });
         if (error) throw error;
         if (data.session) {
-          router.push(redirectTo);
-          router.refresh();
+          if (data.user) {
+            await supabase.rpc("ensure_user_referral", {
+              p_user_id: data.user.id,
+              p_full_name: name.trim() || undefined,
+              p_referred_by: referralCode.trim().toUpperCase() || undefined,
+            });
+          }
+          await finalizeNewAccount();
+          redirectAfterAuth(redirectTo);
+          return;
         } else {
           setNotice(
             "Account aangemaakt. Check je e-mail om je adres te bevestigen en log daarna in.",
@@ -104,8 +116,20 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           password,
         });
         if (error) throw error;
-        router.push(redirectTo);
-        router.refresh();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.rpc("ensure_user_referral", {
+            p_user_id: user.id,
+            p_full_name:
+              (user.user_metadata?.full_name as string | undefined) ?? undefined,
+            p_referred_by:
+              (user.user_metadata?.referred_by as string | undefined) ?? undefined,
+          });
+        }
+        redirectAfterAuth(redirectTo);
+        return;
       }
     } catch (err) {
       setError(
@@ -152,14 +176,14 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {isRegister && refCode && (
+        {isRegister && referralCode.trim() && (
           <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">
             <p className="flex items-center gap-2 font-medium">
               <Gift size={16} className="shrink-0 text-violet-300" />
               Je bent uitgenodigd door een collega
             </p>
             <p className="mt-1 text-xs leading-relaxed text-violet-200/80">
-              Maak je account af en ontvang automatisch{" "}
+              Code <span className="font-mono font-semibold">{referralCode.trim().toUpperCase()}</span> — ontvang{" "}
               <span className="font-semibold text-violet-100">
                 {REFERRAL_REWARDS.invitee}
               </span>{" "}
@@ -179,6 +203,23 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               onChange={(e) => setName(e.target.value)}
               placeholder="Je volledige naam"
               className={inputClass}
+            />
+          </Field>
+        )}
+
+        {isRegister && (
+          <Field
+            label="Uitnodigingscode (optioneel)"
+            hint="Heb je een code van een collega? Vul die in voor korting op je eerste maand."
+          >
+            <InputIcon icon={<Gift size={16} />} />
+            <input
+              type="text"
+              autoComplete="off"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              placeholder="Bijv. JDV4729"
+              className={`${inputClass} font-mono uppercase tracking-wider`}
             />
           </Field>
         )}
@@ -322,9 +363,11 @@ const inputClass =
 
 function Field({
   label,
+  hint,
   children,
 }: {
   label: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -333,6 +376,7 @@ function Field({
         {label}
       </label>
       <div className="relative">{children}</div>
+      {hint && <p className="mt-1 text-xs text-zinc-500">{hint}</p>}
     </div>
   );
 }

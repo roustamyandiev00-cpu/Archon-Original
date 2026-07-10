@@ -3,6 +3,26 @@ import { NextResponse, type NextRequest } from "next/server";
 import { PREVIEW_COOKIE } from "@/components/dashboard/trial";
 import type { Database } from "@/types/database.types";
 
+function hasSupabaseAuthCookie(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
+}
+
+function applyAuthCookies(
+  response: NextResponse,
+  cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[],
+) {
+  cookiesToSet.forEach(({ name, value, options }) =>
+    response.cookies.set(name, value, {
+      ...(options ?? {}),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    }),
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -19,12 +39,7 @@ export async function updateSession(request: NextRequest) {
             request.cookies.set(name, value),
           );
           supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, {
-              ...options,
-              secure: process.env.NODE_ENV === "production",
-            }),
-          );
+          applyAuthCookies(supabaseResponse, cookiesToSet);
         },
       },
     },
@@ -32,9 +47,21 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: refresh the auth token. Do not run code between createServerClient
   // and getUser() — it can cause hard-to-debug logout issues.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  let authCheckFailed = false;
+
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      authCheckFailed = true;
+      console.error("[auth] getUser error in middleware:", error.message);
+    } else {
+      user = data.user;
+    }
+  } catch (error) {
+    authCheckFailed = true;
+    console.error("[auth] getUser failed in middleware:", error);
+  }
 
   // Protect the dashboard, maar laat anonieme voorbeeldmodus toe.
   const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");
@@ -42,7 +69,14 @@ export async function updateSession(request: NextRequest) {
   const isPreviewMode =
     request.cookies.get(PREVIEW_COOKIE)?.value === "1" || isPreviewEntry;
 
-  if (!user && isDashboard && !isPreviewMode) {
+  const hasAuthCookie = hasSupabaseAuthCookie(request);
+
+  if (
+    !user &&
+    isDashboard &&
+    !isPreviewMode &&
+    !(authCheckFailed && hasAuthCookie)
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);
@@ -56,6 +90,7 @@ export async function updateSession(request: NextRequest) {
       sameSite: "lax",
       path: "/",
       maxAge: 0,
+      secure: process.env.NODE_ENV === "production",
     });
   }
 

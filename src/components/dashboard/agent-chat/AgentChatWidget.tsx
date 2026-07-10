@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type PointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
-import { Bot, GripHorizontal, Minus, Send, Sparkles, X } from "lucide-react";
+import { Bot, GripHorizontal, Mic, MicOff, Minus, Send, X } from "lucide-react";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
+import { useSpeechInput } from "@/hooks/useSpeechInput";
+
+const subscribeToClient = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 export default function AgentChatWidget() {
   const {
@@ -19,14 +31,20 @@ export default function AgentChatWidget() {
   } = useAgentChat();
   const [input, setInput] = useState("");
   const [dragging, setDragging] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const { isListening, supported: voiceSupported, toggle: toggleVoice } =
+    useSpeechInput({
+      continuous: true,
+      onResult: (text) => setInput(text),
+      onFinal: (text) => setInput(text),
+    });
+  const mounted = useSyncExternalStore(
+    subscribeToClient,
+    clientSnapshot,
+    serverSnapshot,
+  );
   const dragOffset = useRef({ x: 0, y: 0 });
   const bottomRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -86,7 +104,7 @@ export default function AgentChatWidget() {
   const panel = (
     <div
       ref={panelRef}
-      className="agent-chat-widget fixed z-[80] flex w-[min(92vw,380px)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-zinc-900/98 shadow-2xl shadow-black/80 shadow-[0_15px_50px_-10px_rgba(0,0,0,0.8),0_0_30px_rgba(14,165,233,0.15)] backdrop-blur-xl"
+      className="agent-chat-widget fixed z-[80] flex w-[min(92vw,380px)] flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-xl"
       style={{
         left: position.x,
         top: position.y,
@@ -106,7 +124,7 @@ export default function AgentChatWidget() {
       >
         <div className="flex min-w-0 items-center gap-2.5">
           <span
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${activeAgent.gradient} text-zinc-950 shadow-md`}
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-800 text-sky-400`}
           >
             {activeAgent.id === "nova" ? (
               <Bot size={17} />
@@ -120,8 +138,8 @@ export default function AgentChatWidget() {
             <p className="truncate text-sm font-semibold text-zinc-50">
               {activeAgent.name}
             </p>
-            <p className="truncate text-[11px] font-medium text-emerald-400">
-              Live · {activeAgent.role}
+            <p className="truncate text-[11px] text-zinc-500">
+              {activeAgent.role}
             </p>
           </div>
         </div>
@@ -164,8 +182,8 @@ export default function AgentChatWidget() {
               <div
                 className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                   message.role === "user"
-                    ? "bg-sky-500 font-semibold text-zinc-950 shadow-md"
-                    : "border border-white/15 bg-zinc-800/90 text-zinc-100 shadow-sm"
+                    ? "bg-sky-500 text-zinc-950"
+                    : "border border-zinc-700 bg-zinc-800 text-zinc-100"
                 }`}
               >
                 <div className="whitespace-pre-line">{message.text}</div>
@@ -224,6 +242,23 @@ export default function AgentChatWidget() {
               }
             }}
           />
+          {voiceSupported && (
+            <button
+              type="button"
+              onClick={toggleVoice}
+              aria-pressed={isListening}
+              aria-label={
+                isListening ? "Stop met opnemen" : "Spreek je vraag in"
+              }
+              className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition-colors ${
+                isListening
+                  ? "border-rose-500/50 bg-rose-500/15 text-rose-300 animate-pulse"
+                  : "border-white/15 bg-zinc-800/60 text-zinc-300 hover:border-white/25 hover:text-zinc-100"
+              }`}
+            >
+              {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+          )}
           <button
             type="submit"
             disabled={!input.trim() || isTyping}
@@ -233,8 +268,7 @@ export default function AgentChatWidget() {
             <Send size={16} />
           </button>
         </div>
-        <p className="mt-2.5 flex items-center gap-1.5 text-[10px] text-zinc-400">
-          <Sparkles size={11} className="text-sky-400" />
+        <p className="mt-2.5 text-[10px] text-zinc-500">
           Acties worden klaargezet ter goedkeuring
         </p>
       </form>

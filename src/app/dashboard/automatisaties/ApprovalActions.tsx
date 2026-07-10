@@ -4,10 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import { decideAction } from "./actions";
+import { useAgentNavigation } from "@/components/dashboard/agent-navigation/AgentNavigationProvider";
 
 export default function ApprovalActions({ id }: { id: number }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const { navigateTo, markActionNavigated } = useAgentNavigation();
   const [acting, setActing] = useState<"approve" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +21,16 @@ export default function ApprovalActions({ id }: { id: number }) {
       if (res?.error) {
         setError(res.error);
       } else if (decision === "approve" && res && "route" in res && res.route) {
-        router.push(res.route);
+        if ("actionId" in res && typeof res.actionId === "number") {
+          markActionNavigated(res.actionId);
+        }
+        if ("mailto" in res && typeof res.mailto === "string") {
+          window.open(res.mailto, "_blank");
+        }
+        if ("bailiffMailto" in res && typeof res.bailiffMailto === "string") {
+          window.open(res.bailiffMailto, "_blank");
+        }
+        navigateTo(res.route, { minimizeChat: true });
       } else {
         router.refresh();
       }

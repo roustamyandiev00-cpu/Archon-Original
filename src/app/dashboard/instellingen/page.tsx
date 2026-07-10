@@ -1,10 +1,13 @@
 import { Settings } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { loadUserAgentName } from "@/lib/agents/userAi";
+import { ensureUserReferral } from "@/lib/referral";
 import SettingsForm from "@/components/dashboard/instellingen/SettingsForm";
 import PlaceholderPage from "@/components/dashboard/PlaceholderPage";
 import { parseExtras, DEFAULT_TEMPLATE, type SettingsInput } from "./settings";
 import type { ApiKeyInfo } from "@/lib/apiResources";
+import { untyped, type Integratie } from "@/lib/integraties";
+import { isSlackPlatformReady } from "@/components/dashboard/integraties/slackSetup";
 
 export const metadata = { title: "Instellingen — ArchonPro" };
 
@@ -51,6 +54,24 @@ export default async function InstellingenPage() {
     ? await loadUserAgentName(supabase, user.id)
     : extras.ai.agentNaam;
 
+  const referralCode = user
+    ? await ensureUserReferral(supabase, {
+        fullName: user.user_metadata?.full_name as string | undefined,
+        referredBy: user.user_metadata?.referred_by as string | undefined,
+      })
+    : null;
+
+  const { data: integrationRows } = await untyped(supabase)
+    .from("integraties")
+    .select("provider, status, config")
+    .eq("bedrijf_id", companyId);
+
+  const integrationConnections = Object.fromEntries(
+    ((integrationRows ?? []) as Pick<Integratie, "provider" | "status" | "config">[]).map(
+      (c) => [c.provider, { status: c.status, config: c.config ?? {} }],
+    ),
+  );
+
   const initial: SettingsInput = {
     naam: data?.naam ?? "",
     adres: data?.adres ?? "",
@@ -86,7 +107,13 @@ export default async function InstellingenPage() {
         </div>
       </header>
 
-      <SettingsForm initial={initial} apiKeys={apiKeys} />
+      <SettingsForm
+        initial={initial}
+        apiKeys={apiKeys}
+        referralCode={referralCode}
+        integrationConnections={integrationConnections}
+        slackPlatformReady={isSlackPlatformReady()}
+      />
     </div>
   );
 }

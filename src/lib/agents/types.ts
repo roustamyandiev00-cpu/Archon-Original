@@ -4,7 +4,21 @@ import type { CreateOfferteInput } from "@/app/dashboard/offertes/actions";
 export type AgentActionType =
   | "create_offerte"
   | "send_offerte"
-  | "create_invoice_from_offerte";
+  | "create_invoice_from_offerte"
+  | "send_payment_reminder"
+  | "send_formal_notice"
+  | "forward_to_bailiff";
+
+export type IncassoStage =
+  | "herinnering"
+  | "aanmaning"
+  | "ingebrekestelling"
+  | "deurwaarder";
+
+export type SendPaymentReminderPayload = {
+  factuurId: number;
+  stage: IncassoStage;
+};
 
 export type CreateOffertePayload = CreateOfferteInput & {
   description?: string;

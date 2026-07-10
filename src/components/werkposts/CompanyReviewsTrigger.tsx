@@ -21,6 +21,21 @@ interface ReviewItem {
   } | null;
 }
 
+type ReviewRow = {
+  id: string | number;
+  rating: number | null;
+  commentaar: string | null;
+  created_at: string;
+  reviewer:
+    | {
+        naam: string | null;
+      }
+    | {
+        naam: string | null;
+      }[]
+    | null;
+};
+
 export default function CompanyReviewsTrigger({
   companyId,
   companyName,
@@ -46,7 +61,7 @@ export default function CompanyReviewsTrigger({
             rating,
             commentaar,
             created_at,
-            reviewer:reviewer_company_id (
+            reviewer:bedrijven!bedrijf_reviews_reviewer_company_id_fkey (
               naam
             )
           `)
@@ -56,10 +71,28 @@ export default function CompanyReviewsTrigger({
         if (fetchError) {
           setError(fetchError.message);
         } else {
-          setReviews((data || []) as any[]);
+          const rows = (data ?? []) as ReviewRow[];
+          setReviews(
+            rows.map((row) => {
+              const reviewer = Array.isArray(row.reviewer)
+                ? row.reviewer[0] ?? null
+                : row.reviewer;
+              return {
+                id: String(row.id),
+                rating: row.rating ?? 0,
+                commentaar: row.commentaar ?? "",
+                created_at: row.created_at,
+                reviewer: reviewer ? { naam: reviewer.naam ?? "" } : null,
+              };
+            }),
+          );
         }
-      } catch (err: any) {
-        setError(err.message || "Fout bij ophalen van reviews.");
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Fout bij ophalen van reviews.",
+        );
       }
     });
   }, [isOpen, companyId]);

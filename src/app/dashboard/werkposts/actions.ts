@@ -226,6 +226,7 @@ export async function provisionCompany(naam: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/bouwnetwerk");
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard/werkposts");
   revalidatePath("/dashboard/comms");
   return { companyId: data as number };

@@ -1009,6 +1009,62 @@ export type Database = {
           },
         ]
       }
+      bedrijf_reviews: {
+        Row: {
+          commentaar: string
+          created_at: string
+          id: string
+          rating: number
+          reviewer_company_id: number
+          target_company_id: number
+        }
+        Insert: {
+          commentaar: string
+          created_at?: string
+          id?: string
+          rating: number
+          reviewer_company_id: number
+          target_company_id: number
+        }
+        Update: {
+          commentaar?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          reviewer_company_id?: number
+          target_company_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bedrijf_reviews_reviewer_company_id_fkey"
+            columns: ["reviewer_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_reviews_reviewer_company_id_fkey"
+            columns: ["reviewer_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_reviews_target_company_id_fkey"
+            columns: ["target_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_reviews_target_company_id_fkey"
+            columns: ["target_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bedrijf_smtp_instellingen: {
         Row: {
           bedrijf_id: number
@@ -2362,8 +2418,10 @@ export type Database = {
           first_name: string | null
           id: number
           is_active: boolean | null
+          is_overheid: boolean
           kvk: string | null
           last_name: string | null
+          mercurius_entiteit_id: string | null
           name: string
           notes: string | null
           ondernemingsnummer: string | null
@@ -2388,8 +2446,10 @@ export type Database = {
           first_name?: string | null
           id?: number
           is_active?: boolean | null
+          is_overheid?: boolean
           kvk?: string | null
           last_name?: string | null
+          mercurius_entiteit_id?: string | null
           name: string
           notes?: string | null
           ondernemingsnummer?: string | null
@@ -2414,8 +2474,10 @@ export type Database = {
           first_name?: string | null
           id?: number
           is_active?: boolean | null
+          is_overheid?: boolean
           kvk?: string | null
           last_name?: string | null
+          mercurius_entiteit_id?: string | null
           name?: string
           notes?: string | null
           ondernemingsnummer?: string | null
@@ -2443,6 +2505,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bouwmateriaal_winkels: {
+        Row: {
+          adres: string | null
+          beschrijving: string | null
+          categorie: string
+          created_at: string
+          fotos: string[]
+          id: number
+          lat: number | null
+          lng: number | null
+          naam: string
+          postcode: string | null
+          regio: string | null
+          stad: string | null
+          telefoon: string | null
+          toegevoegd_door: string | null
+          website: string | null
+        }
+        Insert: {
+          adres?: string | null
+          beschrijving?: string | null
+          categorie?: string
+          created_at?: string
+          fotos?: string[]
+          id?: never
+          lat?: number | null
+          lng?: number | null
+          naam: string
+          postcode?: string | null
+          regio?: string | null
+          stad?: string | null
+          telefoon?: string | null
+          toegevoegd_door?: string | null
+          website?: string | null
+        }
+        Update: {
+          adres?: string | null
+          beschrijving?: string | null
+          categorie?: string
+          created_at?: string
+          fotos?: string[]
+          id?: never
+          lat?: number | null
+          lng?: number | null
+          naam?: string
+          postcode?: string | null
+          regio?: string | null
+          stad?: string | null
+          telefoon?: string | null
+          toegevoegd_door?: string | null
+          website?: string | null
+        }
+        Relationships: []
       }
       dak_bedrijf_reviews: {
         Row: {
@@ -2537,11 +2653,16 @@ export type Database = {
         Row: {
           bedrijf_id: number | null
           contact_id: number | null
+          contactpersoon: string | null
           created_at: string | null
           deadline: string | null
+          email: string | null
           id: number
           kans: number | null
+          laatste_contact_op: string | null
+          notitie: string | null
           stadium: string
+          telefoon: string | null
           titel: string
           updated_at: string | null
           user_id: string | null
@@ -2550,11 +2671,16 @@ export type Database = {
         Insert: {
           bedrijf_id?: number | null
           contact_id?: number | null
+          contactpersoon?: string | null
           created_at?: string | null
           deadline?: string | null
+          email?: string | null
           id?: number
           kans?: number | null
+          laatste_contact_op?: string | null
+          notitie?: string | null
           stadium: string
+          telefoon?: string | null
           titel: string
           updated_at?: string | null
           user_id?: string | null
@@ -2563,11 +2689,16 @@ export type Database = {
         Update: {
           bedrijf_id?: number | null
           contact_id?: number | null
+          contactpersoon?: string | null
           created_at?: string | null
           deadline?: string | null
+          email?: string | null
           id?: number
           kans?: number | null
+          laatste_contact_op?: string | null
+          notitie?: string | null
           stadium?: string
+          telefoon?: string | null
           titel?: string
           updated_at?: string | null
           user_id?: string | null
@@ -2791,6 +2922,9 @@ export type Database = {
           id: number
           klant: string | null
           last_reminder_sent_at: string | null
+          mercurius_last_error: string | null
+          mercurius_sent_at: string | null
+          mercurius_status: string | null
           notities: string | null
           nummer: string | null
           offerte_id: number | null
@@ -2824,6 +2958,9 @@ export type Database = {
           id?: number
           klant?: string | null
           last_reminder_sent_at?: string | null
+          mercurius_last_error?: string | null
+          mercurius_sent_at?: string | null
+          mercurius_status?: string | null
           notities?: string | null
           nummer?: string | null
           offerte_id?: number | null
@@ -2857,6 +2994,9 @@ export type Database = {
           id?: number
           klant?: string | null
           last_reminder_sent_at?: string | null
+          mercurius_last_error?: string | null
+          mercurius_sent_at?: string | null
+          mercurius_status?: string | null
           notities?: string | null
           nummer?: string | null
           offerte_id?: number | null
@@ -4044,6 +4184,9 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          referral_code: string | null
+          referral_pending_discount: boolean
+          referred_by: string | null
           updated_at: string | null
         }
         Insert: {
@@ -4054,6 +4197,9 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          referral_code?: string | null
+          referral_pending_discount?: boolean
+          referred_by?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -4064,6 +4210,9 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
+          referral_pending_discount?: boolean
+          referred_by?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -5185,6 +5334,18 @@ export type Database = {
       provision_landing_workspace: {
         Args: { p_company_name?: string; p_user_name?: string }
         Returns: number
+      }
+      ensure_user_referral: {
+        Args: {
+          p_full_name?: string
+          p_referred_by?: string
+          p_user_id?: string
+        }
+        Returns: string
+      }
+      generate_referral_code: {
+        Args: { p_full_name: string }
+        Returns: string
       }
       search_agent_memory: {
         Args: {

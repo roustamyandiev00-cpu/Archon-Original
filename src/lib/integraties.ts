@@ -135,7 +135,53 @@ export const INTEGRATION_PROVIDERS: ProviderMeta[] = [
     category: "Meldingen",
     auth: "connect",
     description:
-      "Ontvang meldingen in Slack via Vercel Connect — geen bot-token in je omgeving.",
+      "Stuur meldingen naar sales- of supportkanalen.",
+  },
+];
+
+/** App-koppelingen op de Instellingen-pagina (zoals archonpro-crm). */
+export const APP_INTEGRATION_PROVIDERS: ProviderMeta[] = [
+  {
+    id: "slack",
+    name: "Slack",
+    category: "Meldingen",
+    auth: "connect",
+    description: "Stuur meldingen naar sales- of supportkanalen.",
+  },
+  {
+    id: "google-calendar",
+    name: "Google Calendar",
+    category: "Planning",
+    auth: "apikey",
+    description: "Synchroniseer afspraken en herinneringen.",
+  },
+  {
+    id: "microsoft-teams",
+    name: "Microsoft Teams",
+    category: "Samenwerking",
+    auth: "apikey",
+    description: "Plan vergaderingen en deel updates.",
+  },
+  {
+    id: "dropbox",
+    name: "Dropbox",
+    category: "Opslag",
+    auth: "apikey",
+    description: "Koppel documenten en offertes aan cloudopslag.",
+  },
+  {
+    id: "zapier",
+    name: "Zapier",
+    category: "Automatisering",
+    auth: "apikey",
+    description: "Automatiseer terugkerende processen.",
+  },
+  {
+    id: "quickbooks",
+    name: "QuickBooks",
+    category: "Boekhouding",
+    auth: "apikey",
+    description: "Gebruik boekhoudkoppelingen voor export en afstemming.",
   },
 ];
 

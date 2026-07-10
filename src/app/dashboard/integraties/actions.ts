@@ -7,7 +7,15 @@ import {
   resolveSlackConnectorUid,
   slackTokenParams,
 } from "@/components/dashboard/integraties/slackConnect";
+import {
+  loadSlackSetupStatus,
+  resolveSlackConnectorForCompany,
+} from "@/components/dashboard/integraties/slackSetup";
+import { sendSlackNotification } from "@/components/dashboard/integraties/slackNotify";
 import { providerMeta, untyped } from "@/lib/integraties";
+import { defaultSupplierPeppolId } from "@/lib/peppol/be";
+import { getPeppolConfig } from "@/lib/peppol/build";
+import { testPeppolAccessPoint } from "@/lib/peppol/send";
 import {
   hasOAuth,
   isTokenExpired,
@@ -34,16 +42,41 @@ export async function connectIntegration(
 
   if (meta.auth === "peppol") {
     if (!config.accessPoint) return { error: "Kies een access point." };
+
     if (!config.participantId?.trim()) {
-      return { error: "Vul je Peppol-identificatie in (bv. 0208:BE0123456789)." };
+      const { data: bedrijf } = await untyped(supabase)
+        .from("bedrijven")
+        .select("kvk, btw, peppol_participant_id")
+        .eq("id", companyId)
+        .maybeSingle();
+      const derived = defaultSupplierPeppolId(bedrijf ?? {});
+      if (derived) config.participantId = derived;
+    }
+
+    if (!config.participantId?.trim()) {
+      return {
+        error:
+          "Vul je Peppol-identificatie in (bv. 0208:0123456789) of stel KBO/BTW in bij Instellingen.",
+      };
+    }
+
+    const needsApiKey =
+      config.accessPoint === "storecove" || config.accessPoint === "billit";
+    if (needsApiKey && !config.apiKey?.trim()) {
+      return { error: "Vul de API-sleutel van je access point in." };
+    }
+    if (config.accessPoint === "storecove" && !config.legalEntityId?.trim()) {
+      return { error: "Storecove vereist een Legal Entity ID." };
+    }
+    if (config.accessPoint === "billit" && !config.partyId?.trim()) {
+      return { error: "Billit vereist een Party ID (te vinden in MyBillit)." };
     }
   } else if (isConnectFlow) {
-    const connectorUid =
-      config.connectorUid?.trim() || process.env.SLACK_CONNECTOR?.trim();
+    const connectorUid = resolveSlackConnectorForCompany(config);
     if (!connectorUid) {
       return {
         error:
-          "Vul de Vercel Connect connector-UID in (bv. slack/archon) of stel SLACK_CONNECTOR in.",
+          "Slack is nog niet beschikbaar voor je account. Neem contact op met support.",
       };
     }
     config.connectorUid = connectorUid;
@@ -51,13 +84,51 @@ export async function connectIntegration(
     if (!config.clientId?.trim() || !config.clientSecret?.trim()) {
       return { error: "Vul Client ID en Client Secret in." };
     }
+  } else if (meta.id === "yuki") {
+    if (!config.apiKey?.trim()) return { error: "Vul de Yuki API-sleutel in." };
+    if (!config.administrationId?.trim()) {
+      return {
+        error: "Vul de Yuki administratie-ID in (nodig voor UBL-export).",
+      };
+    }
+  } else if (meta.id === "billit") {
+    if (!config.apiKey?.trim()) return { error: "Vul de Billit API-sleutel in." };
+    if (!config.partyId?.trim()) {
+      return { error: "Billit vereist een Party ID (te vinden in MyBillit)." };
+    }
   } else if (!config.apiKey?.trim()) {
     return { error: "Vul de API-sleutel in." };
   }
 
   const now = new Date().toISOString();
-  const status =
-    isOAuthFlow || isConnectFlow ? "configured" : "connected";
+  let status = isOAuthFlow || isConnectFlow ? "configured" : "connected";
+  let configToSave: Record<string, string> = config;
+  let connectedAt: string | null =
+    isOAuthFlow || isConnectFlow ? null : now;
+
+  if (isConnectFlow) {
+    const { data: existingRow } = await untyped(supabase)
+      .from("integraties")
+      .select("config, status, connected_at")
+      .eq("bedrijf_id", companyId)
+      .eq("provider", provider)
+      .maybeSingle();
+    const prev = (existingRow?.config ?? {}) as Record<string, string>;
+    configToSave = {
+      ...prev,
+      ...config,
+      connectorUid: config.connectorUid ?? prev.connectorUid ?? "",
+    };
+    const hasWorkspace =
+      typeof configToSave.installationId === "string" &&
+      configToSave.installationId.trim() !== "";
+    if (hasWorkspace) {
+      status = "connected";
+      connectedAt =
+        (existingRow?.connected_at as string | null) ?? now;
+    }
+  }
+
   const { error } = await untyped(supabase)
     .from("integraties")
     .upsert(
@@ -65,8 +136,8 @@ export async function connectIntegration(
         bedrijf_id: companyId,
         provider,
         status,
-        config,
-        connected_at: isOAuthFlow || isConnectFlow ? null : now,
+        config: configToSave,
+        connected_at: connectedAt,
         updated_at: now,
       },
       { onConflict: "bedrijf_id,provider" },
@@ -85,6 +156,7 @@ export async function connectIntegration(
   }
 
   revalidatePath("/dashboard/integraties");
+  revalidatePath("/dashboard/instellingen");
   return { ok: true, status };
 }
 
@@ -111,6 +183,7 @@ export async function disconnectIntegration(provider: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard/integraties");
+  revalidatePath("/dashboard/instellingen");
   return { ok: true };
 }
 
@@ -126,6 +199,28 @@ export async function testIntegration(provider: string) {
   const meta = providerMeta(provider);
   if (meta?.auth === "connect" && provider === "slack") {
     return testSlackConnection(supabase, companyId);
+  }
+
+  if (provider === "peppol") {
+    const peppol = await getPeppolConfig(supabase, companyId);
+    if (!peppol) {
+      return { error: "Peppol is nog niet verbonden. Sla eerst je configuratie op." };
+    }
+    const result = await testPeppolAccessPoint(peppol);
+    if (!result.ok) return { error: result.error };
+    return { ok: true, account: result.message };
+  }
+
+  if (provider === "billit") {
+    const { getBillitCredentials } = await import("@/lib/peppol/inbox");
+    const creds = await getBillitCredentials(supabase, companyId);
+    if (!creds) {
+      return { error: "Billit is nog niet verbonden. Sla API-sleutel en Party ID op." };
+    }
+    const { testBillitCredentials } = await import("@/lib/billit/client");
+    const result = await testBillitCredentials(creds);
+    if (!result.ok) return { error: result.error };
+    return { ok: true, account: result.message };
   }
 
   if (!hasOAuth(provider)) {
@@ -172,6 +267,67 @@ export async function testIntegration(provider: string) {
   if (!result.ok) return { error: result.error };
 
   return { ok: true, account: result.account };
+}
+
+/** Setup-status voor Slack per bedrijf (SaaS — elke tenant apart). */
+export async function getSlackSetupStatus() {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const status = await loadSlackSetupStatus(access.supabase, access.companyId);
+  return { ok: true, status };
+}
+
+/** Stuurt een testmelding naar het kanaal van dit bedrijf. */
+export async function sendSlackTestNotification() {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const setup = await loadSlackSetupStatus(supabase, companyId);
+  if (!setup.platformReady) {
+    return { error: "Slack is nog niet beschikbaar voor je account." };
+  }
+  if (!setup.workspaceConnected) {
+    return { error: "Koppel eerst je Slack-workspace (stap 1)." };
+  }
+  if (!setup.channelConfigured) {
+    return { error: "Vul eerst een meldingenkanaal in (stap 2)." };
+  }
+
+  const result = await sendSlackNotification(
+    supabase,
+    companyId,
+    "✅ *Testmelding van ArchonPro*\nJe Slack-koppeling werkt. Meldingen over facturen komen hier binnen.",
+  );
+
+  if ("failed" in result && result.failed) {
+    return { error: result.error };
+  }
+  if ("skipped" in result && result.skipped) {
+    return { error: result.reason };
+  }
+
+  const { data } = await untyped(supabase)
+    .from("integraties")
+    .select("config")
+    .eq("bedrijf_id", companyId)
+    .eq("provider", "slack")
+    .maybeSingle();
+
+  const config = (data?.config ?? {}) as Record<string, unknown>;
+  const now = new Date().toISOString();
+  await untyped(supabase)
+    .from("integraties")
+    .update({
+      config: { ...config, testSentAt: now },
+      updated_at: now,
+    })
+    .eq("bedrijf_id", companyId)
+    .eq("provider", "slack");
+
+  revalidatePath("/dashboard/integraties");
+  revalidatePath("/dashboard/instellingen");
+  return { ok: true };
 }
 
 async function testSlackConnection(

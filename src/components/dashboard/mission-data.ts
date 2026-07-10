@@ -23,6 +23,7 @@ type PendingActionRow = {
   title: string;
   reason: string | null;
   action_type: string;
+  agent_name: string | null;
   target_entity_type: string | null;
   target_route: string | null;
 };
@@ -42,7 +43,7 @@ export const fetchPendingAgentActions = cache(
     const { data } = await supabase
       .from("agent_actions")
       .select(
-        "id, title, reason, action_type, target_entity_type, target_route",
+        "id, title, reason, action_type, agent_name, target_entity_type, target_route",
       )
       .eq("company_id", companyId)
       .eq("status", "pending")
@@ -267,14 +268,21 @@ export async function loadMissionOverview(
   companyId: number | null,
   agentName: string,
   agentConfig: CustomAgent[],
+  options: FetchMissionOptions = {},
 ) {
-  const core = await fetchMissionCore(supabase, companyId);
+  const core = await fetchMissionCore(supabase, companyId, options);
   return assembleMissionOverview(core, agentName, agentConfig);
 }
+
+type FetchMissionOptions = {
+  /** Alleen voor anonieme dashboard-voorbeeldmodus. */
+  useDemoWhenEmpty?: boolean;
+};
 
 export const fetchMissionCore = cache(async function fetchMissionCore(
   supabase: SupabaseClient,
   companyId: number | null,
+  options: FetchMissionOptions = {},
 ) {
   let offertesCount = 0;
   let klantenCount = 0;
@@ -531,7 +539,7 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
     );
   }
 
-  const isDemo =
+  const isEmpty =
     !companyId ||
     (klantenCount === 0 &&
       offertesCount === 0 &&
@@ -540,6 +548,9 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
       tasks.length === 0 &&
       important.length === 0 &&
       activity.length === 0);
+
+  const useDemo = Boolean(options.useDemoWhenEmpty);
+  const isDemo = useDemo && isEmpty;
 
   if (isDemo) {
     offertesCount = DEMO_DASHBOARD.offertesCount;
@@ -1007,12 +1018,24 @@ function bucketByWeek(
 }
 
 /** Echte omzettrend + sales-funnel voor de Overzicht-charts (i.p.v. hardcoded demo-cijfers). */
+const EMPTY_FUNNEL: FunnelStage[] = FUNNEL_STAGES.map((label) => ({
+  label,
+  value: 0,
+}));
+
 export const fetchChartsData = cache(async function fetchChartsData(
   supabase: SupabaseClient,
   companyId: number | null,
+  options: FetchMissionOptions = {},
 ): Promise<ChartsData> {
+  const useDemo = Boolean(options.useDemoWhenEmpty);
+
   if (!companyId) {
-    return { trend: FALLBACK_TREND, funnel: FALLBACK_FUNNEL, isDemo: true };
+    return {
+      trend: useDemo ? FALLBACK_TREND : [],
+      funnel: useDemo ? FALLBACK_FUNNEL : EMPTY_FUNNEL,
+      isDemo: useDemo,
+    };
   }
 
   const start = new Date();
@@ -1057,14 +1080,44 @@ export const fetchChartsData = cache(async function fetchChartsData(
     value: counts.get(label) ?? 0,
   }));
 
-  const isDemo =
+  const isEmpty =
     trend.every((w) => w.omzet === 0 && w.offertes === 0) &&
     funnel.every((f) => f.value === 0);
+  const isDemo = useDemo && isEmpty;
 
   return {
     trend: isDemo ? FALLBACK_TREND : trend,
     funnel: isDemo ? FALLBACK_FUNNEL : funnel,
     isDemo,
+  };
+});
+
+export const loadControlCenterData = cache(async function loadControlCenterData(
+  supabase: SupabaseClient,
+  companyId: number | null,
+  agentName: string,
+  agentConfig: CustomAgent[],
+) {
+  if (!companyId) {
+    return { agents: [] as AgentFleetMember[], logs: [], isDemo: false };
+  }
+
+  const [core, logsRes] = await Promise.all([
+    fetchMissionCore(supabase, companyId),
+    supabase
+      .from("agent_activity_logs")
+      .select("id, message, agent_name, action_type, created_at")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+
+  const overview = assembleMissionOverview(core, agentName, agentConfig);
+
+  return {
+    agents: overview.agents,
+    logs: logsRes.data ?? [],
+    isDemo: core.isDemo && (logsRes.data?.length ?? 0) === 0,
   };
 });
 

@@ -13,12 +13,17 @@ import {
 import {
   connectIntegration,
   disconnectIntegration,
+  sendSlackTestNotification,
   testIntegration,
 } from "@/app/dashboard/integraties/actions";
 import {
   PEPPOL_ACCESS_POINTS,
   type ProviderMeta,
 } from "@/lib/integraties";
+import {
+  evaluateSlackSetup,
+  slackCardLabel,
+} from "@/components/dashboard/integraties/slackSetup";
 import { hasOAuth } from "@/lib/oauth";
 
 type ConnState = Record<string, { status: string; config: Record<string, unknown> }>;
@@ -30,9 +35,11 @@ const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
 export default function IntegrationsGrid({
   providers,
   connections,
+  slackPlatformReady = true,
 }: {
   providers: ProviderMeta[];
   connections: ConnState;
+  slackPlatformReady?: boolean;
 }) {
   const [active, setActive] = useState<ProviderMeta | null>(null);
 
@@ -43,13 +50,52 @@ export default function IntegrationsGrid({
           const conn = connections[p.id];
           const connected = conn?.status === "connected";
           const configured = conn?.status === "configured";
+          const slackSetup =
+            p.id === "slack"
+              ? evaluateSlackSetup(
+                  conn
+                    ? { status: conn.status, config: conn.config }
+                    : null,
+                )
+              : null;
+          if (p.id === "slack" && slackSetup) {
+            slackSetup.platformReady = slackPlatformReady;
+          }
+          const slackBadge =
+            slackSetup != null ? slackCardLabel(slackSetup) : null;
+          const badgeLabel = slackBadge?.label ?? (
+            connected
+              ? "Verbonden"
+              : configured
+                ? "Autorisatie nodig"
+                : "Niet verbonden"
+          );
+          const badgeTone = slackBadge?.tone ?? (
+            connected ? "ok" : configured ? "warn" : "idle"
+          );
+          const badgeClass =
+            badgeTone === "ok"
+              ? "bg-emerald-500/15 text-emerald-300"
+              : badgeTone === "warn"
+                ? "bg-amber-500/15 text-amber-300"
+                : "bg-zinc-500/15 text-zinc-400";
+          const dotClass =
+            badgeTone === "ok"
+              ? "bg-emerald-400"
+              : badgeTone === "warn"
+                ? "bg-amber-400"
+                : "bg-zinc-500";
+          const showManage =
+            connected ||
+            configured ||
+            (p.id === "slack" && slackSetup?.platformReady);
           return (
             <div
               key={p.id}
-              className="flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/50 p-5 transition-colors hover:border-sky-500/30"
+              className="flex flex-col justify-between rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition-colors hover:border-zinc-700"
             >
               <div className="flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-sm font-bold text-sky-400 ring-1 ring-inset ring-white/10">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300">
                   {p.name.charAt(0)}
                 </span>
                 <div className="min-w-0">
@@ -63,39 +109,21 @@ export default function IntegrationsGrid({
 
               <div className="mt-4 flex items-center justify-between">
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                    connected
-                      ? "bg-emerald-500/15 text-emerald-300"
-                      : configured
-                        ? "bg-amber-500/15 text-amber-300"
-                        : "bg-zinc-500/15 text-zinc-400"
-                  }`}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${badgeClass}`}
                 >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      connected
-                        ? "bg-emerald-400"
-                        : configured
-                          ? "bg-amber-400"
-                          : "bg-zinc-500"
-                    }`}
-                  />
-                  {connected
-                    ? "Verbonden"
-                    : configured
-                      ? "Autorisatie nodig"
-                      : "Niet verbonden"}
+                  <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+                  {badgeLabel}
                 </span>
                 <button
                   type="button"
                   onClick={() => setActive(p)}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    connected || configured
+                    showManage
                       ? "border border-white/10 text-zinc-200 hover:bg-white/5"
                       : "bg-sky-500 text-zinc-950 hover:bg-sky-400"
                   }`}
                 >
-                  {connected || configured ? (
+                  {showManage ? (
                     <>
                       <Plug size={13} /> Beheren
                     </>
@@ -115,6 +143,7 @@ export default function IntegrationsGrid({
         <ConnectModal
           provider={active}
           current={connections[active.id]}
+          slackPlatformReady={slackPlatformReady}
           onClose={() => setActive(null)}
         />
       )}
@@ -125,10 +154,12 @@ export default function IntegrationsGrid({
 function ConnectModal({
   provider,
   current,
+  slackPlatformReady,
   onClose,
 }: {
   provider: ProviderMeta;
   current?: { status: string; config: Record<string, unknown> };
+  slackPlatformReady?: boolean;
   onClose: () => void;
 }) {
   const cfg = current?.config ?? {};
@@ -150,6 +181,9 @@ function ConnectModal({
   );
 
   const [apiKey, setApiKey] = useState((cfg.apiKey as string) ?? "");
+  const [administrationId, setAdministrationId] = useState(
+    (cfg.administrationId as string) ?? "",
+  );
   const [clientId, setClientId] = useState((cfg.clientId as string) ?? "");
   const [clientSecret, setClientSecret] = useState(
     (cfg.clientSecret as string) ?? "",
@@ -163,14 +197,26 @@ function ConnectModal({
   const [legalEntityId, setLegalEntityId] = useState(
     (cfg.legalEntityId as string) ?? "",
   );
-  const [connectorUid, setConnectorUid] = useState(
-    (cfg.connectorUid as string) ?? "",
+  const [partyId, setPartyId] = useState(
+    (cfg.partyId as string) ?? (cfg.legalEntityId as string) ?? "",
+  );
+  const [sandbox, setSandbox] = useState(
+    cfg.sandbox === true || cfg.sandbox === "true",
   );
   const [notificationChannel, setNotificationChannel] = useState(
     (cfg.notificationChannel as string) ?? "",
   );
-  const workspaceName =
-    typeof cfg.workspaceName === "string" ? cfg.workspaceName : null;
+  const slackSetup =
+    provider.id === "slack"
+      ? evaluateSlackSetup(
+          current ? { status: current.status, config: cfg } : null,
+        )
+      : null;
+  if (slackSetup) slackSetup.platformReady = slackPlatformReady ?? true;
+  const workspaceName = slackSetup?.workspaceName ?? null;
+  const [testNotifyPending, setTestNotifyPending] = useState(false);
+  const [testNotifyMsg, setTestNotifyMsg] = useState<string | null>(null);
+  const [testNotifyErr, setTestNotifyErr] = useState<string | null>(null);
 
   const redirectUri = origin
     ? `${origin}/dashboard/integraties/${provider.id}/callback`
@@ -185,14 +231,24 @@ function ConnectModal({
         participantId: participantId.trim(),
         apiKey: apiKey.trim(),
         legalEntityId: legalEntityId.trim(),
+        partyId: partyId.trim(),
+        sandbox: sandbox ? "true" : "false",
       };
     } else if (isConnectFlow) {
-      config = {
-        connectorUid: connectorUid.trim(),
-        notificationChannel: notificationChannel.trim(),
-      };
+      config = { notificationChannel: notificationChannel.trim() };
     } else if (isOAuthFlow) {
       config = { clientId: clientId.trim(), clientSecret: clientSecret.trim() };
+    } else if (provider.id === "billit") {
+      config = {
+        apiKey: apiKey.trim(),
+        partyId: partyId.trim(),
+        sandbox: sandbox ? "true" : "false",
+      };
+    } else if (provider.id === "yuki") {
+      config = {
+        apiKey: apiKey.trim(),
+        administrationId: administrationId.trim(),
+      };
     } else {
       config = { apiKey: apiKey.trim() };
     }
@@ -231,6 +287,31 @@ function ConnectModal({
     });
   }
 
+  function runSlackTestNotify() {
+    setTestNotifyErr(null);
+    setTestNotifyMsg(null);
+    setTestNotifyPending(true);
+    startTransition(async () => {
+      if (notificationChannel.trim()) {
+        const save = await connectIntegration("slack", {
+          notificationChannel: notificationChannel.trim(),
+        });
+        if (save && "error" in save && save.error) {
+          setTestNotifyPending(false);
+          setTestNotifyErr(save.error);
+          return;
+        }
+      }
+      const res = await sendSlackTestNotification();
+      setTestNotifyPending(false);
+      if (res && "error" in res && res.error) {
+        setTestNotifyErr(res.error);
+        return;
+      }
+      setTestNotifyMsg("Testmelding verstuurd. Controleer je Slack-kanaal.");
+    });
+  }
+
   function remove() {
     setError(null);
     startTransition(async () => {
@@ -254,7 +335,7 @@ function ConnectModal({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-sm font-bold text-sky-400 ring-1 ring-inset ring-white/10">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300">
               {provider.name.charAt(0)}
             </span>
             <div>
@@ -328,86 +409,182 @@ function ConnectModal({
                   />
                 </div>
               )}
-            </>
-          ) : isConnectFlow ? (
-            <>
-              <p className="text-xs text-zinc-500">
-                Tokens komen via{" "}
-                <a
-                  href="https://vercel.com/docs/connect"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sky-400 hover:underline"
-                >
-                  Vercel Connect
-                </a>
-                . Geen bot-token in je omgeving.
-              </p>
-              <div>
-                <label className={labelClass}>Connector-UID</label>
-                <input
-                  value={connectorUid}
-                  onChange={(e) => setConnectorUid(e.target.value)}
-                  placeholder="slack/archon"
-                  className={inputClass}
-                />
-                <p className="mt-1 text-xs text-zinc-500">
-                  Optioneel als <code>SLACK_CONNECTOR</code> al in de omgeving
-                  staat.
+              {accessPoint === "billit" && (
+                <>
+                  <div>
+                    <label className={labelClass}>Party ID (Billit)</label>
+                    <input
+                      value={partyId}
+                      onChange={(e) => setPartyId(e.target.value)}
+                      placeholder="Te vinden in MyBillit → Instellingen → API"
+                      className={inputClass}
+                    />
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Uniek bedrijfs-ID in Billit. Gebruik de sandbox-Party ID
+                      als je test op{" "}
+                      <code className="text-zinc-400">api.sandbox.billit.be</code>.
+                    </p>
+                  </div>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={sandbox}
+                      onChange={(e) => setSandbox(e.target.checked)}
+                      className="rounded border-white/20 bg-zinc-900"
+                    />
+                    Sandbox-modus (testomgeving)
+                  </label>
+                </>
+              )}
+              {(accessPoint === "storecove" || accessPoint === "billit") &&
+                connected && (
+                  <button
+                    type="button"
+                    onClick={runTest}
+                    disabled={testing}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
+                  >
+                    {testing ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" /> Testen…
+                      </>
+                    ) : (
+                      <>
+                        <Link2 size={15} /> Test Peppol-verbinding
+                      </>
+                    )}
+                  </button>
+                )}
+              {accessPoint === "other" && (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                  Bij &quot;Andere / handmatig&quot; kun je UBL-XML downloaden
+                  per factuur. Automatisch versturen vereist Storecove of Billit.
                 </p>
-              </div>
-              <div>
-                <label className={labelClass}>Meldingenkanaal (optioneel)</label>
-                <input
-                  value={notificationChannel}
-                  onChange={(e) => setNotificationChannel(e.target.value)}
-                  placeholder="#facturen of C01234567"
-                  className={inputClass}
-                />
-              </div>
-              {connected && workspaceName && (
-                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-                  Workspace: <b>{workspaceName}</b>
-                </p>
               )}
-              {(configured || connected) && (
-                <a
-                  href="/dashboard/integraties/slack/authorize"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-400"
-                >
-                  <ExternalLink size={15} />
-                  {connected
-                    ? "Opnieuw koppelen"
-                    : "Slack-workspace koppelen"}
-                </a>
-              )}
-              {connected && (
-                <button
-                  type="button"
-                  onClick={runTest}
-                  disabled={testing}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
-                >
-                  {testing ? (
-                    <>
-                      <Loader2 size={15} className="animate-spin" /> Testen…
-                    </>
-                  ) : (
-                    <>
-                      <Link2 size={15} /> Test verbinding
-                    </>
-                  )}
-                </button>
-              )}
-              {testMsg && (
+              {testMsg && provider.auth === "peppol" && (
                 <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
                   {testMsg}
                 </p>
               )}
-              {testErr && (
+              {testErr && provider.auth === "peppol" && (
                 <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
                   {testErr}
                 </p>
+              )}
+            </>
+          ) : isConnectFlow && provider.id === "slack" && slackSetup ? (
+            <>
+              <p className="text-xs text-zinc-500">
+                Elke ArchonPro-klant koppelt <b>eigen</b> Slack-workspace en
+                kanaal. Tokens blijven bij Vercel Connect — niets om te
+                kopiëren.
+              </p>
+
+              {!slackSetup.platformReady ? (
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+                  Slack-meldingen zijn op dit moment niet actief voor je
+                  account. Neem contact op met support.
+                </p>
+              ) : (
+                <>
+                  <ol className="space-y-2">
+                    {slackSetup.steps.map((step, i) => (
+                      <li
+                        key={step.id}
+                        className={`flex gap-3 rounded-xl border px-3 py-2.5 text-sm ${
+                          step.done
+                            ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-100"
+                            : "border-white/10 bg-zinc-900/40 text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
+                            step.done
+                              ? "bg-emerald-500 text-zinc-950"
+                              : "bg-zinc-700 text-zinc-300"
+                          }`}
+                        >
+                          {step.done ? <Check size={12} /> : i + 1}
+                        </span>
+                        <span>
+                          <span className="font-medium">{step.label}</span>
+                          <span className="mt-0.5 block text-xs text-zinc-500">
+                            {step.hint}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+
+                  {workspaceName && (
+                    <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+                      Workspace: <b>{workspaceName}</b>
+                    </p>
+                  )}
+
+                  {!slackSetup.workspaceConnected && (
+                    <a
+                      href="/dashboard/integraties/slack/authorize"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-400"
+                    >
+                      <ExternalLink size={15} />
+                      Stap 1 — Slack-workspace koppelen
+                    </a>
+                  )}
+
+                  {slackSetup.workspaceConnected && (
+                    <div>
+                      <label className={labelClass}>
+                        Stap 2 — Meldingenkanaal
+                      </label>
+                      <input
+                        value={notificationChannel}
+                        onChange={(e) => setNotificationChannel(e.target.value)}
+                        placeholder="#facturen of C01234567"
+                        className={inputClass}
+                      />
+                    </div>
+                  )}
+
+                  {slackSetup.workspaceConnected &&
+                    notificationChannel.trim() && (
+                      <button
+                        type="button"
+                        onClick={runSlackTestNotify}
+                        disabled={testNotifyPending || pending}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
+                      >
+                        {testNotifyPending ? (
+                          <>
+                            <Loader2 size={15} className="animate-spin" />{" "}
+                            Versturen…
+                          </>
+                        ) : (
+                          <>
+                            <Link2 size={15} /> Stap 3 — Testmelding sturen
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                  {slackSetup.ready && (
+                    <p className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-200">
+                      Meldingen zijn actief voor dit bedrijf (nieuwe facturen,
+                      Peppol).
+                    </p>
+                  )}
+
+                  {testNotifyMsg && (
+                    <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+                      {testNotifyMsg}
+                    </p>
+                  )}
+                  {testNotifyErr && (
+                    <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+                      {testNotifyErr}
+                    </p>
+                  )}
+                </>
               )}
             </>
           ) : isOAuthFlow ? (
@@ -483,25 +660,91 @@ function ConnectModal({
               )}
             </>
           ) : (
-            <div>
-              <label className={labelClass}>
-                {provider.auth === "oauth" ? "Toegangstoken / API-sleutel" : "API-sleutel"}
-              </label>
-              <input
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Plak hier je sleutel"
-                className={inputClass}
-                type="password"
-              />
-              {provider.auth === "oauth" && (
-                <p className="mt-1 text-xs text-zinc-500">
-                  Voor {provider.name} verloopt de koppeling normaal via OAuth.
-                  Vul hier voorlopig je API-token in; de volledige OAuth-flow
-                  wordt geactiveerd zodra de app-credentials zijn ingesteld.
-                </p>
+            <>
+              <div>
+                <label className={labelClass}>
+                  {provider.auth === "oauth" ? "Toegangstoken / API-sleutel" : "API-sleutel"}
+                </label>
+                <input
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Plak hier je sleutel"
+                  className={inputClass}
+                  type="password"
+                />
+                {provider.auth === "oauth" && (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Voor {provider.name} verloopt de koppeling normaal via OAuth.
+                    Vul hier voorlopig je API-token in; de volledige OAuth-flow
+                    wordt geactiveerd zodra de app-credentials zijn ingesteld.
+                  </p>
+                )}
+              </div>
+              {provider.id === "yuki" && (
+                <div>
+                  <label className={labelClass}>Administratie-ID</label>
+                  <input
+                    value={administrationId}
+                    onChange={(e) => setAdministrationId(e.target.value)}
+                    placeholder="Yuki domain / administratie GUID"
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Te vinden in Yuki onder domeininstellingen.
+                  </p>
+                </div>
               )}
-            </div>
+              {provider.id === "billit" && (
+                <>
+                  <div>
+                    <label className={labelClass}>Party ID (MyBillit)</label>
+                    <input
+                      value={partyId}
+                      onChange={(e) => setPartyId(e.target.value)}
+                      placeholder="Party ID uit MyBillit"
+                      className={inputClass}
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={sandbox}
+                      onChange={(e) => setSandbox(e.target.checked)}
+                      className="rounded border-white/20 bg-zinc-900"
+                    />
+                    Sandbox (api.sandbox.billit.be)
+                  </label>
+                  {connected && (
+                    <button
+                      type="button"
+                      onClick={runTest}
+                      disabled={testing}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
+                    >
+                      {testing ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin" /> Testen…
+                        </>
+                      ) : (
+                        <>
+                          <Link2 size={15} /> Test Billit-verbinding
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {testMsg && (
+                    <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+                      {testMsg}
+                    </p>
+                  )}
+                  {testErr && (
+                    <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+                      {testErr}
+                    </p>
+                  )}
+                </>
+              )}
+            </>
           )}
 
           {error && (

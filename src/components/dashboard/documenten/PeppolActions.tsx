@@ -12,6 +12,7 @@ import type { PeppolValidationIssue } from "@/lib/peppol/validate";
 export default function PeppolActions({
   factuurId,
   peppolConnected,
+  peppolCanSend = false,
   buyerReference,
   structuredCommunication,
   peppolStatus,
@@ -19,6 +20,7 @@ export default function PeppolActions({
 }: {
   factuurId: number;
   peppolConnected: boolean;
+  peppolCanSend?: boolean;
   buyerReference?: string | null;
   structuredCommunication?: string | null;
   peppolStatus?: string | null;
@@ -167,7 +169,7 @@ export default function PeppolActions({
         <button
           type="button"
           onClick={send}
-          disabled={pending || errors.length > 0}
+          disabled={pending || errors.length > 0 || !peppolCanSend}
           className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
         >
           {pending ? (
@@ -190,6 +192,17 @@ export default function PeppolActions({
             Integraties
           </a>
           .
+        </p>
+      )}
+
+      {peppolConnected && !peppolCanSend && (
+        <p className="mt-3 text-xs text-amber-300/90">
+          Peppol is gekoppeld maar automatisch versturen is niet actief. Kies
+          Storecove of Billit als access point en vul je API-sleutel in via{" "}
+          <a href="/dashboard/integraties" className="underline hover:text-amber-200">
+            Integraties
+          </a>
+          , of download de UBL-XML hierboven.
         </p>
       )}
 

@@ -106,14 +106,12 @@ export default function OfferteDocumentPreview({
     customerId,
     customers,
     datum,
-    defaultTemplate,
     geldigTot,
     klantVrij,
     lines,
     notes,
     nummer,
     renderId,
-    templateId,
   ]);
 
   const frame = (

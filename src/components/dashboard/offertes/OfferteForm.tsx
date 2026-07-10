@@ -109,36 +109,41 @@ export default function OfferteForm({
 
   useEffect(() => {
     if (!seedDraft) return;
-    setCustomerId(seedDraft.customerId);
-    setKlantVrij(seedDraft.klantVrij);
-    setDatum(seedDraft.datum);
-    setGeldigTot(seedDraft.geldigTot);
 
-    let cleanNotes = seedDraft.notes;
-    if (
-      cleanNotes.includes("Project Naam:") &&
-      cleanNotes.includes("Beschrijving werkzaamheden:")
-    ) {
-      const match = cleanNotes.match(/Beschrijving werkzaamheden:\s*([\s\S]*)/i);
-      if (match && match[1]) {
-        cleanNotes = match[1].trim();
-      }
-    }
-    setNotes(cleanNotes);
+    const id = window.setTimeout(() => {
+      setCustomerId(seedDraft.customerId);
+      setKlantVrij(seedDraft.klantVrij);
+      setDatum(seedDraft.datum);
+      setGeldigTot(seedDraft.geldigTot);
 
-    const cleanLines = seedDraft.lines.map((l) => {
-      let desc = l.omschrijving;
+      let cleanNotes = seedDraft.notes;
       if (
-        desc.includes("Project Naam:") &&
-        desc.includes("Beschrijving werkzaamheden:")
+        cleanNotes.includes("Project Naam:") &&
+        cleanNotes.includes("Beschrijving werkzaamheden:")
       ) {
-        const match = desc.match(/Beschrijving werkzaamheden:\s*([\s\S]*)/i);
-        desc =
-          match && match[1] ? match[1].trim() : "Werken volgens beschrijving";
+        const match = cleanNotes.match(/Beschrijving werkzaamheden:\s*([\s\S]*)/i);
+        if (match && match[1]) {
+          cleanNotes = match[1].trim();
+        }
       }
-      return { ...l, omschrijving: desc };
-    });
-    setLines(cleanLines);
+      setNotes(cleanNotes);
+
+      const cleanLines = seedDraft.lines.map((l) => {
+        let desc = l.omschrijving;
+        if (
+          desc.includes("Project Naam:") &&
+          desc.includes("Beschrijving werkzaamheden:")
+        ) {
+          const match = desc.match(/Beschrijving werkzaamheden:\s*([\s\S]*)/i);
+          desc =
+            match && match[1] ? match[1].trim() : "Werken volgens beschrijving";
+        }
+        return { ...l, omschrijving: desc };
+      });
+      setLines(cleanLines);
+    }, 0);
+
+    return () => window.clearTimeout(id);
   }, [seedDraft]);
 
   const totals = useMemo(() => lineTotals(lines), [lines]);

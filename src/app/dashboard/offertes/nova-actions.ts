@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
 import { parseExtras } from "@/app/dashboard/instellingen/settings";
+import {
+  fetchRelevantMemories,
+  memoriesFromOffertePayload,
+  rememberFromExecution,
+  saveAgentMemories,
+} from "@/components/dashboard/agents/memory";
 import { loadMergedAiConfig } from "@/lib/agents/companyAi";
 import { generateNovaOfferteDraft } from "@/lib/agents/nova";
 import { proposeAgentAction } from "@/lib/agents/propose";
@@ -48,8 +54,17 @@ export async function requestNovaOfferte(input: {
     }
   }
 
+  const memoryContext = await fetchRelevantMemories(
+    supabase,
+    companyId,
+    `${klant} ${input.description}`,
+  );
+  const enrichedDescription = memoryContext
+    ? `Bedrijfsgeheugen (gebruik waar relevant):\n${memoryContext}\n\n${input.description}`
+    : input.description;
+
   const { draft, error: aiError } = await generateNovaOfferteDraft({
-    description: input.description,
+    description: enrichedDescription,
     klant,
     ai,
     standaardBtw: extras.standaardBtw,
@@ -74,6 +89,12 @@ export async function requestNovaOfferte(input: {
   const agentName = ai.agentNaam.trim() || "Nova";
   const title = `${agentName}: offerte voor ${payload.klant}`;
 
+  await saveAgentMemories(supabase, {
+    companyId,
+    userId: user.id,
+    memories: memoriesFromOffertePayload(payload, agentName),
+  });
+
   if (ai.toestemming === "versturen") {
     const created = await createOfferte(payload);
     if ("error" in created && created.error) {
@@ -81,6 +102,7 @@ export async function requestNovaOfferte(input: {
     }
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/offertes");
+    revalidatePath("/dashboard/geheugen");
     return {
       ok: true,
       mode: "direct" as const,
@@ -107,6 +129,7 @@ export async function requestNovaOfferte(input: {
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/automatisaties");
+  revalidatePath("/dashboard/geheugen");
   return {
     ok: true,
     mode: "pending" as const,
@@ -147,6 +170,15 @@ export async function approveAndExecuteAction(actionId: number) {
   revalidatePath("/dashboard/automatisaties");
   revalidatePath("/dashboard/offertes");
   revalidatePath("/dashboard/facturen");
+
+  if ("ok" in result && result.ok) {
+    await rememberFromExecution(supabase, {
+      companyId,
+      userId: user.id,
+      actionId,
+    });
+    revalidatePath("/dashboard/geheugen");
+  }
 
   return result;
 }

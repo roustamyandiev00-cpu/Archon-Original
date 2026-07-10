@@ -19,21 +19,36 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
   const activeId = getActiveMobileTabId(pathname);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    setMoreOpen(false);
+    const id = window.setTimeout(() => setMoreOpen(false), 0);
+    return () => window.clearTimeout(id);
   }, [pathname]);
 
   useEffect(() => {
-    const el = scrollRef.current?.querySelector<HTMLElement>(
+    const container = scrollRef.current;
+    const indicator = indicatorRef.current;
+    if (!container || !indicator) return;
+
+    const activeEl = container.querySelector<HTMLElement>(
       '[data-mobile-nav-active="true"]',
     );
-    el?.scrollIntoView({
+    if (!activeEl) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const activeRect = activeEl.getBoundingClientRect();
+    const left = activeRect.left - containerRect.left + container.scrollLeft;
+
+    indicator.style.width = `${activeRect.width}px`;
+    indicator.style.transform = `translateX(${left}px)`;
+
+    activeEl.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
       inline: "center",
     });
-  }, [activeId]);
+  }, [activeId, pathname]);
 
   return (
     <>
@@ -41,59 +56,70 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
         className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.06] bg-zinc-950/92 backdrop-blur-xl lg:hidden"
         aria-label="Mobiele navigatie"
       >
-        <div
-          ref={scrollRef}
-          className="flex items-stretch gap-0.5 overflow-x-auto px-2 pt-1.5 pb-[calc(0.35rem+env(safe-area-inset-bottom))] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {MOBILE_SWIPE_TABS.map((tab) => {
-            const active = activeId === tab.id;
-            return (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                prefetch
-                aria-current={active ? "page" : undefined}
-                data-mobile-nav-active={active ? "true" : undefined}
-                className={`flex min-w-[4.1rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition-colors ${
-                  active
-                    ? "text-sky-400"
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                <span
-                  className={`grid h-8 w-8 place-items-center rounded-xl transition-colors ${
-                    active ? "bg-sky-500/12" : "bg-transparent"
+        <div className="relative">
+          <span
+            ref={indicatorRef}
+            className="mobile-bottom-nav-indicator pointer-events-none absolute top-1.5 left-0 h-[calc(100%-0.375rem-env(safe-area-inset-bottom))] rounded-2xl bg-sky-500/10 transition-[transform,width] duration-300 ease-out"
+            aria-hidden
+          />
+
+          <div
+            ref={scrollRef}
+            className="relative flex items-stretch gap-0.5 overflow-x-auto px-2 pt-1.5 pb-[calc(0.35rem+env(safe-area-inset-bottom))] snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {MOBILE_SWIPE_TABS.map((tab) => {
+              const active = activeId === tab.id;
+              return (
+                <Link
+                  key={tab.id}
+                  href={tab.href}
+                  prefetch
+                  aria-current={active ? "page" : undefined}
+                  data-mobile-nav-active={active ? "true" : undefined}
+                  className={`relative z-[1] flex min-w-[4.25rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-medium transition-colors ${
+                    active
+                      ? "text-sky-400"
+                      : "text-zinc-500 hover:text-zinc-300"
                   }`}
                 >
-                  <tab.icon size={18} strokeWidth={active ? 2.25 : 1.75} />
-                </span>
-                <span className="max-w-[4rem] truncate">{tab.label}</span>
-              </Link>
-            );
-          })}
+                  <span
+                    className={`grid h-8 w-8 place-items-center rounded-xl transition-colors ${
+                      active ? "bg-sky-500/12" : "bg-transparent"
+                    }`}
+                  >
+                    <tab.icon size={18} strokeWidth={active ? 2.25 : 1.75} />
+                  </span>
+                  <span className="max-w-[4.25rem] truncate">{tab.label}</span>
+                </Link>
+              );
+            })}
 
-          <button
-            type="button"
-            data-mobile-nav-active={activeId === "more" ? "true" : undefined}
-            onClick={() => setMoreOpen(true)}
-            aria-label="Meer menu"
-            aria-expanded={moreOpen}
-            aria-controls="mobile-more-sheet"
-            className={`flex min-w-[4.1rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition-colors ${
-              activeId === "more"
-                ? "text-sky-400"
-                : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <span
-              className={`grid h-8 w-8 place-items-center rounded-xl transition-colors ${
-                activeId === "more" ? "bg-sky-500/12" : "bg-transparent"
+            <button
+              type="button"
+              data-mobile-nav-active={activeId === "more" ? "true" : undefined}
+              onClick={() => setMoreOpen(true)}
+              aria-label="Meer menu"
+              aria-expanded={moreOpen}
+              aria-controls="mobile-more-sheet"
+              className={`relative z-[1] flex min-w-[4.25rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-medium transition-colors ${
+                activeId === "more"
+                  ? "text-sky-400"
+                  : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              <LayoutGrid size={18} strokeWidth={activeId === "more" ? 2.25 : 1.75} />
-            </span>
-            <span>Meer</span>
-          </button>
+              <span
+                className={`grid h-8 w-8 place-items-center rounded-xl transition-colors ${
+                  activeId === "more" ? "bg-sky-500/12" : "bg-transparent"
+                }`}
+              >
+                <LayoutGrid
+                  size={18}
+                  strokeWidth={activeId === "more" ? 2.25 : 1.75}
+                />
+              </span>
+              <span>Meer</span>
+            </button>
+          </div>
         </div>
       </nav>
 

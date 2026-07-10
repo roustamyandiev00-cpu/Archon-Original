@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
-  Sparkles,
   Repeat,
   ShieldCheck,
   Wallet,
@@ -87,14 +86,6 @@ function SectionHeading({
         {title}
       </h2>
       {desc && <p className="mt-4 text-lg text-zinc-400">{desc}</p>}
-    </div>
-  );
-}
-
-function IconBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-sky-400 ring-1 ring-inset ring-white/10">
-      {children}
     </div>
   );
 }
@@ -332,6 +323,12 @@ function EInvoiceSection() {
               <Bullet>Btw-nummer, btw-vermeldingen, betalingsvoorwaarden</Bullet>
               <Bullet>Geschikt voor zelfstandigen én kmo&apos;s</Bullet>
             </ul>
+            <Link
+              href="/functies/peppol"
+              className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-sky-400 hover:text-sky-300"
+            >
+              Meer over Peppol <ArrowRight size={14} />
+            </Link>
           </div>
         </div>
       </div>

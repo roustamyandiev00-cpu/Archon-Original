@@ -88,11 +88,11 @@ export default function FactuurForm({
   const [error, setError] = useState<string | null>(null);
 
   const totals = useMemo(() => lineTotals(lines), [lines]);
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => String(c.id) === customerId),
+    [customers, customerId],
+  );
   const isProforma = documentType === "proforma";
-
-  const selectedCustomer = customers.find((c) => String(c.id) === customerId);
-  const klantNaam =
-    (selectedCustomer ? selectedCustomer.name : klantVrij).trim() || "";
 
   function updateLine(i: number, patch: Partial<OfferteLijnInput>) {
     setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));

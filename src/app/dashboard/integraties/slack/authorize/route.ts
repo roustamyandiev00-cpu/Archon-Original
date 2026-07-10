@@ -3,10 +3,8 @@ import { cookies } from "next/headers";
 import { startAuthorization } from "@vercel/connect";
 import { getCompanyContext } from "@/lib/company";
 import { untyped } from "@/lib/integraties";
-import {
-  resolveSlackConnectorUid,
-  slackTokenParams,
-} from "@/components/dashboard/integraties/slackConnect";
+import { slackTokenParams } from "@/components/dashboard/integraties/slackConnect";
+import { resolveSlackConnectorForCompany } from "@/components/dashboard/integraties/slackSetup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,15 +26,28 @@ export async function GET(req: NextRequest) {
     .eq("provider", "slack")
     .maybeSingle();
 
-  const config = (data?.config ?? {}) as Record<string, unknown>;
-  const connector = resolveSlackConnectorUid(config);
+  const existing = (data?.config ?? {}) as Record<string, unknown>;
+  const connector = resolveSlackConnectorForCompany(existing);
   if (!connector) {
     dashboard.searchParams.set(
       "error",
-      "Slack-connector ontbreekt. Stel SLACK_CONNECTOR in of vul de connector-UID in.",
+      "Slack is nog niet beschikbaar. Neem contact op met support.",
     );
     return NextResponse.redirect(dashboard);
   }
+
+  const now = new Date().toISOString();
+  await untyped(supabase).from("integraties").upsert(
+    {
+      bedrijf_id: companyId,
+      provider: "slack",
+      status: "configured",
+      config: { ...existing, connectorUid: connector },
+      connected_at: null,
+      updated_at: now,
+    },
+    { onConflict: "bedrijf_id,provider" },
+  );
 
   const callbackUrl = new URL(
     "/dashboard/integraties/slack/callback",

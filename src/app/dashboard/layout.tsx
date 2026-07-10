@@ -6,6 +6,8 @@ import MobileSwipeNav from "@/components/dashboard/MobileSwipeNav";
 import DashboardThemeProvider from "@/components/dashboard/DashboardThemeProvider";
 import { AgentChatProvider } from "@/components/dashboard/agent-chat/AgentChatProvider";
 import AgentChatWidget from "@/components/dashboard/agent-chat/AgentChatWidget";
+import { AgentNavigationProvider } from "@/components/dashboard/agent-navigation/AgentNavigationProvider";
+import { ProactiveAgentProvider } from "@/components/dashboard/ProactiveAgentProvider";
 import { PendingApprovalsProvider } from "@/components/dashboard/PendingApprovalsProvider";
 import { PreviewBanner, TrialBanner } from "@/components/dashboard/AccessBanners";
 import DashboardSidePreview from "@/components/dashboard/DashboardSidePreview";
@@ -16,6 +18,10 @@ import {
 } from "@/components/dashboard/DashboardSidePanel";
 import { getDashboardContext } from "@/components/dashboard/context";
 import { loadTopbarSummary } from "@/components/dashboard/mission-data";
+import {
+  DashboardTourProvider,
+  DashboardTourUi,
+} from "@/components/onboarding/DashboardTourShell";
 
 export const metadata: Metadata = {
   title: "Dashboard — ArchonPro",
@@ -38,6 +44,9 @@ export default async function DashboardLayout({
   return (
     <DashboardThemeProvider>
       <AgentChatProvider companyId={companyId}>
+      <DashboardTourProvider>
+      <AgentNavigationProvider>
+      <ProactiveAgentProvider enabled={!isPreviewMode && Boolean(companyId)}>
       <PendingApprovalsProvider
         companyId={companyId}
         enabled={!isPreviewMode && Boolean(companyId)}
@@ -68,14 +77,19 @@ export default async function DashboardLayout({
           <DashboardSidePreview
             supabase={supabase}
             companyId={companyId}
+            userId={user?.id ?? null}
             isPreview={isPreviewMode}
           />
         </DashboardSidePanel>
       )}
       <MobileBottomNav isPreviewMode={isPreviewMode} />
       <AgentChatWidget />
+      <DashboardTourUi />
       </DashboardSidePanelProvider>
       </PendingApprovalsProvider>
+      </ProactiveAgentProvider>
+      </AgentNavigationProvider>
+      </DashboardTourProvider>
       </AgentChatProvider>
     </DashboardThemeProvider>
   );

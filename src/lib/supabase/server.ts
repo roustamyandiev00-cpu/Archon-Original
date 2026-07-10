@@ -20,6 +20,8 @@ async function createClientImpl() {
               cookieStore.set(name, value, {
                 ...options,
                 secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
               }),
             );
           } catch {
