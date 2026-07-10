@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
+  Building2,
   Calendar,
   Euro,
   GripVertical,
@@ -21,6 +22,14 @@ import {
 } from "@/app/dashboard/leads/actions";
 import { STADIA, STAGE_STYLES, type Stadium } from "./stages";
 
+export type KlantOption = {
+  id: number;
+  name: string;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+};
+
 export type DealCard = {
   id: number;
   titel: string;
@@ -28,6 +37,8 @@ export type DealCard = {
   waarde: number | null;
   kans: number | null;
   deadline: string | null;
+  customer_id?: number | null;
+  customerName?: string | null;
   contactpersoon?: string | null;
   telefoon?: string | null;
   email?: string | null;
@@ -77,7 +88,23 @@ const URGENCY_LABEL: Record<Urgency, string> = {
   later: "Opvolgen op",
 };
 
-export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] }) {
+function klantLabel(klant: KlantOption) {
+  return klant.company_name ? `${klant.name} (${klant.company_name})` : klant.name;
+}
+
+function klantNameById(klanten: KlantOption[], id: number | null | undefined) {
+  if (id == null) return null;
+  const klant = klanten.find((k) => k.id === id);
+  return klant ? klantLabel(klant) : null;
+}
+
+export default function LeadsBoard({
+  initialDeals,
+  klanten,
+}: {
+  initialDeals: DealCard[];
+  klanten: KlantOption[];
+}) {
   const [deals, setDeals] = useState<DealCard[]>(initialDeals);
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<Stadium | null>(null);
@@ -130,7 +157,15 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
     });
   }
 
-  function handleCreate(stadium: Stadium, titel: string, waarde: number | null) {
+  function handleCreate(
+    stadium: Stadium,
+    titel: string,
+    waarde: number | null,
+    customerId: number | null,
+  ) {
+    const klant = customerId
+      ? klanten.find((k) => k.id === customerId)
+      : undefined;
     const tempId = -Date.now();
     const optimistic: DealCard = {
       id: tempId,
@@ -139,12 +174,23 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
       waarde,
       kans: null,
       deadline: null,
+      customer_id: customerId,
+      customerName: klant ? klantLabel(klant) : null,
+      contactpersoon: klant?.name ?? null,
+      telefoon: klant?.phone ?? null,
+      email: klant?.email ?? null,
     };
     setDeals((prev) => [...prev, optimistic]);
     setError(null);
 
     startTransition(async () => {
-      const res = await createDeal({ titel, stadium, waarde, kans: null });
+      const res = await createDeal({
+        titel,
+        stadium,
+        waarde,
+        kans: null,
+        customer_id: customerId,
+      });
       if ("error" in res && res.error) {
         setError(res.error);
         setDeals((prev) => prev.filter((d) => d.id !== tempId));
@@ -160,12 +206,26 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
 
   function handleUpdate(id: number, patch: Partial<DealCard>) {
     const snapshot = deals;
-    setDeals((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+    const enriched: Partial<DealCard> = { ...patch };
+    if ("customer_id" in patch) {
+      enriched.customerName = klantNameById(klanten, patch.customer_id);
+    }
+    setDeals((prev) => prev.map((d) => (d.id === id ? { ...d, ...enriched } : d)));
     setEditingId(null);
     setError(null);
 
     startTransition(async () => {
-      const res = await updateDeal(id, patch);
+      const res = await updateDeal(id, {
+        titel: enriched.titel,
+        waarde: enriched.waarde,
+        kans: enriched.kans,
+        deadline: enriched.deadline,
+        customer_id: enriched.customer_id,
+        contactpersoon: enriched.contactpersoon,
+        telefoon: enriched.telefoon,
+        email: enriched.email,
+        notitie: enriched.notitie,
+      });
       if ("error" in res && res.error) {
         setError(res.error);
         setDeals(snapshot);
@@ -251,6 +311,7 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
                     <EditCard
                       key={deal.id}
                       deal={deal}
+                      klanten={klanten}
                       onSave={(patch) => handleUpdate(deal.id, patch)}
                       onCancel={() => setEditingId(null)}
                     />
@@ -272,8 +333,9 @@ export default function LeadsBoard({ initialDeals }: { initialDeals: DealCard[] 
                 )}
 
                 <AddCard
-                  onAdd={(titel, waarde) =>
-                    handleCreate(stadium, titel, waarde)
+                  klanten={klanten}
+                  onAdd={(titel, waarde, customerId) =>
+                    handleCreate(stadium, titel, waarde, customerId)
                   }
                 />
               </div>
@@ -338,10 +400,22 @@ function DealArticle({
         </div>
       </div>
 
-      {(deal.contactpersoon || deal.telefoon) && (
+      {(deal.customerName || deal.contactpersoon || deal.telefoon) && (
         <div className="mt-2 flex flex-col gap-1 pl-6">
-          {deal.contactpersoon && (
+          {deal.customerName && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-sky-300">
+              <Building2 size={12} className="shrink-0 text-sky-400/80" />
+              {deal.customerName}
+            </span>
+          )}
+          {deal.contactpersoon && !deal.customerName && (
             <span className="flex items-center gap-1.5 text-xs text-zinc-300">
+              <User size={12} className="shrink-0 text-zinc-500" />
+              {deal.contactpersoon}
+            </span>
+          )}
+          {deal.contactpersoon && deal.customerName && (
+            <span className="flex items-center gap-1.5 text-xs text-zinc-400">
               <User size={12} className="shrink-0 text-zinc-500" />
               {deal.contactpersoon}
             </span>
@@ -398,14 +472,19 @@ function DealArticle({
 
 function EditCard({
   deal,
+  klanten,
   onSave,
   onCancel,
 }: {
   deal: DealCard;
+  klanten: KlantOption[];
   onSave: (patch: Partial<DealCard>) => void;
   onCancel: () => void;
 }) {
   const [titel, setTitel] = useState(deal.titel);
+  const [customerId, setCustomerId] = useState(
+    deal.customer_id != null ? String(deal.customer_id) : "",
+  );
   const [contactpersoon, setContactpersoon] = useState(deal.contactpersoon ?? "");
   const [telefoon, setTelefoon] = useState(deal.telefoon ?? "");
   const [email, setEmail] = useState(deal.email ?? "");
@@ -414,10 +493,21 @@ function EditCard({
   const [deadline, setDeadline] = useState(deal.deadline ?? "");
   const [notitie, setNotitie] = useState(deal.notitie ?? "");
 
+  function applyKlant(id: string) {
+    setCustomerId(id);
+    if (!id) return;
+    const klant = klanten.find((k) => k.id === Number(id));
+    if (!klant) return;
+    setContactpersoon(klant.name);
+    setTelefoon(klant.phone ?? "");
+    setEmail(klant.email ?? "");
+  }
+
   function submit() {
     if (!titel.trim()) return;
     onSave({
       titel: titel.trim(),
+      customer_id: customerId ? Number(customerId) : null,
       contactpersoon: contactpersoon.trim() || null,
       telefoon: telefoon.trim() || null,
       email: email.trim() || null,
@@ -439,6 +529,23 @@ function EditCard({
         placeholder="Titel"
         className={`${inputClass} font-medium`}
       />
+      {klanten.length > 0 && (
+        <label className="block">
+          <span className="mb-1 block text-[11px] text-zinc-500">Klant</span>
+          <select
+            value={customerId}
+            onChange={(e) => applyKlant(e.target.value)}
+            className={inputClass}
+          >
+            <option value="">— Geen klant gekoppeld —</option>
+            {klanten.map((klant) => (
+              <option key={klant.id} value={klant.id}>
+                {klantLabel(klant)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <input
         value={contactpersoon}
         onChange={(e) => setContactpersoon(e.target.value)}
@@ -514,13 +621,16 @@ function EditCard({
 }
 
 function AddCard({
+  klanten,
   onAdd,
 }: {
-  onAdd: (titel: string, waarde: number | null) => void;
+  klanten: KlantOption[];
+  onAdd: (titel: string, waarde: number | null, customerId: number | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [titel, setTitel] = useState("");
   const [waarde, setWaarde] = useState("");
+  const [customerId, setCustomerId] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   function submit() {
@@ -530,9 +640,14 @@ function AddCard({
       return;
     }
     const parsed = waarde.trim() ? Number(waarde.replace(/[^\d.,]/g, "").replace(",", ".")) : null;
-    onAdd(t, parsed != null && !Number.isNaN(parsed) ? parsed : null);
+    onAdd(
+      t,
+      parsed != null && !Number.isNaN(parsed) ? parsed : null,
+      customerId ? Number(customerId) : null,
+    );
     setTitel("");
     setWaarde("");
+    setCustomerId("");
     setOpen(false);
   }
 
@@ -564,6 +679,20 @@ function AddCard({
         placeholder="Titel van de deal"
         className="w-full rounded-lg bg-transparent px-1.5 py-1 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
       />
+      {klanten.length > 0 && (
+        <select
+          value={customerId}
+          onChange={(e) => setCustomerId(e.target.value)}
+          className="mt-1 w-full rounded-lg bg-zinc-900/60 px-2 py-1 text-xs text-zinc-100 focus:outline-none"
+        >
+          <option value="">— Optioneel: koppel klant —</option>
+          {klanten.map((klant) => (
+            <option key={klant.id} value={klant.id}>
+              {klantLabel(klant)}
+            </option>
+          ))}
+        </select>
+      )}
       <div className="mt-1 flex items-center gap-2">
         <input
           value={waarde}

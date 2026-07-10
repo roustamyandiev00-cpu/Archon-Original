@@ -125,6 +125,42 @@ export type Database = {
           },
         ]
       }
+      admin_impersonation_log: {
+        Row: {
+          admin_user_id: string
+          id: number
+          started_at: string
+          target_company_id: number
+        }
+        Insert: {
+          admin_user_id: string
+          id?: number
+          started_at?: string
+          target_company_id: number
+        }
+        Update: {
+          admin_user_id?: string
+          id?: number
+          started_at?: string
+          target_company_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_impersonation_log_target_company_id_fkey"
+            columns: ["target_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_impersonation_log_target_company_id_fkey"
+            columns: ["target_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       afspraken: {
         Row: {
           assigned_to: string | null
@@ -1009,6 +1045,131 @@ export type Database = {
           },
         ]
       }
+      bank_rekeningen: {
+        Row: {
+          alias: string | null
+          bank_naam: string | null
+          bedrijf_id: number
+          created_at: string
+          iban: string
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          alias?: string | null
+          bank_naam?: string | null
+          bedrijf_id: number
+          created_at?: string
+          iban: string
+          id?: never
+          updated_at?: string
+        }
+        Update: {
+          alias?: string | null
+          bank_naam?: string | null
+          bedrijf_id?: number
+          created_at?: string
+          iban?: string
+          id?: never
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_rekeningen_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_rekeningen_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_transacties: {
+        Row: {
+          bedrag: number
+          bedrijf_id: number
+          created_at: string
+          extern_referentie: string | null
+          factuur_id: number | null
+          gestructureerde_mededeling: string | null
+          id: number
+          match_status: string
+          omschrijving: string | null
+          rekening_id: number | null
+          tegenpartij: string | null
+          transactie_datum: string
+          updated_at: string
+          valuta: string
+        }
+        Insert: {
+          bedrag: number
+          bedrijf_id: number
+          created_at?: string
+          extern_referentie?: string | null
+          factuur_id?: number | null
+          gestructureerde_mededeling?: string | null
+          id?: never
+          match_status?: string
+          omschrijving?: string | null
+          rekening_id?: number | null
+          tegenpartij?: string | null
+          transactie_datum: string
+          updated_at?: string
+          valuta?: string
+        }
+        Update: {
+          bedrag?: number
+          bedrijf_id?: number
+          created_at?: string
+          extern_referentie?: string | null
+          factuur_id?: number | null
+          gestructureerde_mededeling?: string | null
+          id?: never
+          match_status?: string
+          omschrijving?: string | null
+          rekening_id?: number | null
+          tegenpartij?: string | null
+          transactie_datum?: string
+          updated_at?: string
+          valuta?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_transacties_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transacties_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transacties_factuur_id_fkey"
+            columns: ["factuur_id"]
+            isOneToOne: false
+            referencedRelation: "facturen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transacties_rekening_id_fkey"
+            columns: ["rekening_id"]
+            isOneToOne: false
+            referencedRelation: "bank_rekeningen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bedrijf_reviews: {
         Row: {
           commentaar: string
@@ -1447,6 +1608,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bouwmateriaal_winkels: {
+        Row: {
+          adres: string | null
+          beschrijving: string | null
+          categorie: string
+          created_at: string
+          fotos: string[]
+          id: number
+          lat: number | null
+          lng: number | null
+          naam: string
+          postcode: string | null
+          regio: string | null
+          stad: string | null
+          telefoon: string | null
+          toegevoegd_door: string | null
+          website: string | null
+        }
+        Insert: {
+          adres?: string | null
+          beschrijving?: string | null
+          categorie?: string
+          created_at?: string
+          fotos?: string[]
+          id?: never
+          lat?: number | null
+          lng?: number | null
+          naam: string
+          postcode?: string | null
+          regio?: string | null
+          stad?: string | null
+          telefoon?: string | null
+          toegevoegd_door?: string | null
+          website?: string | null
+        }
+        Update: {
+          adres?: string | null
+          beschrijving?: string | null
+          categorie?: string
+          created_at?: string
+          fotos?: string[]
+          id?: never
+          lat?: number | null
+          lng?: number | null
+          naam?: string
+          postcode?: string | null
+          regio?: string | null
+          stad?: string | null
+          telefoon?: string | null
+          toegevoegd_door?: string | null
+          website?: string | null
+        }
+        Relationships: []
       }
       bouwnetwerk_channel_members: {
         Row: {
@@ -2093,7 +2308,7 @@ export type Database = {
       contacten: {
         Row: {
           achternaam: string
-          bedrijf_id: number | null
+          bedrijf_id: number
           created_at: string | null
           email: string | null
           functie: string | null
@@ -2105,7 +2320,7 @@ export type Database = {
         }
         Insert: {
           achternaam: string
-          bedrijf_id?: number | null
+          bedrijf_id: number
           created_at?: string | null
           email?: string | null
           functie?: string | null
@@ -2117,7 +2332,7 @@ export type Database = {
         }
         Update: {
           achternaam?: string
-          bedrijf_id?: number | null
+          bedrijf_id?: number
           created_at?: string | null
           email?: string | null
           functie?: string | null
@@ -2506,60 +2721,6 @@ export type Database = {
           },
         ]
       }
-      bouwmateriaal_winkels: {
-        Row: {
-          adres: string | null
-          beschrijving: string | null
-          categorie: string
-          created_at: string
-          fotos: string[]
-          id: number
-          lat: number | null
-          lng: number | null
-          naam: string
-          postcode: string | null
-          regio: string | null
-          stad: string | null
-          telefoon: string | null
-          toegevoegd_door: string | null
-          website: string | null
-        }
-        Insert: {
-          adres?: string | null
-          beschrijving?: string | null
-          categorie?: string
-          created_at?: string
-          fotos?: string[]
-          id?: never
-          lat?: number | null
-          lng?: number | null
-          naam: string
-          postcode?: string | null
-          regio?: string | null
-          stad?: string | null
-          telefoon?: string | null
-          toegevoegd_door?: string | null
-          website?: string | null
-        }
-        Update: {
-          adres?: string | null
-          beschrijving?: string | null
-          categorie?: string
-          created_at?: string
-          fotos?: string[]
-          id?: never
-          lat?: number | null
-          lng?: number | null
-          naam?: string
-          postcode?: string | null
-          regio?: string | null
-          stad?: string | null
-          telefoon?: string | null
-          toegevoegd_door?: string | null
-          website?: string | null
-        }
-        Relationships: []
-      }
       dak_bedrijf_reviews: {
         Row: {
           commentaar: string
@@ -2649,12 +2810,40 @@ export type Database = {
         }
         Relationships: []
       }
+      database_backup_log: {
+        Row: {
+          backup_type: string
+          created_at: string
+          file_path: string | null
+          id: number
+          notes: string | null
+          status: string
+        }
+        Insert: {
+          backup_type: string
+          created_at?: string
+          file_path?: string | null
+          id?: never
+          notes?: string | null
+          status: string
+        }
+        Update: {
+          backup_type?: string
+          created_at?: string
+          file_path?: string | null
+          id?: never
+          notes?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
-          bedrijf_id: number | null
+          bedrijf_id: number
           contact_id: number | null
           contactpersoon: string | null
           created_at: string | null
+          customer_id: number | null
           deadline: string | null
           email: string | null
           id: number
@@ -2669,10 +2858,11 @@ export type Database = {
           waarde: number | null
         }
         Insert: {
-          bedrijf_id?: number | null
+          bedrijf_id: number
           contact_id?: number | null
           contactpersoon?: string | null
           created_at?: string | null
+          customer_id?: number | null
           deadline?: string | null
           email?: string | null
           id?: number
@@ -2687,10 +2877,11 @@ export type Database = {
           waarde?: number | null
         }
         Update: {
-          bedrijf_id?: number | null
+          bedrijf_id?: number
           contact_id?: number | null
           contactpersoon?: string | null
           created_at?: string | null
+          customer_id?: number | null
           deadline?: string | null
           email?: string | null
           id?: number
@@ -2724,6 +2915,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -2910,8 +3108,12 @@ export type Database = {
       }
       facturen: {
         Row: {
+          accounting_export_error: string | null
+          accounting_export_id: string | null
+          accounting_export_provider: string | null
+          accounting_exported_at: string | null
           bedrag: number
-          bedrijf_id: number | null
+          bedrijf_id: number
           btw_bedrag: number
           buyer_reference: string | null
           created_at: string
@@ -2946,8 +3148,12 @@ export type Database = {
           vervaldatum: string | null
         }
         Insert: {
+          accounting_export_error?: string | null
+          accounting_export_id?: string | null
+          accounting_export_provider?: string | null
+          accounting_exported_at?: string | null
           bedrag?: number
-          bedrijf_id?: number | null
+          bedrijf_id: number
           btw_bedrag?: number
           buyer_reference?: string | null
           created_at?: string
@@ -2982,8 +3188,12 @@ export type Database = {
           vervaldatum?: string | null
         }
         Update: {
+          accounting_export_error?: string | null
+          accounting_export_id?: string | null
+          accounting_export_provider?: string | null
+          accounting_exported_at?: string | null
           bedrag?: number
-          bedrijf_id?: number | null
+          bedrijf_id?: number
           btw_bedrag?: number
           buyer_reference?: string | null
           created_at?: string
@@ -3096,7 +3306,7 @@ export type Database = {
         Row: {
           aantal: number
           btw_percentage: number
-          company_id: number | null
+          company_id: number
           created_at: string
           eenheid: string
           factuur_id: number
@@ -3109,7 +3319,7 @@ export type Database = {
         Insert: {
           aantal?: number
           btw_percentage?: number
-          company_id?: number | null
+          company_id: number
           created_at?: string
           eenheid?: string
           factuur_id: number
@@ -3122,7 +3332,7 @@ export type Database = {
         Update: {
           aantal?: number
           btw_percentage?: number
-          company_id?: number | null
+          company_id?: number
           created_at?: string
           eenheid?: string
           factuur_id?: number
@@ -3830,7 +4040,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           bedrag: number
-          bedrijf_id: number | null
+          bedrijf_id: number
           converted_at: string | null
           converted_by: string | null
           converted_to_invoice_id: number | null
@@ -3861,7 +4071,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           bedrag?: number
-          bedrijf_id?: number | null
+          bedrijf_id: number
           converted_at?: string | null
           converted_by?: string | null
           converted_to_invoice_id?: number | null
@@ -3892,7 +4102,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           bedrag?: number
-          bedrijf_id?: number | null
+          bedrijf_id?: number
           converted_at?: string | null
           converted_by?: string | null
           converted_to_invoice_id?: number | null
@@ -4005,6 +4215,87 @@ export type Database = {
           voorraad?: string | null
         }
         Relationships: []
+      }
+      peppol_inbox: {
+        Row: {
+          access_point: string
+          bedrijf_id: number
+          confirmed_at: string | null
+          created_at: string
+          currency: string
+          document_type: string
+          external_inbox_item_id: string
+          id: number
+          invoice_number: string | null
+          issue_date: string | null
+          peppol_file_id: string | null
+          received_at: string
+          receiver_peppol_id: string | null
+          sender_peppol_id: string | null
+          status: string
+          supplier_name: string | null
+          total_amount: number | null
+          ubl_xml: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_point?: string
+          bedrijf_id: number
+          confirmed_at?: string | null
+          created_at?: string
+          currency?: string
+          document_type?: string
+          external_inbox_item_id: string
+          id?: never
+          invoice_number?: string | null
+          issue_date?: string | null
+          peppol_file_id?: string | null
+          received_at?: string
+          receiver_peppol_id?: string | null
+          sender_peppol_id?: string | null
+          status?: string
+          supplier_name?: string | null
+          total_amount?: number | null
+          ubl_xml?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_point?: string
+          bedrijf_id?: number
+          confirmed_at?: string | null
+          created_at?: string
+          currency?: string
+          document_type?: string
+          external_inbox_item_id?: string
+          id?: never
+          invoice_number?: string | null
+          issue_date?: string | null
+          peppol_file_id?: string | null
+          received_at?: string
+          receiver_peppol_id?: string | null
+          sender_peppol_id?: string | null
+          status?: string
+          supplier_name?: string | null
+          total_amount?: number | null
+          ubl_xml?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "peppol_inbox_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "peppol_inbox_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       peppol_transmissions: {
         Row: {
@@ -4353,6 +4644,142 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      samenwerking_contracts: {
+        Row: {
+          ai_prompt: string | null
+          channel_id: string
+          created_at: string
+          created_by_company_id: number
+          draft_html: string
+          draft_json: Json
+          id: string
+          party_a_company_id: number
+          party_a_signed_at: string | null
+          party_a_signed_by: string | null
+          party_a_signer_name: string | null
+          party_b_company_id: number
+          party_b_signed_at: string | null
+          party_b_signed_by: string | null
+          party_b_signer_name: string | null
+          pdf_storage_path: string | null
+          status: string
+          titel: string
+          updated_at: string
+          werkpost_id: string | null
+          werkpost_reactie_id: string | null
+        }
+        Insert: {
+          ai_prompt?: string | null
+          channel_id: string
+          created_at?: string
+          created_by_company_id: number
+          draft_html: string
+          draft_json?: Json
+          id?: string
+          party_a_company_id: number
+          party_a_signed_at?: string | null
+          party_a_signed_by?: string | null
+          party_a_signer_name?: string | null
+          party_b_company_id: number
+          party_b_signed_at?: string | null
+          party_b_signed_by?: string | null
+          party_b_signer_name?: string | null
+          pdf_storage_path?: string | null
+          status?: string
+          titel: string
+          updated_at?: string
+          werkpost_id?: string | null
+          werkpost_reactie_id?: string | null
+        }
+        Update: {
+          ai_prompt?: string | null
+          channel_id?: string
+          created_at?: string
+          created_by_company_id?: number
+          draft_html?: string
+          draft_json?: Json
+          id?: string
+          party_a_company_id?: number
+          party_a_signed_at?: string | null
+          party_a_signed_by?: string | null
+          party_a_signer_name?: string | null
+          party_b_company_id?: number
+          party_b_signed_at?: string | null
+          party_b_signed_by?: string | null
+          party_b_signer_name?: string | null
+          pdf_storage_path?: string | null
+          status?: string
+          titel?: string
+          updated_at?: string
+          werkpost_id?: string | null
+          werkpost_reactie_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "samenwerking_contracts_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "bouwnetwerk_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_created_by_company_id_fkey"
+            columns: ["created_by_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_created_by_company_id_fkey"
+            columns: ["created_by_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_party_a_company_id_fkey"
+            columns: ["party_a_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_party_a_company_id_fkey"
+            columns: ["party_a_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_party_b_company_id_fkey"
+            columns: ["party_b_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_party_b_company_id_fkey"
+            columns: ["party_b_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_werkpost_id_fkey"
+            columns: ["werkpost_id"]
+            isOneToOne: false
+            referencedRelation: "werkposts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_werkpost_reactie_id_fkey"
+            columns: ["werkpost_reactie_id"]
+            isOneToOne: false
+            referencedRelation: "werkpost_reacties"
             referencedColumns: ["id"]
           },
         ]
@@ -4901,93 +5328,6 @@ export type Database = {
           },
         ]
       }
-      samenwerking_contracts: {
-        Row: {
-          ai_prompt: string | null
-          channel_id: string
-          created_at: string
-          created_by_company_id: number
-          draft_html: string
-          draft_json: Json
-          id: string
-          party_a_company_id: number
-          party_a_signed_at: string | null
-          party_a_signed_by: string | null
-          party_a_signer_name: string | null
-          party_b_company_id: number
-          party_b_signed_at: string | null
-          party_b_signed_by: string | null
-          party_b_signer_name: string | null
-          pdf_storage_path: string | null
-          status: string
-          titel: string
-          updated_at: string
-          werkpost_id: string | null
-          werkpost_reactie_id: string | null
-        }
-        Insert: {
-          ai_prompt?: string | null
-          channel_id: string
-          created_at?: string
-          created_by_company_id: number
-          draft_html: string
-          draft_json?: Json
-          id?: string
-          party_a_company_id: number
-          party_a_signed_at?: string | null
-          party_a_signed_by?: string | null
-          party_a_signer_name?: string | null
-          party_b_company_id: number
-          party_b_signed_at?: string | null
-          party_b_signed_by?: string | null
-          party_b_signer_name?: string | null
-          pdf_storage_path?: string | null
-          status?: string
-          titel: string
-          updated_at?: string
-          werkpost_id?: string | null
-          werkpost_reactie_id?: string | null
-        }
-        Update: {
-          ai_prompt?: string | null
-          channel_id?: string
-          created_at?: string
-          created_by_company_id?: number
-          draft_html?: string
-          draft_json?: Json
-          id?: string
-          party_a_company_id?: number
-          party_a_signed_at?: string | null
-          party_a_signed_by?: string | null
-          party_a_signer_name?: string | null
-          party_b_company_id?: number
-          party_b_signed_at?: string | null
-          party_b_signed_by?: string | null
-          party_b_signer_name?: string | null
-          pdf_storage_path?: string | null
-          status?: string
-          titel?: string
-          updated_at?: string
-          werkpost_id?: string | null
-          werkpost_reactie_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "samenwerking_contracts_channel_id_fkey"
-            columns: ["channel_id"]
-            isOneToOne: false
-            referencedRelation: "bouwnetwerk_channels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "samenwerking_contracts_werkpost_id_fkey"
-            columns: ["werkpost_id"]
-            isOneToOne: false
-            referencedRelation: "werkposts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       werkposts: {
         Row: {
           aantal_personen: number
@@ -5351,11 +5691,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      ensure_user_referral: {
+        Args: {
+          p_full_name?: string
+          p_referred_by?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       exec_sql: { Args: { sql: string }; Returns: undefined }
       generate_document_number: {
         Args: { p_company_id: number; p_document_type: string }
         Returns: string
       }
+      generate_referral_code: { Args: { p_full_name: string }; Returns: string }
       generate_storage_signed_url: {
         Args: { p_bucket: string; p_expiry_seconds?: number; p_path: string }
         Returns: Json
@@ -5388,6 +5737,7 @@ export type Database = {
         Args: { p_company_id: number; p_plan: string }
         Returns: undefined
       }
+      is_company_admin: { Args: { p_company_id: number }; Returns: boolean }
       is_company_owner_record: {
         Args: { p_company_id: number; p_user_id?: string }
         Returns: boolean
@@ -5422,18 +5772,6 @@ export type Database = {
         Args: { p_company_name?: string; p_user_name?: string }
         Returns: number
       }
-      ensure_user_referral: {
-        Args: {
-          p_full_name?: string
-          p_referred_by?: string
-          p_user_id?: string
-        }
-        Returns: string
-      }
-      generate_referral_code: {
-        Args: { p_full_name: string }
-        Returns: string
-      }
       search_agent_memory: {
         Args: {
           p_company_id: number
@@ -5465,6 +5803,11 @@ export type Database = {
           type: string
         }[]
       }
+      storage_path_company_id: {
+        Args: { object_path: string }
+        Returns: number
+      }
+      storage_tenant_access: { Args: { object_path: string }; Returns: boolean }
       validate_factuur_state_transition: {
         Args: { p_current_status: string; p_new_status: string }
         Returns: boolean

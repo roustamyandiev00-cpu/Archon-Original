@@ -62,3 +62,6 @@ thomas-dashboard-test.png
 
 # generated captures
 /screenshots/dashboard-tour/
+
+# python exports (peppol bundles, ubl)
+/exports/

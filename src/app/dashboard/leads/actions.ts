@@ -35,6 +35,7 @@ export type CreateDealInput = {
   stadium: string;
   waarde: number | null;
   kans: number | null;
+  customer_id?: number | null;
 };
 
 export async function createDeal(input: CreateDealInput) {
@@ -45,16 +46,34 @@ export async function createDeal(input: CreateDealInput) {
   const { supabase, user, companyId } = access;
   if (!input.titel.trim()) return { error: "Geef de deal een titel." };
 
+  const insert: Database["public"]["Tables"]["deals"]["Insert"] = {
+    titel: input.titel.trim(),
+    stadium: input.stadium,
+    waarde: input.waarde,
+    kans: input.kans,
+    customer_id: input.customer_id ?? null,
+    bedrijf_id: companyId,
+    user_id: user.id,
+  };
+
+  if (input.customer_id) {
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("name, phone, email")
+      .eq("id", input.customer_id)
+      .eq("company_id", companyId)
+      .maybeSingle();
+
+    if (customer) {
+      insert.contactpersoon = customer.name;
+      insert.telefoon = customer.phone;
+      insert.email = customer.email;
+    }
+  }
+
   const { data, error } = await supabase
     .from("deals")
-    .insert({
-      titel: input.titel.trim(),
-      stadium: input.stadium,
-      waarde: input.waarde,
-      kans: input.kans,
-      bedrijf_id: companyId,
-      user_id: user.id,
-    })
+    .insert(insert)
     .select("id")
     .single();
 
@@ -69,6 +88,7 @@ export type UpdateDealInput = {
   waarde?: number | null;
   kans?: number | null;
   deadline?: string | null;
+  customer_id?: number | null;
   contactpersoon?: string | null;
   telefoon?: string | null;
   email?: string | null;
@@ -89,6 +109,7 @@ export async function updateDeal(dealId: number, input: UpdateDealInput) {
   if (input.waarde !== undefined) patch.waarde = input.waarde;
   if (input.kans !== undefined) patch.kans = input.kans;
   if (input.deadline !== undefined) patch.deadline = input.deadline;
+  if (input.customer_id !== undefined) patch.customer_id = input.customer_id;
   if (input.contactpersoon !== undefined)
     patch.contactpersoon = input.contactpersoon?.trim() || null;
   if (input.telefoon !== undefined) patch.telefoon = input.telefoon?.trim() || null;

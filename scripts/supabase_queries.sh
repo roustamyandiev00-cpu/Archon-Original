@@ -62,5 +62,23 @@ fetch "KLANTEN MET PEPPOL-GEGEVENS" \
 fetch "E-FACTURATIE INSTELLINGEN PER BEDRIJF" \
   "company_einvoicing_settings?select=bedrijf_id,is_enabled,provider_id,environment,auto_send,peppol_endpoint_url&limit=10"
 
+fetch "PEPPOL INTEGRATIE (config — keys gemaskeerd in export script)" \
+  "integraties?select=bedrijf_id,provider,status,connected_at&provider=eq.peppol"
+
+fetch "BEDRIJF LEGAL ENTITIES (leverancier Peppol)" \
+  "company_legal_entities?select=bedrijf_id,legal_name,enterprise_number,vat_number,city,country_code&order=bedrijf_id.asc&limit=10"
+
+fetch "PEPPOL UBL-HASH (transmissions)" \
+  "peppol_transmissions?select=factuur_id,status,access_point,ubl_hash,error_message&order=id.desc&limit=5"
+
+fetch "BEDRIJVEN — PEPPOL SENDER ID" \
+  "bedrijven?select=id,naam,btw,peppol_participant_id,kvk&peppol_participant_id=not.is.null&limit=10"
+
+echo ""
+echo "UBL XML export (app moet draaien + ingelogd):"
+echo "  http://localhost:3000/dashboard/facturen/1/peppol"
+echo ""
+echo "Volledige Peppol-bundle (JSON, keys gemaskeerd):"
+echo "  source .venv/bin/activate && python scripts/export_peppol_bundle.py 1"
 echo ""
 echo "Klaar."

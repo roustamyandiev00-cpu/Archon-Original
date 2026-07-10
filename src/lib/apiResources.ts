@@ -36,6 +36,12 @@ export const API_RESOURCES: ApiResource[] = [
     description: "Je volledige klantenbestand uit het CRM.",
   },
   {
+    id: "deals",
+    path: "/api/v1/deals",
+    title: "Deals / leads",
+    description: "CRM-pipeline met stadium, waarde, kans en opvolgvelden.",
+  },
+  {
     id: "werkposts",
     path: "/api/v1/werkposts",
     title: "Werkposts",

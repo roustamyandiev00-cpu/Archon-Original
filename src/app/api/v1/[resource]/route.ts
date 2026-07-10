@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/types/database.types";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 import { hashApiKey } from "@/lib/apiKeys";
 import { API_RESOURCE_IDS } from "@/lib/apiResources";
 
@@ -13,8 +14,8 @@ export const dynamic = "force-dynamic";
  */
 function apiClient() {
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabaseAnonKey(),
     { cookies: { getAll: () => [], setAll: () => {} } },
   );
 }
