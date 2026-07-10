@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
+import { untyped } from "@/lib/integraties";
 import {
   normalizeBelgianVat,
   normalizeKbo,
@@ -22,6 +23,8 @@ export type KlantInput = {
   ondernemingsnummer?: string;
   btw?: string;
   peppol_participant_id?: string;
+  is_overheid?: boolean;
+  mercurius_entiteit_id?: string;
   notes?: string;
 };
 
@@ -63,6 +66,8 @@ function clean(input: KlantInput) {
     kvk: kbo,
     btw: vat,
     peppol_participant_id: peppolId,
+    is_overheid: Boolean(input.is_overheid),
+    mercurius_entiteit_id: input.mercurius_entiteit_id?.trim() || null,
     notes: input.notes?.trim() || null,
     is_active: true,
   };
@@ -76,7 +81,7 @@ export async function createKlant(input: KlantInput) {
   const row = clean(input);
   if (!row.name) return { error: "Naam is verplicht." };
 
-  const { data, error } = await supabase
+  const { data, error } = await untyped(supabase)
     .from("customers")
     .insert({
       company_id: companyId,
@@ -101,7 +106,7 @@ export async function updateKlant(id: number, input: KlantInput) {
   const row = clean(input);
   if (!row.name) return { error: "Naam is verplicht." };
 
-  const { error } = await supabase
+  const { error } = await untyped(supabase)
     .from("customers")
     .update({
       ...row,

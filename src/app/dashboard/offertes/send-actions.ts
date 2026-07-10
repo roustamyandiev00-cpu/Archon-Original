@@ -36,17 +36,15 @@ export async function markOfferteSent(
   if (!offerte) return { error: "Offerte niet gevonden." };
 
   let customerEmail: string | null = opts?.recipientEmail ?? null;
-  let customerPhone: string | null = null;
 
   if (offerte.customer_id) {
     const { data: customer } = await supabase
       .from("customers")
-      .select("email, phone")
+      .select("email")
       .eq("id", offerte.customer_id)
       .eq("company_id", companyId)
       .maybeSingle();
     customerEmail = customerEmail || customer?.email || null;
-    customerPhone = customer?.phone || null;
   }
 
   const token = offerte.public_token || randomToken();

@@ -13,8 +13,8 @@ export type TrialStatus = {
 };
 
 export function computeTrialStatus(
-  createdAt: string | null | undefined,
-  subscriptionStatus: string | null | undefined,
+  _createdAt: string | null | undefined,
+  _subscriptionStatus: string | null | undefined,
 ): TrialStatus {
   // Altijd een actieve, betaalde status teruggeven zodat de gebruiker alles kan zien en testen.
   return { active: false, daysLeft: 9999, expired: false, endsAt: null, isPaid: true };

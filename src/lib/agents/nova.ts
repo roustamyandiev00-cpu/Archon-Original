@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { ChatCompletionContentPart } from "openai/resources/chat/completions";
 import type { AiConfig } from "@/app/dashboard/instellingen/settings";
 import type { NovaOfferteDraft } from "@/lib/agents/types";
 import type { OfferteLijnInput } from "@/lib/offertes";
@@ -100,7 +101,7 @@ export async function generateNovaOfferteDraft(input: {
 
   try {
     const client = new OpenAI({ apiKey });
-    const contentArray: any[] = [
+    const contentArray: ChatCompletionContentPart[] = [
       {
         type: "text",
         text: `Klant: ${klant}\n\nWerkbeschrijving:\n${description}`,
@@ -126,7 +127,7 @@ export async function generateNovaOfferteDraft(input: {
         { role: "system", content: system },
         {
           role: "user",
-          content: contentArray as any,
+          content: contentArray,
         },
       ],
     });

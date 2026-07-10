@@ -58,6 +58,7 @@ export default function IntroOverlay() {
     setLeaving(true);
     if (typeof window !== "undefined") {
       sessionStorage.setItem(STORAGE_KEY, "1");
+      window.dispatchEvent(new CustomEvent("archonpro-intro-dismissed"));
     }
     document.body.style.overflow = "";
     window.setTimeout(() => setShow(false), 180);

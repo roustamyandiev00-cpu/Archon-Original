@@ -1,0 +1,385 @@
+import Link from "next/link";
+import {
+  Bot,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Euro,
+  FileText,
+  FolderKanban,
+  Inbox,
+  Plus,
+  Receipt,
+  RefreshCw,
+  TrendingUp,
+  UserPlus,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
+import ActionItems from "@/components/dashboard/ActionItems";
+import type { DashboardHomeProps } from "@/components/dashboard/DashboardHome";
+import {
+  DashboardPanel,
+  EmptyState,
+  IconActionButton,
+  MetricStat,
+  PrimaryButton,
+  QuickActionCard,
+} from "@/components/dashboard/views/shared";
+import { euro } from "@/components/dashboard/mission-data";
+
+type DomainCard = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  href: string;
+  stripe: string;
+  iconTone: string;
+  status: (mission: DashboardHomeProps["mission"]) => string;
+};
+
+const domainCards: DomainCard[] = [
+  {
+    id: "offerte",
+    label: "Offerte",
+    icon: FileText,
+    href: "/dashboard/offertes",
+    stripe: "border-l-orange-500",
+    iconTone: "text-orange-400 bg-orange-500/10",
+    status: (m) =>
+      m.offertesCount > 0
+        ? `${m.offertesCount} openstaande offerte${m.offertesCount > 1 ? "s" : ""}`
+        : "Geen openstaande offertes",
+  },
+  {
+    id: "factuur",
+    label: "Factuur",
+    icon: Receipt,
+    href: "/dashboard/facturen",
+    stripe: "border-l-orange-500",
+    iconTone: "text-orange-400 bg-orange-500/10",
+    status: (m) =>
+      m.overdueFacturenCount > 0
+        ? `${m.overdueFacturenCount} openstaande factuur${m.overdueFacturenCount > 1 ? "en" : ""}`
+        : "Geen openstaande facturen",
+  },
+  {
+    id: "project",
+    label: "Project",
+    icon: FolderKanban,
+    href: "/dashboard/offertes/projecten",
+    stripe: "border-l-zinc-600",
+    iconTone: "text-zinc-400 bg-zinc-800/80",
+    status: () => "Geen actieve projecten",
+  },
+  {
+    id: "klant",
+    label: "Klant",
+    icon: Users,
+    href: "/dashboard/contacten",
+    stripe: "border-l-emerald-500",
+    iconTone: "text-emerald-400 bg-emerald-500/10",
+    status: (m) =>
+      m.klantenCount > 0
+        ? `${m.klantenCount} klant${m.klantenCount > 1 ? "en" : ""}`
+        : "Geen actieve klant",
+  },
+  {
+    id: "planning",
+    label: "Planning",
+    icon: Calendar,
+    href: "/dashboard/agenda",
+    stripe: "border-l-orange-500",
+    iconTone: "text-orange-400 bg-orange-500/10",
+    status: () => "Geen taken vandaag",
+  },
+  {
+    id: "document",
+    label: "Document",
+    icon: FileText,
+    href: "/dashboard/offertes",
+    stripe: "border-l-zinc-600",
+    iconTone: "text-zinc-400 bg-zinc-800/80",
+    status: () => "Documenten controleren",
+  },
+];
+
+function statusMessage(mission: DashboardHomeProps["mission"]) {
+  const urgent = mission.important.length + mission.actionItems.length;
+  if (urgent > 0) {
+    return {
+      text: `${urgent} ${urgent === 1 ? "punt vraagt" : "punten vragen"} aandacht`,
+      detail: "Bekijk AI Inbox en openstaande taken.",
+      tone: "warn" as const,
+    };
+  }
+  if (mission.overdueFacturenCount > 0) {
+    return {
+      text: `${mission.overdueFacturenCount} vervallen factuur${mission.overdueFacturenCount > 1 ? "en" : ""}`,
+      detail: "Stuur herinneringen of plan opvolging.",
+      tone: "warn" as const,
+    };
+  }
+  return {
+    text: "Alles rustig vandaag",
+    detail: "Geen openstaande acties – goed moment om vooruit te plannen.",
+    tone: "ok" as const,
+  };
+}
+
+const DOMAIN_AGENT_COUNT = domainCards.length;
+
+export default function CommandCenterView({
+  mission,
+}: Pick<DashboardHomeProps, "mission" | "agentName">) {
+  const status = statusMessage(mission);
+  const openTasks = [...mission.important, ...mission.tasks].slice(0, 5);
+  const hasCashflowData = mission.gefactureerd > 0 || mission.openstaand > 0;
+  const projectCount = mission.tasks.filter((t) =>
+    t.href.includes("project"),
+  ).length;
+  const attentionCount = mission.important.length + mission.actionItems.length;
+
+  return (
+    <div className="space-y-5">
+      <section
+        data-tour="dash-status"
+        className="rounded-2xl border border-white/[0.08] bg-zinc-900/80 p-4 sm:p-5"
+      >
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="flex items-start gap-3.5">
+            <span
+              className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
+                status.tone === "ok"
+                  ? "bg-emerald-500/15 text-emerald-400"
+                  : "bg-amber-500/15 text-amber-400"
+              }`}
+            >
+              <CheckCircle2 size={22} />
+            </span>
+            <div>
+              <p className="text-base font-semibold text-zinc-100">{status.text}</p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                {status.detail}
+              </p>
+            </div>
+          </div>
+
+          <div
+            data-tour="dash-metrics"
+            className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[420px]"
+          >
+            <MetricStat
+              label="Vandaag"
+              value={0}
+              sublabel="afspraken"
+              icon={Calendar}
+              tone="orange"
+            />
+            <MetricStat
+              label="Aandacht"
+              value={attentionCount}
+              sublabel={
+                attentionCount > 0 ? "actie nodig" : "geen blokkades"
+              }
+              icon={Clock}
+              tone={attentionCount > 0 ? "warn" : "ok"}
+            />
+            <MetricStat
+              label="Cashflow"
+              value={mission.overdueFacturenCount}
+              sublabel={
+                mission.overdueFacturenCount > 0 ? "vervallen" : "alles betaald"
+              }
+              icon={Euro}
+              tone={mission.overdueFacturenCount > 0 ? "warn" : "ok"}
+            />
+            <MetricStat
+              label="Pipeline"
+              value={mission.offertesCount}
+              sublabel={`${mission.offertesCount} offertes · ${projectCount} projecten`}
+              icon={TrendingUp}
+              tone="orange"
+            />
+          </div>
+        </div>
+      </section>
+
+      <div
+        data-tour="dash-actions"
+        className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <QuickActionCard
+          title="Nieuwe Klant"
+          subtitle="Dossier openen"
+          href="/dashboard/contacten"
+          icon={UserPlus}
+        />
+        <QuickActionCard
+          title="Nieuwe Offerte"
+          subtitle="Nieuw voorstel"
+          href="/dashboard/offertes/nieuw"
+          icon={FileText}
+        />
+        <QuickActionCard
+          title="Nieuw Project"
+          subtitle="Planning starten"
+          href="/dashboard/offertes/projecten"
+          icon={FolderKanban}
+        />
+        <QuickActionCard
+          title="Nieuwe Factuur"
+          subtitle="Sneller betaald"
+          href="/dashboard/facturen/nieuw"
+          icon={Receipt}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
+        <DashboardPanel title="AI Command Center" icon={Bot} data-tour="dash-agents">
+          <p className="mb-4 text-xs text-zinc-500">
+            {DOMAIN_AGENT_COUNT} agents – klik om te activeren
+          </p>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {domainCards.map((card) => {
+              const Icon = card.icon;
+
+              return (
+                <Link
+                  key={card.id}
+                  href={card.href}
+                  data-tour={
+                    card.id === "offerte"
+                      ? "dash-agent-offerte"
+                      : card.id === "factuur"
+                        ? "dash-agent-factuur"
+                        : card.id === "project"
+                          ? "dash-agent-project"
+                          : undefined
+                  }
+                  className={`flex items-start gap-3 rounded-xl border border-white/[0.06] border-l-[3px] bg-zinc-950/50 px-4 py-3.5 transition-colors hover:border-white/12 hover:bg-zinc-950/80 ${card.stripe}`}
+                >
+                  <span
+                    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${card.iconTone}`}
+                  >
+                    <Icon size={16} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-zinc-100">
+                      {card.label}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {card.status(mission)}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </DashboardPanel>
+
+        <aside className="space-y-4">
+          <DashboardPanel
+            title="AI Inbox"
+            icon={Bot}
+            data-tour="dash-inbox"
+            action={
+              <button
+                type="button"
+                className="grid h-8 w-8 place-items-center rounded-lg border border-white/[0.08] text-zinc-500 transition-colors hover:border-white/15 hover:bg-white/[0.04] hover:text-zinc-300"
+                aria-label="Vernieuwen"
+              >
+                <RefreshCw size={14} />
+              </button>
+            }
+          >
+            {mission.actionItems.length > 0 ? (
+              <ActionItems items={mission.actionItems} demoMode={mission.isDemo} />
+            ) : (
+              <EmptyState
+                icon={Inbox}
+                message="Geen AI-acties op dit moment"
+                detail="Wanneer agents iets vinden dat aandacht vraagt, verschijnt het hier."
+              />
+            )}
+          </DashboardPanel>
+
+          <DashboardPanel
+            title="Mijn Taken"
+            icon={Clock}
+            action={
+              <IconActionButton href="/dashboard/leads" label="Taak toevoegen">
+                <Plus size={16} />
+              </IconActionButton>
+            }
+          >
+            {openTasks.length > 0 ? (
+              <ul className="space-y-2">
+                {openTasks.map((task) => (
+                  <li key={task.id}>
+                    <Link
+                      href={task.href}
+                      className="block rounded-lg border border-white/[0.05] px-3 py-2.5 transition-colors hover:border-white/12 hover:bg-white/[0.03]"
+                    >
+                      <p className="truncate text-sm font-medium text-zinc-200">
+                        {task.title}
+                      </p>
+                      <p className="truncate text-xs text-zinc-500">
+                        {task.detail}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState
+                icon={CheckCircle2}
+                message="Nog geen taken voor vandaag"
+                detail="Alles afgehandeld of nog niets aangemaakt."
+              />
+            )}
+            <PrimaryButton href="/dashboard/leads" className="mt-4">
+              Taak toevoegen
+            </PrimaryButton>
+          </DashboardPanel>
+
+          <DashboardPanel title="Cashflow" icon={Wallet}>
+            {hasCashflowData ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-500">Gefactureerd</span>
+                  <span className="font-semibold text-zinc-100">
+                    {euro(mission.gefactureerd)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-500">Openstaand</span>
+                  <span className="font-semibold text-orange-300">
+                    {euro(mission.openstaand)}
+                  </span>
+                </div>
+                <PrimaryButton href="/dashboard/facturen">
+                  Facturen bekijken
+                </PrimaryButton>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-zinc-400">
+                  Nog niet genoeg data voor voorspelling
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+                  Maak eerst facturen zodat de cashflow op echte gegevens
+                  gebaseerd is.
+                </p>
+                <PrimaryButton href="/dashboard/facturen" className="mt-4">
+                  Opnieuw controleren
+                </PrimaryButton>
+              </>
+            )}
+          </DashboardPanel>
+        </aside>
+      </div>
+    </div>
+  );
+}

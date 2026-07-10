@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
+import { rememberFromExecution } from "@/components/dashboard/agents/memory";
 import { executeAgentAction } from "@/lib/agents/executor";
 
 export async function decideAction(id: number, decision: "approve" | "reject") {
@@ -33,10 +34,25 @@ export async function decideAction(id: number, decision: "approve" | "reject") {
     if ("error" in exec && exec.error) {
       return { error: exec.error };
     }
+
+    await rememberFromExecution(supabase, {
+      companyId,
+      userId: user.id,
+      actionId: id,
+    });
+
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/offertes");
     revalidatePath("/dashboard/facturen");
-    return { ok: true, route: exec.route };
+    revalidatePath("/dashboard/geheugen");
+    return {
+      ok: true,
+      route: exec.route,
+      actionId: id,
+      mailto: "mailto" in exec ? exec.mailto : undefined,
+      bailiffMailto:
+        "bailiffMailto" in exec ? exec.bailiffMailto : undefined,
+    };
   }
 
   revalidatePath("/dashboard/automatisaties");

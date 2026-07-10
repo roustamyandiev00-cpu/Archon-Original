@@ -12,7 +12,9 @@ import type {
   CreateInvoiceFromOffertePayload,
   CreateOffertePayload,
   SendOffertePayload,
+  SendPaymentReminderPayload,
 } from "@/lib/agents/types";
+import { executeIncassoStep } from "@/app/dashboard/facturen/incasso-actions";
 
 async function logActivity(
   supabase: SupabaseClient,
@@ -127,6 +129,7 @@ export async function executeAgentAction(input: {
         .from("agent_actions")
         .update({
           executed_at: new Date().toISOString(),
+          target_route: `/dashboard/offertes/${p.offerteId}`,
           updated_at: new Date().toISOString(),
         })
         .eq("id", actionId);
@@ -142,7 +145,7 @@ export async function executeAgentAction(input: {
 
       revalidatePath("/dashboard/offertes");
       revalidatePath(`/dashboard/offertes/${p.offerteId}`);
-      return { ok: true, offerteId: p.offerteId };
+      return { ok: true, offerteId: p.offerteId, route: `/dashboard/offertes/${p.offerteId}` };
     }
 
     if (action.action_type === "create_invoice_from_offerte") {
@@ -176,6 +179,75 @@ export async function executeAgentAction(input: {
 
       revalidatePath("/dashboard/facturen");
       return { ok: true, factuurId, route };
+    }
+
+    if (
+      action.action_type === "send_payment_reminder" ||
+      action.action_type === "send_formal_notice" ||
+      action.action_type === "forward_to_bailiff"
+    ) {
+      const p = payload as unknown as SendPaymentReminderPayload;
+      const stage =
+        p.stage ??
+        (action.action_type === "forward_to_bailiff"
+          ? "deurwaarder"
+          : action.action_type === "send_formal_notice"
+            ? "ingebrekestelling"
+            : "herinnering");
+
+      const result = await executeIncassoStep({
+        supabase,
+        companyId,
+        userId,
+        factuurId: p.factuurId,
+        stage,
+        agentName,
+      });
+
+      if ("error" in result && result.error) {
+        throw new Error(result.error);
+      }
+
+      const route = result.route ?? `/dashboard/facturen/${p.factuurId}`;
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_entity_type: "factuur",
+          target_entity_id: p.factuurId,
+          target_route: route,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Incasso uitgevoerd voor factuur #${p.factuurId} (${stage})`,
+        outputJson: {
+          factuurId: p.factuurId,
+          stage,
+          mailto: "mailto" in result ? result.mailto : undefined,
+          bailiffMailto:
+            "bailiffMailto" in result ? result.bailiffMailto : undefined,
+        },
+      });
+
+      revalidatePath("/dashboard/facturen");
+      revalidatePath(`/dashboard/facturen/${p.factuurId}`);
+      revalidatePath("/dashboard/automatisaties");
+      revalidatePath("/dashboard/cron");
+      return {
+        ok: true,
+        factuurId: p.factuurId,
+        route,
+        mailto: "mailto" in result ? result.mailto : undefined,
+        bailiffMailto:
+          "bailiffMailto" in result ? result.bailiffMailto : undefined,
+      };
     }
 
     return { error: `Onbekend actietype: ${action.action_type}` };

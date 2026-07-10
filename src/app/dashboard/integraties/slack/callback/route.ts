@@ -3,10 +3,8 @@ import { cookies } from "next/headers";
 import { getTokenResponse } from "@vercel/connect";
 import { getCompanyContext } from "@/lib/company";
 import { untyped } from "@/lib/integraties";
-import {
-  resolveSlackConnectorUid,
-  slackTokenParams,
-} from "@/components/dashboard/integraties/slackConnect";
+import { slackTokenParams } from "@/components/dashboard/integraties/slackConnect";
+import { resolveSlackConnectorForCompany } from "@/components/dashboard/integraties/slackSetup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,21 +40,27 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   const existing = (data?.config ?? {}) as Record<string, unknown>;
-  const connector = resolveSlackConnectorUid(existing);
+  const connector = resolveSlackConnectorForCompany(existing);
   if (!connector) {
     dashboard.searchParams.set("error", "Slack-connector niet gevonden.");
     return NextResponse.redirect(dashboard);
   }
 
   try {
+    // Geen bestaande installationId: na installatie geeft Connect de nieuwe tenant.
     const response = await getTokenResponse(
       connector,
-      slackTokenParams(
-        typeof existing.installationId === "string"
-          ? existing.installationId
-          : undefined,
-      ),
+      slackTokenParams(),
+      { forceRefresh: true },
     );
+
+    if (!response.installationId) {
+      dashboard.searchParams.set(
+        "error",
+        "Slack-workspace gekoppeld maar installatie-id ontbreekt. Probeer opnieuw.",
+      );
+      return NextResponse.redirect(dashboard);
+    }
 
     const now = new Date().toISOString();
     const { error } = await untyped(supabase)
@@ -69,9 +73,10 @@ export async function GET(req: NextRequest) {
           config: {
             ...existing,
             connectorUid: connector,
-            installationId: response.installationId ?? existing.installationId,
+            installationId: response.installationId,
             workspaceName: response.name ?? existing.workspaceName,
             tenantId: response.tenantId ?? existing.tenantId,
+            testSentAt: null,
           },
           connected_at: now,
           updated_at: now,

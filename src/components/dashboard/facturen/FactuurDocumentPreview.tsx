@@ -108,8 +108,6 @@ export default function FactuurDocumentPreview({
     customerId,
     customers,
     datum,
-    defaultTemplate,
-    documentType,
     isProforma,
     klantVrij,
     lines,
@@ -117,7 +115,6 @@ export default function FactuurDocumentPreview({
     nummer,
     omschrijving,
     renderId,
-    templateId,
     vervaldatum,
   ]);
 

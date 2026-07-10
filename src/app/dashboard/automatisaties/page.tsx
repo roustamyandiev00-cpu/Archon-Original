@@ -36,6 +36,9 @@ function labelForAction(t: string) {
     send_offerte: "Offerte versturen",
     send_invoice: "Factuur versturen",
     send_reminder: "Herinnering sturen",
+    send_payment_reminder: "Betalingsherinnering",
+    send_formal_notice: "Ingebrekestelling",
+    forward_to_bailiff: "Dossier naar deurwaarder",
     follow_up: "Opvolging",
     create_invoice: "Factuur opstellen",
   };

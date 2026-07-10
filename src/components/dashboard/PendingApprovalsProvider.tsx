@@ -171,9 +171,13 @@ export function PendingApprovalsProvider({
   useEffect(() => {
     if (!enabled || !companyId) return;
 
-    void poll();
-    const id = window.setInterval(() => void poll(), POLL_MS);
-    return () => window.clearInterval(id);
+    const tick = () => void poll();
+    const initialId = window.setTimeout(tick, 0);
+    const intervalId = window.setInterval(tick, POLL_MS);
+    return () => {
+      window.clearTimeout(initialId);
+      window.clearInterval(intervalId);
+    };
   }, [poll, enabled, companyId]);
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Gift,
   MessageCircle,
   Play,
   Shield,
@@ -10,6 +11,7 @@ import {
 import HeroDashboard from "@/components/HeroDashboard";
 import HeroTrustBar from "@/components/HeroTrustBar";
 import { FastLink } from "@/components/FastLink";
+import { REFERRAL_REWARDS } from "@/components/ReferralProgram";
 
 export default function Hero() {
   return (
@@ -80,26 +82,53 @@ export default function Hero() {
               </li>
             </ul>
 
-            <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left backdrop-blur-sm lg:max-w-md">
-              <p className="text-sm leading-relaxed text-zinc-400">
-                We bouwen ArchonPro{" "}
-                <span className="font-medium text-zinc-200">
-                  samen met vakmensen zoals jij
-                </span>
-                . Heb je feedback, een idee of gewoon iets dat je wilt delen?
-                Jouw mening helpt ons beter worden.
-              </p>
-              <FastLink
-                href="/gemeenschap"
-                className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-sky-500/35 bg-sky-500/10 px-5 py-3 text-sm font-semibold text-sky-300 transition-all hover:border-sky-400/45 hover:bg-sky-500/15 hover:text-sky-200 sm:w-auto"
-              >
-                <MessageCircle size={16} className="shrink-0" />
-                Deel je mening
-                <ArrowRight
-                  size={15}
-                  className="transition-transform duration-150 group-hover:translate-x-0.5"
-                />
-              </FastLink>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:max-w-2xl">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left backdrop-blur-sm">
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  We bouwen ArchonPro{" "}
+                  <span className="font-medium text-zinc-200">
+                    samen met vakmensen zoals jij
+                  </span>
+                  . Heb je feedback, een idee of gewoon iets dat je wilt delen?
+                  Jouw mening helpt ons beter worden.
+                </p>
+                <FastLink
+                  href="/gemeenschap"
+                  className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-sky-500/35 bg-sky-500/10 px-5 py-3 text-sm font-semibold text-sky-300 transition-all hover:border-sky-400/45 hover:bg-sky-500/15 hover:text-sky-200"
+                >
+                  <MessageCircle size={16} className="shrink-0" />
+                  Deel je mening
+                  <ArrowRight
+                    size={15}
+                    className="transition-transform duration-150 group-hover:translate-x-0.5"
+                  />
+                </FastLink>
+              </div>
+
+              <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.08] via-white/[0.02] to-sky-500/[0.06] p-5 text-left backdrop-blur-sm">
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  Ken je collega&apos;s die nog met Excel werken?{" "}
+                  <span className="font-medium text-zinc-200">
+                    Nodig vrienden uit
+                  </span>{" "}
+                  en ontvang je eigen code (initialen + cijfers). Zij krijgen{" "}
+                  <span className="font-medium text-violet-200">
+                    {REFERRAL_REWARDS.invitee}
+                  </span>
+                  .
+                </p>
+                <FastLink
+                  href="/register"
+                  className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-violet-500/35 bg-violet-500/10 px-5 py-3 text-sm font-semibold text-violet-200 transition-all hover:border-violet-400/45 hover:bg-violet-500/15 hover:text-violet-100"
+                >
+                  <Gift size={16} className="shrink-0" />
+                  Nodig vrienden uit
+                  <ArrowRight
+                    size={15}
+                    className="transition-transform duration-150 group-hover:translate-x-0.5"
+                  />
+                </FastLink>
+              </div>
             </div>
           </div>
 

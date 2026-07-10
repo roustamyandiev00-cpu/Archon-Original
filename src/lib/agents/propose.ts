@@ -5,6 +5,7 @@ import type {
   CreateInvoiceFromOffertePayload,
   CreateOffertePayload,
   SendOffertePayload,
+  SendPaymentReminderPayload,
 } from "@/lib/agents/types";
 
 type ProposeInput = {
@@ -14,7 +15,7 @@ type ProposeInput = {
   actionType: AgentActionType;
   title: string;
   reason?: string;
-  payload: CreateOffertePayload | SendOffertePayload | CreateInvoiceFromOffertePayload;
+  payload: CreateOffertePayload | SendOffertePayload | CreateInvoiceFromOffertePayload | SendPaymentReminderPayload;
   targetEntityType?: string | null;
   targetEntityId?: number | null;
   targetRoute?: string | null;

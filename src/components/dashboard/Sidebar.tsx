@@ -4,126 +4,19 @@ import Link from "next/link";
 import { BrandLockup } from "@/components/BrandLogo";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  Gauge,
-  Users,
-  FileText,
-  Receipt,
-  Contact,
-  Zap,
-  Bot,
-  MessageCircle,
-  BarChart3,
-  LineChart,
-  List,
-  Settings,
-  LogOut,
-  BrainCircuit,
-  Search,
-  Clock,
-  Rocket,
-  HardHat,
-  Handshake,
-  Plug,
-  FolderKanban,
-  ChevronDown,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  groupHasActivePath,
+  SIDEBAR_GROUPS,
+  SIDEBAR_LOGOUT,
+  SIDEBAR_SETTINGS,
+  sidebarItemIsActive,
+  type SidebarGroup,
+  type SidebarItem,
+} from "@/components/dashboard/sidebar-nav";
 
-type Item = {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  badge?: number;
-  badgeTone?: "info" | "warning";
-  available?: boolean;
-  children?: Item[];
-};
-
-type NavGroup = {
-  title: string;
-  items: Item[];
-  collapsible?: boolean;
-};
-
-const groups: NavGroup[] = [
-  {
-    title: "Overzicht",
-    items: [{ label: "Overzicht", href: "/dashboard", icon: Gauge }],
-  },
-  {
-    title: "Operatie",
-    items: [
-      { label: "Contacten", href: "/dashboard/contacten", icon: Users },
-      {
-        label: "Offertes",
-        href: "/dashboard/offertes",
-        icon: FileText,
-        children: [
-          {
-            label: "Projecten",
-            href: "/dashboard/offertes/projecten",
-            icon: FolderKanban,
-          },
-        ],
-      },
-      { label: "Facturen", href: "/dashboard/facturen", icon: Receipt, badge: 3, badgeTone: "warning" },
-      { label: "Leads / CRM", href: "/dashboard/leads", icon: Contact, badge: 5, badgeTone: "info" },
-      { label: "Automatisaties", href: "/dashboard/automatisaties", icon: Zap },
-      {
-        label: "Bouwnetwerk",
-        href: "/dashboard/werkposts",
-        icon: HardHat,
-        children: [
-          {
-            label: "Samenwerkingen",
-            href: "/dashboard/werkposts/samenwerkingen",
-            icon: Handshake,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: "AI",
-    items: [
-      { label: "AI-agents", href: "/dashboard/nova-agents", icon: Bot },
-      { label: "Comms", href: "/dashboard/comms", icon: MessageCircle, available: false },
-      { label: "Geheugen", href: "/dashboard/geheugen", icon: BrainCircuit, available: false },
-    ],
-  },
-  {
-    title: "Observeer",
-    collapsible: true,
-    items: [
-      { label: "Onderzoek", href: "/dashboard/onderzoek", icon: Search, available: false },
-      { label: "KPI's", href: "/dashboard/kpi", icon: BarChart3, available: false },
-      { label: "Analytics", href: "/dashboard/analytics", icon: LineChart, available: false },
-      { label: "Activiteit", href: "/dashboard/activiteit", icon: List, available: false },
-    ],
-  },
-  {
-    title: "Systeem",
-    collapsible: true,
-    items: [
-      { label: "Integraties", href: "/dashboard/integraties", icon: Plug, available: false },
-      { label: "Cron", href: "/dashboard/cron", icon: Clock, available: false },
-      { label: "Deploy", href: "/dashboard/deploy", icon: Rocket, available: false },
-    ],
-  },
-];
-
-function groupHasActivePath(group: NavGroup, pathname: string) {
-  return group.items.some(
-    (item) =>
-      pathname === item.href ||
-      item.children?.some((child) => pathname === child.href),
-  );
-}
-
-function itemIsAvailable(item: Item) {
+function itemIsAvailable(item: SidebarItem) {
   return item.available !== false;
 }
 
@@ -136,10 +29,10 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
     setOpenGroups((prev) => ({ ...prev, [title]: !isGroupOpen(title) }));
   }
 
-  function isGroupOpen(titleOrGroup: string | NavGroup) {
+  function isGroupOpen(titleOrGroup: string | SidebarGroup) {
     const group =
       typeof titleOrGroup === "string"
-        ? groups.find((g) => g.title === titleOrGroup)
+        ? SIDEBAR_GROUPS.find((g) => g.title === titleOrGroup)
         : titleOrGroup;
     if (!group || !group.collapsible) return true;
     if (groupHasActivePath(group, pathname)) return true;
@@ -154,7 +47,7 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
   }
 
   function renderLink(
-    item: Item,
+    item: SidebarItem,
     active: boolean,
     isChild = false,
     parentOfActive = false,
@@ -235,8 +128,13 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
     );
   }
 
+  const settingsActive = sidebarItemIsActive(pathname, SIDEBAR_SETTINGS.href);
+
   return (
-    <aside className="dashboard-sidebar fixed inset-y-0 left-0 z-40 hidden w-[220px] flex-col border-r border-white/[0.06] bg-zinc-950 lg:flex">
+    <aside
+      data-tour="dash-sidebar"
+      className="dashboard-sidebar fixed inset-y-0 left-0 z-40 hidden w-[220px] flex-col border-r border-white/[0.06] bg-zinc-950 lg:flex"
+    >
       <div className="relative flex h-14 items-center border-b border-white/[0.06] px-4">
         <BrandLockup
           href="/dashboard"
@@ -247,7 +145,7 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
       </div>
 
       <nav className="relative flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:rgba(255,255,255,0.08)_transparent] [scrollbar-width:thin]">
-        {groups.map((group, groupIndex) => {
+        {SIDEBAR_GROUPS.map((group, groupIndex) => {
           const open = isGroupOpen(group);
 
           return (
@@ -282,28 +180,22 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
                 <div className="space-y-0.5">
                   {group.items.map((item) => {
                     const hasChildren = item.children && item.children.length > 0;
-                    const childActive = item.children?.some(
-                      (child) =>
-                        pathname === child.href ||
-                        pathname.startsWith(`${child.href}/`),
+                    const childActive = item.children?.some((child) =>
+                      sidebarItemIsActive(pathname, child.href),
                     );
-                    const itemActive =
-                      pathname === item.href ||
-                      (item.href === "/dashboard/offertes" &&
-                        pathname.startsWith("/dashboard/offertes") &&
-                        !childActive);
+                    const itemActive = sidebarItemIsActive(pathname, item.href);
+
                     return (
                       <div key={item.label}>
-                        {renderLink(
-                          item,
-                          itemActive,
-                          false,
-                          !!childActive,
-                        )}
+                        {renderLink(item, itemActive, false, !!childActive)}
                         {hasChildren && (
                           <div className="relative ml-[18px] mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-3">
                             {item.children!.map((child) =>
-                              renderLink(child, pathname === child.href, true),
+                              renderLink(
+                                child,
+                                sidebarItemIsActive(pathname, child.href),
+                                true,
+                              ),
                             )}
                           </div>
                         )}
@@ -320,23 +212,23 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
       <div className="relative space-y-0.5 border-t border-white/[0.06] p-3">
         {!isPreviewMode && (
           <Link
-            href="/dashboard/instellingen"
+            href={SIDEBAR_SETTINGS.href}
             className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-200 ${
-              pathname === "/dashboard/instellingen"
+              settingsActive
                 ? "bg-sky-500/10 text-sky-200"
                 : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
             }`}
           >
-            <Settings
+            <SIDEBAR_SETTINGS.icon
               size={16}
-              strokeWidth={pathname === "/dashboard/instellingen" ? 2 : 1.75}
+              strokeWidth={settingsActive ? 2 : 1.75}
               className={
-                pathname === "/dashboard/instellingen"
+                settingsActive
                   ? "text-sky-400"
                   : "text-zinc-500 transition-colors group-hover:text-zinc-300"
               }
             />
-            Instellingen
+            {SIDEBAR_SETTINGS.label}
           </Link>
         )}
         {isPreviewMode ? (
@@ -353,15 +245,16 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
           </Link>
         ) : (
           <button
+            type="button"
             onClick={handleLogout}
             className="group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-zinc-400 transition-all duration-200 hover:bg-white/[0.04] hover:text-rose-400"
           >
-            <LogOut
+            <SIDEBAR_LOGOUT.icon
               size={16}
               strokeWidth={1.75}
               className="text-zinc-500 transition-colors group-hover:text-rose-400/90"
             />
-            Uitloggen
+            {SIDEBAR_LOGOUT.label}
           </button>
         )}
       </div>

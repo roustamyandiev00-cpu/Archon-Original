@@ -48,7 +48,7 @@ export default async function SamenwerkingenPage() {
   let samenwerkingen: Samenwerking[] = [];
   let afspraken: AfspraakRow[] = [];
   let myReviews: { target_company_id: number; rating: number; commentaar: string }[] = [];
-  let counterpartRatings: Record<number, { avg: number; count: number }> = {};
+  const counterpartRatings: Record<number, { avg: number; count: number }> = {};
   let pendingReacties: PendingReactie[] = [];
 
   if (companyId) {
@@ -144,7 +144,23 @@ export default async function SamenwerkingenPage() {
           .select("target_company_id, rating, commentaar")
           .eq("reviewer_company_id", companyId)
           .in("target_company_id", counterpartIds);
-        myReviews = (myReviewsData ?? []) as any[];
+        myReviews = (myReviewsData ?? [])
+          .filter(
+            (
+              review,
+            ): review is {
+              target_company_id: number;
+              rating: number;
+              commentaar: string;
+            } =>
+              typeof review.target_company_id === "number" &&
+              typeof review.rating === "number",
+          )
+          .map((review) => ({
+            target_company_id: review.target_company_id,
+            rating: review.rating,
+            commentaar: review.commentaar ?? "",
+          }));
 
         // Reviews stats van de partners ophalen.
         const { data: counterpartReviewsData } = await supabase

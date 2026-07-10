@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import Image from "next/image";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Loader2, Sparkles, Mic, MicOff, ImageIcon, Trash2, Lightbulb, Calculator, AlertTriangle, ChevronRight, ChevronLeft, ArrowLeft, X } from "lucide-react";
+import { Bot, Loader2, Sparkles, Mic, MicOff, ImageIcon, Trash2, Lightbulb, Calculator, AlertTriangle, ChevronRight, ChevronLeft } from "lucide-react";
 import { requestNovaOfferte } from "@/app/dashboard/offertes/nova-actions";
 import type { OfferteLijnInput } from "@/lib/offertes";
 import { formatEuro } from "@/lib/offertes";
@@ -13,6 +14,36 @@ interface PhotoFile {
   name: string;
   url: string;
 }
+
+type SpeechRecognitionResultEvent = Event & {
+  results: {
+    length: number;
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+};
+
+type SpeechRecognitionInstance = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+type SpeechRecognitionWindow = Window &
+  typeof globalThis & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
 
 export default function NovaOffertePanel({
   agentName = "Nova",
@@ -54,7 +85,36 @@ export default function NovaOffertePanel({
 
   // Spraakinvoer states
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
+  const [recognition] = useState<SpeechRecognitionInstance | null>(() => {
+    if (typeof window === "undefined") return null;
+
+    const speechWindow = window as SpeechRecognitionWindow;
+    const SpeechRecognition =
+      speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!SpeechRecognition) return null;
+
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.lang = "nl-NL";
+
+    rec.onresult = (event) => {
+      const result = event.results[event.results.length - 1]?.[0];
+      const text = result?.transcript;
+      if (!text) return;
+      setDescription((prev) => (prev ? prev + " " + text : text));
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+    };
+
+    rec.onerror = () => {
+      setIsListening(false);
+    };
+
+    return rec;
+  });
 
   // Foto states
   const [photos, setPhotos] = useState<PhotoFile[]>([]);
@@ -62,38 +122,9 @@ export default function NovaOffertePanel({
   const [analyzingPhotos, setAnalyzingPhotos] = useState(false);
 
   // Tips & Berekeningen states
-  const [showTips, setShowTips] = useState(true);
+  const [showTips] = useState(true);
   const [generatedTips, setGeneratedTips] = useState<string[]>([]);
   const [calculations, setCalculations] = useState<string[]>([]);
-
-  // Initialiseer spraakherkenning
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const rec = new SpeechRecognition();
-        rec.continuous = true;
-        rec.interimResults = false;
-        rec.lang = "nl-NL";
-
-        rec.onresult = (event: any) => {
-          const text = event.results[event.results.length - 1][0].transcript;
-          setDescription((prev) => (prev ? prev + " " + text : text));
-        };
-
-        rec.onend = () => {
-          setIsListening(false);
-        };
-
-        rec.onerror = () => {
-          setIsListening(false);
-        };
-
-        setRecognition(rec);
-      }
-    }
-  }, []);
 
   function toggleListening() {
     if (!recognition) {
@@ -290,7 +321,7 @@ Beschrijving werkzaamheden: ${description}
   ];
 
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-2xl border border-white/10 bg-zinc-950/80 p-5 shadow-2xl backdrop-blur-xl space-y-6">
+    <div className="w-full max-w-2xl mx-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-5 space-y-6">
       
       {/* Wizard Header */}
       <div className="flex items-center justify-between border-b border-white/5 pb-3 shrink-0">
@@ -326,7 +357,7 @@ Beschrijving werkzaamheden: ${description}
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               placeholder="Bijvoorbeeld: Renovatie Keuken, Schilderen Begane Grond..."
-              className="w-full bg-transparent border-b-2 border-zinc-800 focus:border-emerald-500 py-3 text-lg font-medium text-zinc-100 outline-none transition-colors placeholder:text-zinc-600"
+              className="w-full bg-transparent border-b border-zinc-700 focus:border-sky-500 py-3 text-lg font-medium text-zinc-100 outline-none transition-colors placeholder:text-zinc-600"
             />
           </div>
 
@@ -343,7 +374,7 @@ Beschrijving werkzaamheden: ${description}
                     setProjectName(name);
                     setTimeout(() => setStep(2), 200);
                   }}
-                  className="rounded-xl border border-white/10 bg-zinc-900/40 px-4 py-3 text-xs font-semibold text-zinc-300 hover:border-emerald-500/50 hover:bg-emerald-500/5 hover:text-emerald-300 transition-all text-left"
+                  className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900 transition-colors text-left"
                 >
                   {name}
                 </button>
@@ -361,7 +392,7 @@ Beschrijving werkzaamheden: ${description}
         <div className="space-y-5 py-1">
           <div className="space-y-1">
             <h3 className="text-base font-bold text-zinc-100">
-              Projectdetails voor: <span className="text-emerald-400">{projectName}</span>
+              Projectdetails voor: <span className="text-sky-400">{projectName}</span>
             </h3>
             <p className="text-xs text-zinc-400">
               Vul details in om {agentName} te helpen de juiste materialen en tarieven te berekenen.
@@ -379,7 +410,7 @@ Beschrijving werkzaamheden: ${description}
                 value={dimensions}
                 onChange={(e) => setDimensions(e.target.value)}
                 placeholder="bv. 45 m², 12 strekkende meter, 3 ramen..."
-                className="w-full rounded-xl border border-white/15 bg-zinc-950/80 px-3.5 py-2.5 text-sm text-zinc-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all"
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-100 outline-none focus:border-sky-500 transition-colors"
               />
             </div>
 
@@ -396,10 +427,10 @@ Beschrijving werkzaamheden: ${description}
                       key={q}
                       type="button"
                       onClick={() => setQuality(q)}
-                      className={`rounded-xl border py-2.5 text-xs font-bold transition-all ${
+                      className={`rounded-xl border py-2.5 text-xs font-medium transition-colors ${
                         active
-                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                          : "border-white/10 bg-zinc-950/40 text-zinc-400 hover:border-white/20 hover:bg-zinc-900/30"
+                          ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                          : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900"
                       }`}
                     >
                       {q}
@@ -416,17 +447,17 @@ Beschrijving werkzaamheden: ${description}
               </label>
               <div className="grid gap-2 grid-cols-2">
                 <label
-                  className={`flex cursor-pointer items-center gap-2.5 rounded-xl border p-3 text-xs font-semibold transition-all ${
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-xl border p-3 text-xs font-medium transition-colors ${
                     demolition
-                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                      : "border-white/10 bg-zinc-950/40 text-zinc-400 hover:border-white/20"
+                      ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                      : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={demolition}
                     onChange={(e) => setDemolition(e.target.checked)}
-                    className="accent-emerald-500 rounded"
+                    className="accent-sky-500 rounded"
                   />
                   Sloop- / afbraakwerk vooraf
                 </label>
@@ -434,15 +465,15 @@ Beschrijving werkzaamheden: ${description}
                 <label
                   className={`flex cursor-pointer items-center gap-2.5 rounded-xl border p-3 text-xs font-semibold transition-all ${
                     scaffolding
-                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                      : "border-white/10 bg-zinc-950/40 text-zinc-400 hover:border-white/20"
+                      ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                      : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={scaffolding}
                     onChange={(e) => setScaffolding(e.target.checked)}
-                    className="accent-emerald-500 rounded"
+                    className="accent-sky-500 rounded"
                   />
                   Steiger / hoogwerker vereist
                 </label>
@@ -450,15 +481,15 @@ Beschrijving werkzaamheden: ${description}
                 <label
                   className={`flex cursor-pointer items-center gap-2.5 rounded-xl border p-3 text-xs font-semibold transition-all ${
                     narrowPassage
-                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                      : "border-white/10 bg-zinc-950/40 text-zinc-400 hover:border-white/20"
+                      ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                      : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={narrowPassage}
                     onChange={(e) => setNarrowPassage(e.target.checked)}
-                    className="accent-emerald-500 rounded"
+                    className="accent-sky-500 rounded"
                   />
                   Smalle werf / doorgang
                 </label>
@@ -466,15 +497,15 @@ Beschrijving werkzaamheden: ${description}
                 <label
                   className={`flex cursor-pointer items-center gap-2.5 rounded-xl border p-3 text-xs font-semibold transition-all ${
                     wasteRemoval
-                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                      : "border-white/10 bg-zinc-950/40 text-zinc-400 hover:border-white/20"
+                      ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                      : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700"
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={wasteRemoval}
                     onChange={(e) => setWasteRemoval(e.target.checked)}
-                    className="accent-emerald-500 rounded"
+                    className="accent-sky-500 rounded"
                   />
                   Afval afvoeren & opkuis
                 </label>
@@ -524,10 +555,10 @@ Beschrijving werkzaamheden: ${description}
                   <button
                     type="button"
                     onClick={toggleListening}
-                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
                       isListening 
-                        ? "bg-rose-500 text-white animate-pulse" 
-                        : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
+                        ? "bg-rose-500/90 text-white" 
+                        : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
                     }`}
                     title={isListening ? "Opname stoppen" : "Inspreken"}
                   >
@@ -553,7 +584,7 @@ Beschrijving werkzaamheden: ${description}
                 </div>
                 
                 {isListening && (
-                  <span className="text-[10px] text-rose-400 font-semibold animate-pulse mr-2">
+                  <span className="text-[10px] text-rose-400 font-medium mr-2">
                     Aan het luisteren...
                   </span>
                 )}
@@ -565,7 +596,13 @@ Beschrijving werkzaamheden: ${description}
               <div className="flex flex-wrap gap-2.5 rounded-xl border border-white/5 bg-zinc-900/20 p-2.5">
                 {photos.map((p, idx) => (
                   <div key={idx} className="group relative h-16 w-16 rounded-lg overflow-hidden border border-white/10">
-                    <img src={p.url} alt="Werk" className="h-full w-full object-cover" />
+                    <Image
+                      src={p.url}
+                      alt="Werk"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
                     <button
                       type="button"
                       onClick={() => removePhoto(idx)}
@@ -587,7 +624,7 @@ Beschrijving werkzaamheden: ${description}
         <div className="space-y-4 py-1">
           <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
             <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
-              <Sparkles size={16} className="text-emerald-400" />
+              <Sparkles size={16} className="text-sky-400" />
               Voorstel gegenereerd door {agentName}
             </h3>
             <button
@@ -607,8 +644,8 @@ Beschrijving werkzaamheden: ${description}
 
           {/* AI Berekeningen & Tips Panel */}
           {showTips && (generatedTips.length > 0 || calculations.length > 0) && (
-            <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.03] p-4 space-y-3.5 shadow-lg shadow-sky-500/[0.02]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5 border-b border-sky-500/10 pb-2">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-3.5">
+              <h3 className="text-xs font-medium text-zinc-300 flex items-center gap-1.5 border-b border-zinc-800 pb-2">
                 <Lightbulb size={13} />
                 Calculatie Berekeningen &amp; Tips
               </h3>
@@ -689,7 +726,7 @@ Beschrijving werkzaamheden: ${description}
             </div>
             <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-500 transition-all duration-300"
+                className="h-full bg-sky-500 transition-all duration-300"
                 style={{ width: step === 1 ? "33%" : step === 2 ? "66%" : "100%" }}
               />
             </div>
@@ -711,7 +748,7 @@ Beschrijving werkzaamheden: ${description}
                 type="button"
                 disabled={!projectName.trim()}
                 onClick={() => setStep(2)}
-                className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="inline-flex items-center gap-1 rounded-full bg-sky-500 px-6 py-2.5 text-xs font-semibold text-zinc-950 hover:bg-sky-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Volgende stap
                 <ChevronRight size={14} />
@@ -731,7 +768,7 @@ Beschrijving werkzaamheden: ${description}
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-all"
+                className="inline-flex items-center gap-1 rounded-full bg-sky-500 px-6 py-2.5 text-xs font-semibold text-zinc-950 hover:bg-sky-400 transition-colors"
               >
                 Volgende stap
                 <ChevronRight size={14} />
@@ -752,7 +789,7 @@ Beschrijving werkzaamheden: ${description}
                 type="button"
                 onClick={handleGenerate}
                 disabled={pending || analyzingPhotos || !description.trim()}
-                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-6 py-2.5 text-xs font-semibold text-zinc-950 hover:bg-sky-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
                 {pending || analyzingPhotos ? (
                   <>
@@ -786,7 +823,7 @@ Beschrijving werkzaamheden: ${description}
                     document.getElementById("offerte-form-root")?.scrollIntoView({ behavior: "smooth" });
                   }, 100);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-6 py-2.5 text-xs font-bold text-zinc-950 hover:bg-sky-400 transition-all shadow-md animate-bounce"
+                className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-6 py-2.5 text-xs font-semibold text-zinc-950 hover:bg-sky-400 transition-colors"
               >
                 <ChevronRight size={14} />
                 Offerte handmatig aanpassen

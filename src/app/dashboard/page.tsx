@@ -1,31 +1,8 @@
-import DashboardHome from "@/components/dashboard/DashboardHome";
-import { getDashboardContext } from "@/components/dashboard/context";
-import {
-  assembleMissionOverview,
-  fetchChartsData,
-  fetchMissionCore,
-} from "@/components/dashboard/mission-data";
-import { loadCompanyAgents } from "@/components/dashboard/agents/storage";
-import { loadUserAgentName } from "@/lib/agents/userAi";
+import { redirect } from "next/navigation";
 
-export default async function DashboardPage() {
-  const { supabase, user, companyId } = await getDashboardContext();
+export const metadata = { title: "Dashboard — ArchonPro" };
 
-  const [agentName, core, agentConfig, charts] = await Promise.all([
-    user ? loadUserAgentName(supabase, user.id) : Promise.resolve("Nova"),
-    fetchMissionCore(supabase, companyId),
-    loadCompanyAgents(supabase, companyId),
-    fetchChartsData(supabase, companyId),
-  ]);
-
-  const mission = assembleMissionOverview(core, agentName, agentConfig);
-
-  return (
-    <DashboardHome
-      companyId={companyId}
-      agentName={agentName}
-      mission={mission}
-      charts={charts}
-    />
-  );
+/** Standaard landing: Command Center. */
+export default function DashboardPage() {
+  redirect("/dashboard/command-center");
 }

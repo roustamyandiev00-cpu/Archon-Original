@@ -20,10 +20,13 @@ import {
   KeyRound,
   ImageIcon,
   Database,
+  Plug,
 } from "lucide-react";
 import GlowCard from "@/components/dashboard/GlowCard";
 import ApiKeysManager from "@/components/dashboard/instellingen/ApiKeysManager";
 import ImportManager from "@/components/dashboard/instellingen/ImportManager";
+import AppIntegrationsPanel from "@/components/dashboard/instellingen/AppIntegrationsPanel";
+import ReferralInvitePanel from "@/components/dashboard/instellingen/ReferralInvitePanel";
 import type { ApiKeyInfo } from "@/lib/apiResources";
 import {
   updateSettings,
@@ -52,7 +55,7 @@ const inputClass =
 const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
 const hintClass = "mt-1 text-xs text-zinc-500";
 
-type Section = "bedrijf" | "documenten" | "ai" | "import" | "api";
+type Section = "bedrijf" | "documenten" | "ai" | "import" | "api" | "integraties";
 
 const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "bedrijf", label: "Bedrijfsgegevens", icon: <Building2 size={15} /> },
@@ -61,6 +64,7 @@ const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
     label: "Offertes & facturen",
     icon: <FileText size={15} />,
   },
+  { id: "integraties", label: "Integraties", icon: <Plug size={15} /> },
   { id: "import", label: "Data importeren", icon: <Database size={15} /> },
   { id: "ai", label: "AI-agent", icon: <Bot size={15} /> },
   { id: "api", label: "API", icon: <KeyRound size={15} /> },
@@ -402,9 +406,18 @@ function LogoField({
 export default function SettingsForm({
   initial,
   apiKeys,
+  referralCode,
+  integrationConnections = {},
+  slackPlatformReady = true,
 }: {
   initial: SettingsInput;
   apiKeys: ApiKeyInfo[];
+  referralCode?: string | null;
+  integrationConnections?: Record<
+    string,
+    { status: string; config: Record<string, unknown> }
+  >;
+  slackPlatformReady?: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Section>("bedrijf");
@@ -456,6 +469,8 @@ export default function SettingsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {referralCode && <ReferralInvitePanel referralCode={referralCode} />}
+
       <p className="text-sm text-zinc-500">
         Kies een categorie — alle instellingen staan in de tabs hieronder.
       </p>
@@ -915,6 +930,13 @@ export default function SettingsForm({
           </div>
         )}
 
+        {tab === "integraties" && (
+          <AppIntegrationsPanel
+            connections={integrationConnections}
+            slackPlatformReady={slackPlatformReady}
+          />
+        )}
+
         {tab === "api" && <ApiKeysManager initialKeys={apiKeys} />}
 
         {tab === "import" && (
@@ -929,7 +951,7 @@ export default function SettingsForm({
         )}
       </GlowCard>
 
-      {tab !== "api" && tab !== "import" && (
+      {tab !== "api" && tab !== "import" && tab !== "integraties" && (
       <div className="flex items-center justify-end gap-3">
         {error && (
           <p className="mr-auto rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">

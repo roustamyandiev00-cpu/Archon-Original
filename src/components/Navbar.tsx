@@ -11,7 +11,9 @@ const functies = [
   { label: "AI-metgezel", href: "/functies/ai-metgezel" },
   { label: "Schatting", href: "/functies/schatting" },
   { label: "Facturen", href: "/functies/facturen" },
+  { label: "Peppol & E-facturen", href: "/functies/peppol" },
   { label: "Integraties", href: "/functies/integraties" },
+  { label: "Ontwikkelaars", href: "/ontwikkelaars" },
 ];
 
 const links = [
@@ -19,6 +21,7 @@ const links = [
   { label: "Functies", href: "/functies", children: functies },
   { label: "Over", href: "/over" },
   { label: "Bouwnetwerk", href: "/bouwnetwerk" },
+  { label: "Winkeladressen", href: "/bouwmaterialen" },
   { label: "Prijzen", href: "/prijzen" },
   { label: "Blog", href: "/blog" },
   { label: "Community", href: "/gemeenschap" },

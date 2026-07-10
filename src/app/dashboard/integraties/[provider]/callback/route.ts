@@ -67,11 +67,33 @@ export async function GET(
   }
 
   const now = new Date().toISOString();
+  let extraConfig: Record<string, unknown> = { tokens: result.tokens };
+  if (provider === "exact-online") {
+    try {
+      const meRes = await fetch(
+        "https://start.exactonline.be/api/v1/current/Me?$select=CurrentDivision",
+        {
+          headers: {
+            Authorization: `Bearer ${result.tokens.access_token}`,
+            Accept: "application/json",
+          },
+        },
+      );
+      const meJson = (await meRes.json()) as {
+        d?: { results?: { CurrentDivision?: number }[] };
+      };
+      const division = meJson.d?.results?.[0]?.CurrentDivision;
+      if (division) extraConfig.division = String(division);
+    } catch {
+      // Divisie kan later bij eerste export worden opgehaald.
+    }
+  }
+
   const { error } = await untyped(supabase)
     .from("integraties")
     .update({
       status: "connected",
-      config: { ...config, tokens: result.tokens },
+      config: { ...config, ...extraConfig },
       connected_at: now,
       updated_at: now,
     })

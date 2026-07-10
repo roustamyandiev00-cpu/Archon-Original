@@ -25,6 +25,25 @@ export function parseUserAiPreferences(
   return { agentNaam: DEFAULT_AGENT_NAME };
 }
 
+export async function loadUserDisplayName(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const full = data?.full_name?.trim();
+  if (full) return full.split(/\s+/)[0] ?? full;
+
+  const email = data?.email?.trim();
+  if (email) return email.split("@")[0] ?? "daar";
+
+  return "daar";
+}
+
 export const loadUserAgentName = cache(async function loadUserAgentName(
   supabase: SupabaseClient,
   userId: string,

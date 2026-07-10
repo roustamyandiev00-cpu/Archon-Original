@@ -14,9 +14,23 @@ const STORAGE_KEY = "archon-dashboard-side-panel-collapsed";
 type SidePanelContextValue = {
   collapsed: boolean;
   toggle: () => void;
+  open: () => void;
 };
 
+export function dispatchOpenControlCenter() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("archon:open-control-center"));
+}
+
 const SidePanelContext = createContext<SidePanelContextValue | null>(null);
+
+function readStoredCollapsed() {
+  if (typeof window === "undefined") return true;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === "1") return true;
+  if (stored === "0") return false;
+  return true;
+}
 
 function useSidePanel() {
   const ctx = useContext(SidePanelContext);
@@ -33,25 +47,36 @@ export function DashboardSidePanelProvider({
   children: ReactNode;
   enabled: boolean;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  // SSR + eerste client-render moeten identiek zijn (collapsed). localStorage pas na mount.
+  const [collapsed, setCollapsed] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
+    setCollapsed(readStoredCollapsed());
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !hydrated) return;
     localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
-  }, [collapsed, enabled]);
+  }, [collapsed, enabled, hydrated]);
 
   const toggle = () => setCollapsed((value) => !value);
+  const open = () => setCollapsed(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const handler = () => setCollapsed(false);
+    window.addEventListener("archon:open-control-center", handler);
+    return () => window.removeEventListener("archon:open-control-center", handler);
+  }, [enabled]);
 
   if (!enabled) {
     return <>{children}</>;
   }
 
   return (
-    <SidePanelContext.Provider value={{ collapsed, toggle }}>
+    <SidePanelContext.Provider value={{ collapsed, toggle, open }}>
       {children}
     </SidePanelContext.Provider>
   );
@@ -98,7 +123,7 @@ export function DashboardSidePanel({
       <aside
         aria-label="AI Control Center"
         aria-hidden={collapsed}
-        className={`fixed bottom-0 right-0 z-20 hidden w-[min(22rem,26vw)] border-l border-white/10 bg-zinc-950/90 p-3.5 backdrop-blur-xl transition-transform duration-300 ease-in-out lg:block xl:w-[24rem] 2xl:w-[26rem] ${topbarOffset} ${
+        className={`fixed bottom-0 right-0 z-20 hidden w-[min(22rem,26vw)] border-l border-zinc-800 bg-zinc-950 p-3.5 transition-transform duration-300 ease-in-out lg:block xl:w-[24rem] 2xl:w-[26rem] ${topbarOffset} ${
           collapsed ? "pointer-events-none translate-x-full" : "translate-x-0"
         }`}
       >
@@ -108,7 +133,7 @@ export function DashboardSidePanel({
           aria-expanded={!collapsed}
           aria-label="AI Control Center inklappen"
           title="Inklappen"
-          className="absolute -left-3.5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-zinc-300 shadow-lg transition-colors hover:border-sky-500/30 hover:bg-zinc-800 hover:text-zinc-100"
+          className="absolute -left-3.5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
         >
           <ChevronRight size={15} />
         </button>
@@ -127,13 +152,13 @@ export function DashboardSidePanel({
         aria-expanded={!collapsed}
         aria-label="AI Control Center openen"
         title="AI Control Center"
-        className={`fixed right-0 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-white/10 bg-zinc-950/95 px-2 py-3 text-zinc-300 shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-sky-500/30 hover:bg-zinc-900 hover:text-zinc-100 lg:flex ${
+        className={`fixed right-0 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-zinc-800 bg-zinc-950 px-2 py-3 text-zinc-400 transition-all duration-300 hover:bg-zinc-900 hover:text-zinc-200 lg:flex ${
           collapsed
             ? "translate-x-0 opacity-100"
             : "pointer-events-none translate-x-full opacity-0"
         }`}
       >
-        <Radio size={14} className="text-emerald-400" />
+        <Radio size={14} className="text-zinc-500" />
         <ChevronLeft size={14} />
       </button>
     </>

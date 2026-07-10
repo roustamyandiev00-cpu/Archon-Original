@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Sparkles } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
-import AuthForm from "@/components/auth/AuthForm";
+import RegisterOnboardingForm from "@/components/auth/RegisterOnboardingForm";
 
 export const metadata: Metadata = {
   title: "Registreren — ArchonPro",
@@ -26,7 +26,7 @@ export default function RegisterPage() {
       }}
     >
       <Suspense>
-        <AuthForm mode="register" />
+        <RegisterOnboardingForm />
       </Suspense>
     </AuthLayout>
   );

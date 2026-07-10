@@ -19,6 +19,7 @@ const columns = [
       { label: "Prijzen", href: "/prijzen" },
       { label: "Support", href: "mailto:support@archonpro.be" },
       { label: "Handleiding", href: "/blog" },
+      { label: "API", href: "/ontwikkelaars" },
     ],
   },
   {

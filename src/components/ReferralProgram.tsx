@@ -19,7 +19,7 @@ export default function ReferralProgram({ compact }: { compact?: boolean }) {
     {
       icon: <Users size={16} />,
       title: "Start gratis",
-      text: "Maak je account aan en ontvang meteen je persoonlijke uitnodigingslink.",
+      text: "Maak je account aan en ontvang meteen je persoonlijke code (initialen + cijfers).",
     },
     {
       icon: <Share2 size={16} />,
@@ -102,7 +102,7 @@ export default function ReferralProgram({ compact }: { compact?: boolean }) {
           </span>
           <span className="inline-flex items-center gap-2 rounded-full border border-violet-500/25 bg-violet-500/10 px-3.5 py-1.5 text-xs font-medium text-violet-300">
             <Link2 size={13} />
-            Link direct na registratie
+            Code direct na registratie
           </span>
         </div>
       </div>

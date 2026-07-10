@@ -97,27 +97,48 @@ function SoftwareGrid() {
         </div>
 
         <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {software.map((name) => (
-            <div
-              key={name}
-              className="group flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/50 p-5 transition-colors hover:border-sky-500/40 hover:bg-zinc-900"
-            >
-              <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-sm font-bold text-sky-400 ring-1 ring-inset ring-white/10">
-                  {name.charAt(0)}
-                </span>
-                <span className="font-semibold text-zinc-50">{name}</span>
+          {software.map((name) => {
+            const href =
+              name === "Peppol"
+                ? "/functies/peppol"
+                : name === "Billit"
+                  ? "/functies/peppol"
+                  : undefined;
+            const inner = (
+              <>
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-sm font-bold text-sky-400 ring-1 ring-inset ring-white/10">
+                    {name.charAt(0)}
+                  </span>
+                  <span className="font-semibold text-zinc-50">{name}</span>
+                </div>
+                <div className="mt-5 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
+                    <Check size={12} /> Compatibel
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-zinc-400 transition-colors group-hover:text-sky-400">
+                    Meer weten <ArrowRight size={12} />
+                  </span>
+                </div>
+              </>
+            );
+            return href ? (
+              <Link
+                key={name}
+                href={href}
+                className="group flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/50 p-5 transition-colors hover:border-sky-500/40 hover:bg-zinc-900"
+              >
+                {inner}
+              </Link>
+            ) : (
+              <div
+                key={name}
+                className="group flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/50 p-5 transition-colors hover:border-sky-500/40 hover:bg-zinc-900"
+              >
+                {inner}
               </div>
-              <div className="mt-5 flex items-center justify-between">
-                <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
-                  <Check size={12} /> Compatibel
-                </span>
-                <span className="inline-flex items-center gap-1 text-xs text-zinc-400 transition-colors group-hover:text-sky-400">
-                  Meer weten <ArrowRight size={12} />
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

@@ -1,71 +1,81 @@
 import {
   BarChart3,
   Smartphone,
-  FileCheck,
-  Command,
+  Handshake,
+  Network,
+  LayoutGrid,
+  Palette,
   Plug,
-  BellRing,
+  ShieldCheck,
 } from "lucide-react";
 
 const features = [
   {
     icon: BarChart3,
-    title: "Inzicht in één oogopslag",
-    desc: "Al je offertes, projecten en omzet op één dashboard. Zie meteen wat openstaat en wat er vandaag moet gebeuren.",
+    title: "Helder zicht op je financiën",
+    desc: "Zie meteen wie nog moet betalen en wat er binnenkomt. Openstaande facturen, pipeline en cashflow op één overzicht — altijd actueel.",
   },
   {
     icon: Smartphone,
-    title: "Werkt op de werf",
-    desc: "Volledige controle onderweg. Maak een offerte terwijl je nog op de werf staat, gewoon vanaf je gsm.",
+    title: "Onderweg geregeld",
+    desc: "Offerte opstellen op de werf of een klant opvolgen vanaf je gsm? Je administratie zit in je broekzak, waar je ook bent.",
   },
   {
-    icon: FileCheck,
-    title: "Offerte → factuur in één klik",
-    desc: "Goedgekeurd? Zet je offerte direct om in een conforme factuur, klaar voor Peppol.",
+    icon: Handshake,
+    title: "Werk vlot samen met je accountant",
+    desc: "Deel je administratie in één klik. Jij factureert, je boekhouder doet de rest. Minder mails, meer efficiëntie.",
   },
   {
-    icon: BellRing,
-    title: "Automatische herinneringen",
-    desc: "ArchonPro volgt onbetaalde facturen op en stuurt op tijd een nette herinnering. Sneller betaald, zonder gedoe.",
+    icon: Network,
+    title: "Peppol Access Point",
+    desc: "Verzend en ontvang facturen via Peppol, het officiële Europese netwerk. Conform Belgische e-facturatie.",
+  },
+  {
+    icon: LayoutGrid,
+    title: "Hou alles bij op één plaats",
+    desc: "Klanten, offertes, projecten en taken op een centrale plek. Met één klik zet je alles op je factuur.",
+  },
+  {
+    icon: Palette,
+    title: "Factureren in je eigen stijl",
+    desc: "Maak offertes en facturen die professioneel ogen — volledig in je huisstijl met logo, kleuren en templates.",
   },
   {
     icon: Plug,
-    title: "Koppelt met je tools",
-    desc: "Van e-facturatie via Peppol tot je agenda en betaalproviders — ArchonPro sluit aan op je bestaande workflow.",
+    title: "Naadloze integraties",
+    desc: "Koppel ArchonPro met Slack, Google Calendar, boekhoudpakketten en bouwsoftware. Alles werkt samen.",
   },
   {
-    icon: Command,
-    title: "Jij houdt de controle",
-    desc: "Bliksemsnel werken met sneltoetsen. Alles bereikbaar met ⌘K. Donkere modus. Gemaakt om uit je weg te blijven.",
+    icon: ShieldCheck,
+    title: "Jouw data: altijd veilig",
+    desc: "Je gegevens blijven van jou. EU-hosting, GDPR-compliant en beveiligd — je administratie is veilig bewaard.",
   },
 ];
 
 export default function Features() {
   return (
-    <section id="features" className="section-tint relative py-24">
+    <section id="features-section" className="section-tint relative py-24">
+      <div id="features" className="absolute -top-24" aria-hidden />
       <div aria-hidden className="section-edge" />
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-medium text-sky-400">Alles op één plek</p>
+          <p className="text-sm font-medium text-sky-400">Functies</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-            Alles wat je nodig hebt. Niets wat je niet nodig hebt.
+            Alles om tijd te winnen
           </h2>
           <p className="mt-4 text-lg text-zinc-400">
-            Van eerste aanvraag tot betaalde factuur — beheer je hele bedrijf in
-            één werkruimte die aanvoelt als een fluitje van een cent.
+            Slimme functies die je elke dag tijd besparen — van eerste offerte
+            tot betaalde factuur.
           </p>
         </div>
 
-        <div className="section-surface mt-14 grid gap-4 p-2 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {features.map((f) => (
-            <div
-              key={f.title}
-              className="card-subtle group p-6"
-            >
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-sky-500/10 text-sky-400 ring-1 ring-inset ring-white/5">
+            <div key={f.title} className="card-subtle group p-6">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-white/[0.04] text-sky-400 ring-1 ring-inset ring-white/10">
                 <f.icon size={20} />
               </div>
-              <h3 className="mt-5 text-lg font-semibold text-zinc-50">
+              <h3 className="mt-5 text-base font-semibold leading-snug text-zinc-50">
                 {f.title}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">

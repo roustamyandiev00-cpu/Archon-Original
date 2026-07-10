@@ -13,6 +13,8 @@ export type PeppolConfig = {
   participantId: string;
   apiKey: string;
   legalEntityId?: string;
+  partyId?: string;
+  sandbox?: boolean;
 } | null;
 
 /** Haalt de Peppol access point-configuratie van het bedrijf op (indien verbonden). */
@@ -33,6 +35,8 @@ export async function getPeppolConfig(
     participantId: c.participantId ?? "",
     apiKey: c.apiKey ?? "",
     legalEntityId: c.legalEntityId,
+    partyId: c.partyId ?? c.legalEntityId,
+    sandbox: String(c.sandbox) === "true",
   };
 }
 
@@ -162,7 +166,7 @@ export async function buildFactuurUbl(
     postalZone: customer?.postcode,
     country: customer?.country ?? "BE",
     peppolParticipantId: customer?.peppol_participant_id,
-    kbo: customer?.ondernemingsnummer ?? customer?.kvk,
+    kbo: customer?.ondernemingsnummer,
   });
 
   const buyerReference =

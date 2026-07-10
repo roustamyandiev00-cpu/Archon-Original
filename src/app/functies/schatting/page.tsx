@@ -92,14 +92,6 @@ function SectionHeading({
   );
 }
 
-function IconBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-sky-400 ring-1 ring-inset ring-white/10">
-      {children}
-    </div>
-  );
-}
-
 function Card({
   children,
   className = "",

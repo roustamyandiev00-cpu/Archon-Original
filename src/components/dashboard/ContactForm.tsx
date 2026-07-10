@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore, useState } from "react";
+import { useCallback, useSyncExternalStore, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -9,17 +9,22 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  Loader2,
   Mail,
   MapPin,
   MessageCircle,
   MessageSquare,
   Phone,
+  Shield,
+  Sparkles,
   Trash2,
   User,
   Users,
   X,
 } from "lucide-react";
 import { DEMO_CONTACTS } from "@/lib/demo";
+import { BtwLookupField } from "@/components/dashboard/contacten/BtwLookupField";
+import type { CompanyLookupResult } from "@/components/dashboard/contacten/companyLookup";
 
 type ContactType = "particulier" | "bedrijf";
 
@@ -32,6 +37,9 @@ type Contact = {
   telefoon: string;
   bedrijfsnaam: string;
   bedrijfsgrootte: string;
+  btw?: string;
+  ondernemingsnummer?: string;
+  adres?: string;
   bron: string;
   bericht: string;
   createdAt: string;
@@ -59,24 +67,31 @@ const perks = [
   {
     icon: BadgeCheck,
     title: "Persoonlijk advies",
-    text: "Praat rechtstreeks met onze specialisten.",
+    text: "Praat rechtstreeks met onze specialisten voor de Belgische bouwsector.",
   },
   {
     icon: MessageSquare,
     title: "Oplossing op maat",
-    text: "Een aanpak die bij jouw onderneming past.",
+    text: "Een aanpak die past bij jouw team, workflow en groeifase.",
   },
   {
     icon: Clock,
     title: "Snel antwoord",
-    text: "We komen dezelfde werkdag bij je terug.",
+    text: "We komen dezelfde werkdag bij je terug — gemiddeld binnen 4 uur.",
   },
+];
+
+const trustBadges = [
+  { icon: Shield, label: "GDPR compliant" },
+  { icon: Building2, label: "Belgische support" },
+  { icon: Sparkles, label: "14 dagen gratis" },
 ];
 
 const companySizes = ["1–5", "6–20", "21–50", "51–200", "200+"];
 
 export default function ContactForm() {
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [type, setType] = useState<ContactType>("bedrijf");
   const contacts = useSyncExternalStore(
     subscribeContacts,
@@ -84,7 +99,19 @@ export default function ContactForm() {
     () => DEMO_CONTACTS,
   );
   const [selected, setSelected] = useState<Contact | null>(null);
+  const [btw, setBtw] = useState("");
+  const [bedrijfsnaam, setBedrijfsnaam] = useState("");
+  const [ondernemingsnummer, setOndernemingsnummer] = useState("");
+  const [adres, setAdres] = useState("");
   const isBedrijf = type === "bedrijf";
+
+  const applyCompanyLookup = useCallback((data: CompanyLookupResult) => {
+    setBtw(data.btw);
+    setBedrijfsnaam(data.name);
+    setOndernemingsnummer(data.ondernemingsnummer);
+    const line = [data.street, data.postcode, data.city].filter(Boolean).join(", ");
+    setAdres(line || data.address);
+  }, []);
 
   function persist(next: Contact[]) {
     try {
@@ -95,8 +122,10 @@ export default function ContactForm() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSubmitting(true);
+
     const fd = new FormData(e.currentTarget);
     const get = (k: string) => (fd.get(k) as string | null)?.trim() ?? "";
 
@@ -110,15 +139,25 @@ export default function ContactForm() {
       achternaam: get("achternaam"),
       email: get("email"),
       telefoon: get("telefoon"),
-      bedrijfsnaam: get("bedrijfsnaam"),
+      bedrijfsnaam: isBedrijf ? bedrijfsnaam || get("bedrijfsnaam") : "",
       bedrijfsgrootte: get("bedrijfsgrootte"),
+      btw: isBedrijf ? btw || get("btw") : "",
+      ondernemingsnummer: isBedrijf ? ondernemingsnummer : "",
+      adres: isBedrijf ? adres : "",
       bron: get("bron"),
       bericht: get("bericht"),
       createdAt: new Date().toISOString(),
     };
 
+    await new Promise((r) => setTimeout(r, 600));
     persist([contact, ...contacts]);
+    setSubmitting(false);
     setSent(true);
+    setBtw("");
+    setBedrijfsnaam("");
+    setOndernemingsnummer("");
+    setAdres("");
+    e.currentTarget.reset();
   }
 
   function removeContact(id: string) {
@@ -126,69 +165,88 @@ export default function ContactForm() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative space-y-8">
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-x-10 -bottom-16 top-10 -z-10 blur-3xl"
+        className="pointer-events-none absolute -inset-x-6 -top-8 bottom-0 -z-10"
       >
-        <div className="mx-auto h-full max-w-4xl bg-[radial-gradient(60%_60%_at_50%_100%,rgba(14,165,233,0.35),transparent),radial-gradient(50%_50%_at_20%_20%,rgba(6,182,212,0.25),transparent),radial-gradient(50%_50%_at_80%_30%,rgba(144,137,252,0.25),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(249,115,22,0.12),transparent)]" />
+        <div className="absolute right-0 top-1/4 h-64 w-64 rounded-full bg-orange-500/[0.04] blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-sky-500/[0.04] blur-3xl" />
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/70 shadow-[0_30px_80px_-40px_rgba(14,165,233,0.5)] backdrop-blur">
-        <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-2 lg:gap-14">
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
+      <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-zinc-950/80 shadow-[0_40px_100px_-50px_rgba(0,0,0,0.8)] backdrop-blur-sm">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+          <div className="flex flex-col border-b border-white/[0.06] p-6 sm:p-8 lg:border-b-0 lg:border-r lg:p-10">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-400/90">
+              Contact
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-[2.35rem] sm:leading-tight">
               Ontdek de perfecte fit met{" "}
-              <span className="bg-gradient-to-r from-sky-400 to-cyan-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">
                 ArchonPro
               </span>
             </h1>
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-zinc-400">
-              Vertel ons kort iets over je onderneming en we nemen snel contact
-              met je op.
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">
+              Vertel ons kort iets over je onderneming. We plannen een vrijblijvend
+              gesprek en tonen hoe ArchonPro past bij jouw dagelijkse werking.
             </p>
 
-            <ul className="mt-8 space-y-4">
+            <ul className="mt-8 space-y-5">
               {perks.map((p) => (
-                <li key={p.title} className="flex items-start gap-3">
-                  <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
+                <li key={p.title} className="flex items-start gap-3.5">
+                  <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400">
                     <p.icon size={16} />
                   </span>
                   <div>
-                    <p className="text-sm font-medium text-zinc-100">
+                    <p className="text-sm font-semibold text-zinc-100">
                       {p.title}
                     </p>
-                    <p className="text-sm text-zinc-500">{p.text}</p>
+                    <p className="mt-0.5 text-sm leading-relaxed text-zinc-500">
+                      {p.text}
+                    </p>
                   </div>
                 </li>
               ))}
             </ul>
 
+            <div className="mt-8 flex flex-wrap gap-2">
+              {trustBadges.map((badge) => (
+                <span
+                  key={badge.label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-zinc-400"
+                >
+                  <badge.icon size={12} className="text-orange-400/80" />
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+
             <div className="mt-auto pt-10">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-600">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
                 Of bereik ons direct
               </p>
-              <div className="mt-3 space-y-2.5">
+              <div className="mt-4 space-y-3">
                 <a
                   href="mailto:hallo@archonpro.be"
-                  className="flex items-center gap-3 text-sm text-zinc-300 transition-colors hover:text-sky-300"
+                  className="group flex items-center gap-3 rounded-xl border border-transparent px-1 py-1 text-sm text-zinc-300 transition-colors hover:text-orange-200"
                 >
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-sky-400">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-orange-400 transition-colors group-hover:border-orange-500/20 group-hover:bg-orange-500/10">
                     <Mail size={15} />
                   </span>
                   hallo@archonpro.be
                 </a>
                 <a
                   href="tel:+3231234567"
-                  className="flex items-center gap-3 text-sm text-zinc-300 transition-colors hover:text-sky-300"
+                  className="group flex items-center gap-3 rounded-xl border border-transparent px-1 py-1 text-sm text-zinc-300 transition-colors hover:text-orange-200"
                 >
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-sky-400">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-orange-400 transition-colors group-hover:border-orange-500/20 group-hover:bg-orange-500/10">
                     <Phone size={15} />
                   </span>
                   +32 3 123 45 67
                 </a>
-                <div className="flex items-center gap-3 text-sm text-zinc-400">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-sky-400">
+                <div className="flex items-center gap-3 px-1 py-1 text-sm text-zinc-500">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-orange-400/80">
                     <Clock size={15} />
                   </span>
                   Gemiddelde reactietijd: binnen 4 uur
@@ -197,36 +255,34 @@ export default function ContactForm() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-5 sm:p-7">
+          <div className="bg-zinc-900/40 p-6 sm:p-8 lg:p-10">
             {sent ? (
-              <div className="flex h-full min-h-[420px] flex-col items-center justify-center text-center">
-                <span className="grid h-14 w-14 place-items-center rounded-full bg-emerald-500/12 text-emerald-400">
-                  <CheckCircle2 size={26} />
-                </span>
-                <h2 className="mt-4 text-lg font-semibold text-zinc-50">
-                  Bericht verstuurd
-                </h2>
-                <p className="mt-1.5 max-w-xs text-sm text-zinc-400">
-                  Bedankt! We hebben je bericht ontvangen en nemen snel contact
-                  met je op.
-                </p>
-                <button
-                  onClick={() => setSent(false)}
-                  className="mt-6 rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-200 transition-colors hover:bg-white/5"
-                >
-                  Nog een bericht versturen
-                </button>
-              </div>
+              <SuccessState onReset={() => setSent(false)} />
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <span className="mb-1.5 block text-xs font-medium text-zinc-400">
-                    Ik ben een <span className="text-sky-400">*</span>
+                  <h2 className="text-lg font-semibold text-zinc-100">
+                    Jouw gegevens
+                  </h2>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Velden met * zijn verplicht. Je gegevens blijven vertrouwelijk.
+                  </p>
+                </div>
+
+                <div>
+                  <span className="mb-2 block text-xs font-medium text-zinc-400">
+                    Ik ben een <span className="text-orange-400">*</span>
                   </span>
-                  <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-white/10 bg-zinc-950/60 p-1">
+                  <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/[0.08] bg-zinc-950/60 p-1">
                     <SegmentButton
                       active={type === "particulier"}
-                      onClick={() => setType("particulier")}
+                      onClick={() => {
+                        setType("particulier");
+                        setBtw("");
+                        setBedrijfsnaam("");
+                        setOndernemingsnummer("");
+                        setAdres("");
+                      }}
                       icon={<User size={15} />}
                       label="Particulier"
                     />
@@ -245,7 +301,8 @@ export default function ContactForm() {
                       required
                       name="voornaam"
                       type="text"
-                      placeholder="Sarah"
+                      autoComplete="given-name"
+                      placeholder="Jan"
                       className={inputCls}
                     />
                   </Field>
@@ -254,41 +311,68 @@ export default function ContactForm() {
                       required
                       name="achternaam"
                       type="text"
-                      placeholder="Thompson"
+                      autoComplete="family-name"
+                      placeholder="Peeters"
                       className={inputCls}
                     />
                   </Field>
                 </div>
 
                 {isBedrijf && (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Bedrijfsnaam" required>
-                      <input
-                        required
-                        name="bedrijfsnaam"
-                        type="text"
-                        placeholder="Bedrijf NV"
-                        className={inputCls}
-                      />
-                    </Field>
-                    <Field label="Bedrijfsgrootte" required>
-                      <select
-                        required
-                        name="bedrijfsgrootte"
-                        defaultValue=""
-                        className={inputCls}
-                      >
-                        <option value="" disabled>
-                          Selecteer
-                        </option>
-                        {companySizes.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
+                  <>
+                    <BtwLookupField
+                      value={btw}
+                      onChange={setBtw}
+                      onResolved={applyCompanyLookup}
+                    />
+                    <input
+                      type="hidden"
+                      name="ondernemingsnummer"
+                      value={ondernemingsnummer}
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Bedrijfsnaam" required>
+                        <input
+                          required
+                          name="bedrijfsnaam"
+                          type="text"
+                          autoComplete="organization"
+                          placeholder="Bouwbedrijf Peeters BV"
+                          value={bedrijfsnaam}
+                          onChange={(e) => setBedrijfsnaam(e.target.value)}
+                          className={inputCls}
+                        />
+                      </Field>
+                      <Field label="Bedrijfsgrootte" required>
+                        <select
+                          required
+                          name="bedrijfsgrootte"
+                          defaultValue=""
+                          className={inputCls}
+                        >
+                          <option value="" disabled>
+                            Aantal medewerkers
                           </option>
-                        ))}
-                      </select>
-                    </Field>
-                  </div>
+                          {companySizes.map((s) => (
+                            <option key={s} value={s}>
+                              {s} medewerkers
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                    {adres && (
+                      <Field label="Adres (automatisch ingevuld)">
+                        <input
+                          name="adres"
+                          type="text"
+                          readOnly
+                          value={adres}
+                          className={`${inputCls} text-zinc-400`}
+                        />
+                      </Field>
+                    )}
+                  </>
                 )}
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -300,7 +384,8 @@ export default function ContactForm() {
                       required
                       name="email"
                       type="email"
-                      placeholder={isBedrijf ? "jij@bedrijf.be" : "jij@email.be"}
+                      autoComplete="email"
+                      placeholder={isBedrijf ? "jan@bouwbedrijf.be" : "jan@email.be"}
                       className={inputCls}
                     />
                   </Field>
@@ -308,7 +393,8 @@ export default function ContactForm() {
                     <input
                       name="telefoon"
                       type="tel"
-                      placeholder="+32 ..."
+                      autoComplete="tel"
+                      placeholder="+32 470 12 34 56"
                       className={inputCls}
                     />
                   </Field>
@@ -318,7 +404,7 @@ export default function ContactForm() {
                   <input
                     name="bron"
                     type="text"
-                    placeholder="Bijv. via een aanbeveling of Google"
+                    placeholder="Bijv. aanbeveling, Google of vakbeurs"
                     className={inputCls}
                   />
                 </Field>
@@ -328,21 +414,36 @@ export default function ContactForm() {
                     required
                     name="bericht"
                     rows={4}
-                    placeholder="Vertel ons kort waar je mee zit of wat je zoekt."
-                    className={`${inputCls} resize-none`}
+                    placeholder="Beschrijf kort je situatie, teamgrootte of wat je wilt verbeteren in je administratie."
+                    className={`${inputCls} min-h-[108px] resize-y`}
                   />
                 </Field>
 
                 <button
                   type="submit"
-                  className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-zinc-950 transition-all hover:shadow-[0_8px_30px_-8px_rgba(14,165,233,0.6)]"
+                  disabled={submitting}
+                  className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3.5 text-sm font-semibold text-zinc-950 transition-all hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Verstuur bericht
-                  <ArrowRight
-                    size={16}
-                    className="transition-transform group-hover:translate-x-0.5"
-                  />
+                  {submitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Versturen…
+                    </>
+                  ) : (
+                    <>
+                      Verstuur bericht
+                      <ArrowRight
+                        size={16}
+                        className="transition-transform group-hover:translate-x-0.5"
+                      />
+                    </>
+                  )}
                 </button>
+
+                <p className="text-center text-[11px] leading-relaxed text-zinc-600">
+                  Door te versturen ga je akkoord met ons privacybeleid. We
+                  gebruiken je gegevens enkel om contact op te nemen.
+                </p>
               </form>
             )}
           </div>
@@ -369,6 +470,40 @@ export default function ContactForm() {
   );
 }
 
+function SuccessState({ onReset }: { onReset: () => void }) {
+  return (
+    <div className="flex min-h-[480px] flex-col items-center justify-center px-4 py-12 text-center">
+      <span className="grid h-16 w-16 place-items-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+        <CheckCircle2 size={30} />
+      </span>
+      <h2 className="mt-5 text-xl font-semibold text-zinc-50">
+        Bericht verstuurd
+      </h2>
+      <p className="mt-2 max-w-sm text-sm leading-relaxed text-zinc-400">
+        Bedankt voor je vertrouwen. Een van onze specialisten neemt dezelfde
+        werkdag contact met je op.
+      </p>
+      <div className="mt-6 rounded-xl border border-white/[0.06] bg-zinc-950/50 px-4 py-3 text-left">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+          Wat gebeurt er nu?
+        </p>
+        <ul className="mt-2 space-y-1.5 text-xs text-zinc-500">
+          <li>1. We bekijken je aanvraag</li>
+          <li>2. We plannen een kort kennismakingsgesprek</li>
+          <li>3. Je ontvangt een voorstel op maat</li>
+        </ul>
+      </div>
+      <button
+        type="button"
+        onClick={onReset}
+        className="mt-8 rounded-full border border-white/[0.1] px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/[0.04]"
+      >
+        Nog een bericht versturen
+      </button>
+    </div>
+  );
+}
+
 function ContactList({
   contacts,
   onRemove,
@@ -379,28 +514,35 @@ function ContactList({
   onSelect: (c: Contact) => void;
 }) {
   return (
-    <section className="mt-8 rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-          Toegevoegde contacten
-        </h2>
-        <span className="rounded-full bg-sky-500/12 px-2 py-0.5 text-[11px] font-semibold text-sky-400">
+    <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900/60">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-100">
+            Ontvangen aanvragen
+          </h2>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Contacten via dit formulier
+          </p>
+        </div>
+        <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-orange-300">
           {contacts.length}
         </span>
       </div>
 
       {contacts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-white/5 text-zinc-500">
-            <Users size={18} />
+        <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+          <span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/[0.06] bg-zinc-950/60 text-zinc-500">
+            <Users size={20} />
           </span>
-          <p className="mt-3 text-sm text-zinc-400">Nog geen contacten</p>
-          <p className="mt-0.5 text-xs text-zinc-600">
-            Verstuur het formulier hierboven om je eerste contact toe te voegen.
+          <p className="mt-4 text-sm font-medium text-zinc-300">
+            Nog geen aanvragen
+          </p>
+          <p className="mt-1 max-w-xs text-xs leading-relaxed text-zinc-600">
+            Zodra iemand het formulier invult, verschijnt de aanvraag hier.
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-white/5">
+        <ul className="divide-y divide-white/[0.04]">
           {contacts.map((c) => {
             const naam = `${c.voornaam} ${c.achternaam}`.trim() || "Onbekend";
             const initialen =
@@ -412,47 +554,40 @@ function ContactList({
             const telLink = c.telefoon
               ? `tel:${c.telefoon.replace(/\s/g, "")}`
               : null;
+            const datum = new Date(c.createdAt).toLocaleDateString("nl-BE", {
+              day: "numeric",
+              month: "short",
+            });
+
             return (
               <li
                 key={c.id}
-                className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03] sm:px-5"
+                className="group flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.02] sm:px-5"
               >
                 <button
                   type="button"
                   onClick={() => onSelect(c)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-sky-500/12 text-xs font-semibold uppercase text-sky-300">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-orange-500/15 bg-orange-500/10 text-xs font-semibold uppercase text-orange-300">
                     {initialen}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-sm font-medium text-zinc-100">
                         {naam}
                       </p>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                          c.type === "bedrijf"
-                            ? "bg-indigo-500/15 text-indigo-300"
-                            : "bg-emerald-500/15 text-emerald-300"
-                        }`}
-                      >
-                        {c.type === "bedrijf" ? (
-                          <Building2 size={10} />
-                        ) : (
-                          <User size={10} />
-                        )}
-                        {c.type === "bedrijf" ? "Bedrijf" : "Particulier"}
-                      </span>
+                      <TypeBadge type={c.type} />
+                      <span className="text-[10px] text-zinc-600">{datum}</span>
                     </div>
                     <p className="truncate text-xs text-zinc-500">
-                      {[c.email, c.telefoon, c.bedrijfsnaam]
+                      {[c.bedrijfsnaam, c.email, c.bericht]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
                   </div>
                 </button>
-                <div className="flex shrink-0 items-center gap-0.5">
+                <div className="flex shrink-0 items-center gap-0.5 opacity-80 transition-opacity group-hover:opacity-100">
                   <RowIcon
                     href={waLink}
                     label={`WhatsApp ${naam}`}
@@ -463,19 +598,19 @@ function ContactList({
                     href={mailLink}
                     label={`Mail ${naam}`}
                     icon={<Mail size={15} />}
-                    tone="text-sky-400 hover:bg-sky-500/15 hover:text-sky-300"
+                    tone="text-orange-400 hover:bg-orange-500/15 hover:text-orange-300"
                   />
                   <RowIcon
                     href={telLink}
                     label={`Bel ${naam}`}
                     icon={<Phone size={15} />}
-                    tone="text-indigo-400 hover:bg-indigo-500/15 hover:text-indigo-300"
+                    tone="text-sky-400 hover:bg-sky-500/15 hover:text-sky-300"
                   />
                   <button
                     type="button"
                     onClick={() => onRemove(c.id)}
                     aria-label={`Verwijder ${naam}`}
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-zinc-600 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -486,6 +621,25 @@ function ContactList({
         </ul>
       )}
     </section>
+  );
+}
+
+function TypeBadge({ type }: { type: ContactType }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+        type === "bedrijf"
+          ? "bg-violet-500/15 text-violet-300"
+          : "bg-emerald-500/15 text-emerald-300"
+      }`}
+    >
+      {type === "bedrijf" ? (
+        <Building2 size={10} />
+      ) : (
+        <User size={10} />
+      )}
+      {type === "bedrijf" ? "Bedrijf" : "Particulier"}
+    </span>
   );
 }
 
@@ -504,7 +658,7 @@ function RowIcon({
     return (
       <span
         aria-hidden
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-zinc-700"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-zinc-800"
       >
         {icon}
       </span>
@@ -528,7 +682,7 @@ function waNumber(raw: string) {
   let n = raw.replace(/[^\d+]/g, "");
   if (n.startsWith("+")) n = n.slice(1);
   else if (n.startsWith("00")) n = n.slice(2);
-  else if (n.startsWith("0")) n = "32" + n.slice(1); // Belgisch nummer
+  else if (n.startsWith("0")) n = "32" + n.slice(1);
   return n;
 }
 
@@ -564,6 +718,8 @@ function ContactDetail({
       naam,
       c.type === "bedrijf" ? "Bedrijf" : "Particulier",
       c.bedrijfsnaam && `Bedrijf: ${c.bedrijfsnaam}`,
+      c.btw && `BTW: ${c.btw}`,
+      c.adres && `Adres: ${c.adres}`,
       c.email && `E-mail: ${c.email}`,
       c.telefoon && `Telefoon: ${c.telefoon}`,
       c.bericht && `Bericht: ${c.bericht}`,
@@ -581,39 +737,29 @@ function ContactDetail({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-zinc-950 shadow-2xl sm:max-w-lg sm:rounded-2xl"
+        className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl border border-white/[0.08] bg-zinc-950 shadow-2xl sm:max-w-lg sm:rounded-2xl"
       >
-        <div className="flex items-start gap-3 border-b border-white/10 p-5">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-sky-500/12 text-sm font-semibold uppercase text-sky-300">
+        <div className="flex items-start gap-3 border-b border-white/[0.06] p-5">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-orange-500/15 bg-orange-500/10 text-sm font-semibold uppercase text-orange-300">
             {initialen}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-zinc-50">{naam}</h2>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                  c.type === "bedrijf"
-                    ? "bg-indigo-500/15 text-indigo-300"
-                    : "bg-emerald-500/15 text-emerald-300"
-                }`}
-              >
-                {c.type === "bedrijf" ? (
-                  <Building2 size={10} />
-                ) : (
-                  <User size={10} />
-                )}
-                {c.type === "bedrijf" ? "Bedrijf" : "Particulier"}
-              </span>
+              <TypeBadge type={c.type} />
             </div>
             {c.bedrijfsnaam && (
               <p className="mt-0.5 text-sm text-zinc-400">{c.bedrijfsnaam}</p>
+            )}
+            {c.btw && (
+              <p className="mt-0.5 text-xs text-zinc-500">BTW: {c.btw}</p>
             )}
           </div>
           <button
@@ -634,36 +780,49 @@ function ContactDetail({
             value={c.telefoon}
           />
           {c.type === "bedrijf" && (
-            <DetailRow
-              icon={<Building2 size={15} />}
-              label="Bedrijfsgrootte"
-              value={c.bedrijfsgrootte}
-            />
+            <>
+              <DetailRow
+                icon={<Building2 size={15} />}
+                label="BTW-nummer"
+                value={c.btw ?? ""}
+              />
+              <DetailRow
+                icon={<Building2 size={15} />}
+                label="KBO-nummer"
+                value={c.ondernemingsnummer ?? ""}
+              />
+              <DetailRow
+                icon={<MapPin size={15} />}
+                label="Adres"
+                value={c.adres ?? ""}
+              />
+              <DetailRow
+                icon={<Building2 size={15} />}
+                label="Bedrijfsgrootte"
+                value={c.bedrijfsgrootte}
+              />
+            </>
           )}
-          <DetailRow
-            icon={<MapPin size={15} />}
-            label="Bron"
-            value={c.bron}
-          />
+          <DetailRow icon={<MapPin size={15} />} label="Bron" value={c.bron} />
           <DetailRow
             icon={<CalendarClock size={15} />}
             label="Toegevoegd"
             value={datum}
           />
           {c.bericht && (
-            <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-3">
-              <p className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            <div className="rounded-xl border border-white/[0.06] bg-zinc-900/60 p-4">
+              <p className="mb-1.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
                 <MessageSquare size={13} /> Bericht
               </p>
-              <p className="whitespace-pre-wrap text-sm text-zinc-300">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
                 {c.bericht}
               </p>
             </div>
           )}
         </div>
 
-        <div className="border-t border-white/10 p-5">
-          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+        <div className="border-t border-white/[0.06] p-5">
+          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
             Versturen via
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -677,13 +836,13 @@ function ContactDetail({
               href={mailLink}
               icon={<Mail size={16} />}
               label="E-mail"
-              tone="text-sky-300"
+              tone="text-orange-300"
             />
             <SendAction
               href={telLink}
               icon={<Phone size={16} />}
               label="Bellen"
-              tone="text-indigo-300"
+              tone="text-sky-300"
             />
             <SendAction
               href={smsLink}
@@ -693,11 +852,11 @@ function ContactDetail({
             />
           </div>
 
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={copyAll}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-zinc-200 transition-colors hover:bg-white/10"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-zinc-200 transition-colors hover:bg-white/[0.06]"
             >
               {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
               {copied ? "Gekopieerd" : "Kopieer gegevens"}
@@ -727,11 +886,11 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-sky-400">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/[0.06] bg-zinc-900/80 text-orange-400">
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-600">
           {label}
         </p>
         <p className="truncate text-sm text-zinc-200">{value || "—"}</p>
@@ -756,10 +915,10 @@ function SendAction({
   if (!href) {
     return (
       <div
-        className={`${base} cursor-not-allowed border-white/5 bg-white/[0.02] text-zinc-600`}
+        className={`${base} cursor-not-allowed border-white/[0.04] bg-white/[0.02] text-zinc-700`}
         title="Geen gegeven beschikbaar"
       >
-        <span className="opacity-50">{icon}</span>
+        <span className="opacity-40">{icon}</span>
         {label}
       </div>
     );
@@ -769,7 +928,7 @@ function SendAction({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${base} border-white/10 bg-white/5 ${tone} hover:bg-white/10`}
+      className={`${base} border-white/[0.08] bg-white/[0.03] ${tone} hover:bg-white/[0.06]`}
     >
       {icon}
       {label}
@@ -778,7 +937,7 @@ function SendAction({
 }
 
 const inputCls =
-  "w-full rounded-lg border border-white/10 bg-zinc-950/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-colors focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/20";
+  "w-full rounded-xl border border-white/[0.08] bg-zinc-950/70 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-[border-color,box-shadow] focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/15";
 
 function SegmentButton({
   active,
@@ -796,10 +955,10 @@ function SegmentButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+      className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
         active
-          ? "bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/40"
-          : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+          ? "bg-orange-500/15 text-orange-200 shadow-sm ring-1 ring-inset ring-orange-500/30"
+          : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300"
       }`}
     >
       {icon}
@@ -821,7 +980,7 @@ function Field({
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-zinc-400">
         {label}
-        {required && <span className="text-sky-400"> *</span>}
+        {required && <span className="text-orange-400"> *</span>}
       </span>
       {children}
     </label>

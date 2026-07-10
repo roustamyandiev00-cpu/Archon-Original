@@ -26,35 +26,41 @@ export default function SendOfferteModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      setShare(null);
-      setError(null);
-      return;
-    }
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      const result = await sendOfferteShare(offerteId);
-      if (cancelled) return;
-      setLoading(false);
-      if ("error" in result && result.error) {
-        setError(result.error);
+
+    const id = window.setTimeout(() => {
+      if (!open) {
+        setShare(null);
+        setError(null);
         return;
       }
-      if ("ok" in result && result.ok) {
-        setShare({
-          pdfUrl: result.pdfUrl!,
-          mailtoUrl: result.mailtoUrl ?? null,
-          whatsappUrl: result.whatsappUrl ?? null,
-          nummer: result.nummer!,
-          klant: result.klant!,
-        });
-        onSent?.();
-      }
-    })();
+
+      void (async () => {
+        setLoading(true);
+        setError(null);
+        const result = await sendOfferteShare(offerteId);
+        if (cancelled) return;
+        setLoading(false);
+        if ("error" in result && result.error) {
+          setError(result.error);
+          return;
+        }
+        if ("ok" in result && result.ok) {
+          setShare({
+            pdfUrl: result.pdfUrl!,
+            mailtoUrl: result.mailtoUrl ?? null,
+            whatsappUrl: result.whatsappUrl ?? null,
+            nummer: result.nummer!,
+            klant: result.klant!,
+          });
+          onSent?.();
+        }
+      })();
+    }, 0);
+
     return () => {
       cancelled = true;
+      window.clearTimeout(id);
     };
   }, [open, offerteId, onSent]);
 

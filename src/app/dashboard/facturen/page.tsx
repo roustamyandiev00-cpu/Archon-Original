@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Receipt, Plus, Send, CheckCircle2, Euro } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import { showDemoData } from "@/lib/demo-mode";
 import { formatEuro, formatDate } from "@/lib/offertes";
 import { factuurStatusMeta, documentTypeMeta } from "@/lib/facturen";
 import { DEMO_FACTUREN } from "@/lib/demo";
@@ -10,6 +12,7 @@ import DocumentContactActions from "@/components/dashboard/DocumentContactAction
 export const metadata = { title: "Facturen — ArchonPro" };
 
 export default async function FacturenPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   const now = new Date();
@@ -81,8 +84,7 @@ export default async function FacturenPage() {
     });
   }
 
-  // Toon demovoorbeeld zolang er nog geen echte facturen zijn.
-  const isDemo = facturen.length === 0;
+  const isDemo = showDemoData(preview, facturen.length === 0);
   if (isDemo) facturen = DEMO_FACTUREN;
 
   const maandOmzet = facturen

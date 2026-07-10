@@ -8,6 +8,12 @@ import {
   HardHat,
   Settings,
   Plug,
+  Bot,
+  CalendarDays,
+  Tags,
+  List,
+  ScrollText,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,10 +30,13 @@ export const MOBILE_SWIPE_TABS: MobileTab[] = [
   {
     id: "home",
     label: "Home",
-    href: "/dashboard",
+    href: "/dashboard/command-center",
     icon: Gauge,
     match: (pathname) =>
-      pathname === "/dashboard" || pathname === "/dashboard/",
+      pathname === "/dashboard" ||
+      pathname === "/dashboard/" ||
+      pathname.startsWith("/dashboard/command-center") ||
+      pathname.startsWith("/dashboard/overzicht"),
   },
   {
     id: "offertes",
@@ -74,8 +83,14 @@ export type MoreLink = {
 };
 
 export const MOBILE_MORE_LINKS: MoreLink[] = [
-  { label: "Bouwnetwerk", href: "/dashboard/werkposts", icon: HardHat },
-  { label: "Integraties", href: "/dashboard/integraties", icon: Plug, available: false },
+  { label: "BouwNetwerk", href: "/dashboard/werkposts", icon: HardHat },
+  { label: "E-Facturen", href: "/dashboard/e-facturen", icon: ScrollText },
+  { label: "Boekhouding", href: "/dashboard/boekhouding", icon: Wallet },
+  { label: "Agenda", href: "/dashboard/agenda", icon: CalendarDays },
+  { label: "Prijslijst", href: "/dashboard/prijslijst", icon: Tags },
+  { label: "AI Assistent", href: "/dashboard/nova-agents", icon: Bot },
+  { label: "Activiteiten", href: "/dashboard/activiteit", icon: List },
+  { label: "Integraties", href: "/dashboard/integraties", icon: Plug },
   { label: "Instellingen", href: "/dashboard/instellingen", icon: Settings },
 ];
 

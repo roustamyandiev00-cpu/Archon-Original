@@ -123,7 +123,8 @@ export default function CommunityWall({ showIntro = true }: { showIntro?: boolea
   }, []);
 
   useEffect(() => {
-    void loadPosts();
+    const id = window.setTimeout(() => void loadPosts(), 0);
+    return () => window.clearTimeout(id);
   }, [loadPosts]);
 
   async function handleSubmit(event: React.FormEvent) {

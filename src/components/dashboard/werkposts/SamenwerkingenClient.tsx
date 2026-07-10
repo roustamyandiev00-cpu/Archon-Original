@@ -117,7 +117,7 @@ function parseRichMessage(content: string | null): RichMessage | null {
   if (content.startsWith("{") && content.endsWith("}")) {
     try {
       return JSON.parse(content) as RichMessage;
-    } catch (e) {
+    } catch {
       // Return plain text on parse error
     }
   }
