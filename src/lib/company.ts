@@ -1,6 +1,9 @@
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { withReadOnlyGuard } from "@/lib/supabase/readonly-guard";
+import { getImpersonationContext } from "@/lib/impersonation";
 import type { Database } from "@/types/database.types";
 
 type AppSupabase = SupabaseClient<Database>;
@@ -55,7 +58,22 @@ export const getCompanyContext = cache(async function getCompanyContext() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { supabase, user: null, companyId: null as number | null };
+    return {
+      supabase,
+      user: null,
+      companyId: null as number | null,
+      impersonating: false as const,
+    };
+  }
+
+  const impersonation = await getImpersonationContext();
+  if (impersonation) {
+    return {
+      supabase: withReadOnlyGuard(createServiceClient()),
+      user,
+      companyId: impersonation.targetCompanyId,
+      impersonating: true as const,
+    };
   }
 
   let companyId = await loadActiveCompanyId(supabase, user.id);
@@ -67,5 +85,6 @@ export const getCompanyContext = cache(async function getCompanyContext() {
     supabase,
     user,
     companyId,
+    impersonating: false as const,
   };
 });

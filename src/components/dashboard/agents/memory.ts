@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CreateOffertePayload } from "@/lib/agents/types";
+import { getEmbeddingApiKey } from "@/lib/ai/config";
 
 export type MemoryType =
   | "fact"
@@ -17,7 +18,7 @@ type MemoryInput = {
 };
 
 export async function generateEmbedding(text: string): Promise<string | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getEmbeddingApiKey();
   if (!apiKey) return null;
 
   try {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Eye, Sparkles } from "lucide-react";
 import type { TrialStatus } from "@/components/dashboard/trial";
+import { stopImpersonationAction } from "@/app/dashboard/admin/impersonation-actions";
 
 const shell =
   "fixed inset-x-0 top-14 z-20 border-b bg-zinc-950/95 backdrop-blur-xl lg:left-[220px]";
@@ -21,6 +22,30 @@ export function PreviewBanner() {
             <Sparkles size={13} />
             Start 7 dagen gratis
           </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ImpersonationBanner({ companyName }: { companyName: string }) {
+  return (
+    <div className={`${shell} border-violet-500/25`}>
+      <div className="border-b border-violet-500/25 bg-violet-500/10 px-4 py-2.5 sm:px-6">
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-sm text-violet-100">
+            <Eye size={15} className="shrink-0 text-violet-300" />
+            Je bekijkt <span className="font-semibold">{companyName}</span> als
+            platform-admin — alleen-lezen, wijzigingen zijn uitgeschakeld.
+          </p>
+          <form action={stopImpersonationAction}>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 rounded-full bg-violet-500 px-4 py-1.5 text-xs font-semibold text-zinc-950 transition-colors hover:bg-violet-400"
+            >
+              Stop meekijken
+            </button>
+          </form>
         </div>
       </div>
     </div>

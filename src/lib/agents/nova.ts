@@ -1,8 +1,13 @@
-import OpenAI from "openai";
-import type { ChatCompletionContentPart } from "openai/resources/chat/completions";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiConfig } from "@/app/dashboard/instellingen/settings";
 import type { NovaOfferteDraft } from "@/lib/agents/types";
 import type { OfferteLijnInput } from "@/lib/offertes";
+import { runChatCompletion } from "@/lib/ai/client";
+import { llmIsConfigured } from "@/lib/ai/config";
+import {
+  assertAiCreditsAvailable,
+  deductAiCredits,
+} from "@/lib/ai/credits";
 
 const TONE_HINT: Record<AiConfig["toon"], string> = {
   formeel: "Gebruik een formele, professionele toon.",
@@ -69,6 +74,9 @@ export async function generateNovaOfferteDraft(input: {
   ai: AiConfig;
   standaardBtw?: number;
   images?: string[];
+  supabase?: SupabaseClient;
+  companyId?: number;
+  userId?: string | null;
 }): Promise<{ draft?: NovaOfferteDraft; error?: string }> {
   const description = input.description.trim();
   if (!description) {
@@ -77,10 +85,29 @@ export async function generateNovaOfferteDraft(input: {
 
   const klant = input.klant?.trim() || "Klant";
   const btw = input.standaardBtw ?? 21;
-  const apiKey = process.env.OPENAI_API_KEY;
 
-  if (!apiKey) {
+  if (!llmIsConfigured()) {
     return { draft: fallbackDraft(description, klant, btw) };
+  }
+
+  if (input.supabase && input.companyId != null) {
+    const creditCheck = await assertAiCreditsAvailable(
+      input.supabase,
+      input.companyId,
+      "offerte_draft",
+    );
+    if (!creditCheck.ok) {
+      return { error: creditCheck.error, draft: fallbackDraft(description, klant, btw) };
+    }
+  }
+
+  const hasImages = Boolean(input.images && input.images.length > 0);
+  if (hasImages) {
+    return {
+      error:
+        "Afbeelding-analyse vereist OpenAI Vision. Gebruik tekstbeschrijving of voeg OPENAI_API_KEY toe.",
+      draft: fallbackDraft(description, klant, btw),
+    };
   }
 
   const agentName = input.ai.agentNaam.trim() || "Nova";
@@ -100,43 +127,36 @@ export async function generateNovaOfferteDraft(input: {
     .join("\n");
 
   try {
-    const client = new OpenAI({ apiKey });
-    const contentArray: ChatCompletionContentPart[] = [
-      {
-        type: "text",
-        text: `Klant: ${klant}\n\nWerkbeschrijving:\n${description}`,
-      },
-    ];
-
-    if (input.images && input.images.length > 0) {
-      input.images.forEach((img) => {
-        contentArray.push({
-          type: "image_url",
-          image_url: {
-            url: img,
-          },
-        });
-      });
-    }
-
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+    const { result, error } = await runChatCompletion({
       temperature: 0.4,
-      response_format: { type: "json_object" },
+      jsonMode: true,
       messages: [
         { role: "system", content: system },
         {
           role: "user",
-          content: contentArray,
+          content: `Klant: ${klant}\n\nWerkbeschrijving:\n${description}`,
         },
       ],
     });
 
-    const content = completion.choices[0]?.message?.content ?? "";
-    const draft = parseDraft(content, klant, btw);
+    if (error || !result) {
+      return { error: error ?? "AI-generatie mislukt.", draft: fallbackDraft(description, klant, btw) };
+    }
+
+    const draft = parseDraft(result.content, klant, btw);
     if (!draft) {
       return { draft: fallbackDraft(description, klant, btw) };
     }
+
+    if (input.supabase && input.companyId != null) {
+      await deductAiCredits(input.supabase, {
+        companyId: input.companyId,
+        userId: input.userId,
+        action: "offerte_draft",
+        metadata: { model: result.model, tokens: result.totalTokens },
+      });
+    }
+
     return { draft };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "AI-generatie mislukt.";

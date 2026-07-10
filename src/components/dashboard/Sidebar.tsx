@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChevronDown, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/components/ui/utils";
 import {
   groupHasActivePath,
   SIDEBAR_CEO_CONSOLE,
@@ -59,17 +60,17 @@ export default function Sidebar({
     parentOfActive = false,
   ) {
     const available = itemIsAvailable(item);
-    const className = `group relative flex items-center gap-2.5 rounded-xl py-2 text-sm transition-all duration-200 ${
-      isChild ? "px-2 text-[13px]" : "px-2.5"
-    } ${
+    const className = cn(
+      "group relative flex items-center gap-2.5 rounded-xl py-2.5 text-sm font-medium transition-all duration-200",
+      isChild ? "px-2.5 text-[13px]" : "px-3",
       !available
         ? "cursor-default text-zinc-600 hover:bg-transparent"
         : active
-          ? "bg-sky-500/10 text-sky-200"
+          ? "bg-sky-500/15 text-sky-200"
           : parentOfActive
             ? "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-100"
-            : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
-    }`;
+            : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100",
+    );
 
     const inner = (
       <>

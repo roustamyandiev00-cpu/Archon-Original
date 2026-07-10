@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from "react";
-import { cn } from "@/components/dashboard/admin/ui/utils";
+import { cn } from "@/components/ui/utils";
 
 const variants = {
   default: "border-white/10 bg-white/5 text-zinc-300",

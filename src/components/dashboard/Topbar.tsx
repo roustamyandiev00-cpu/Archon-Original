@@ -15,6 +15,13 @@ import {
   LineChart,
 } from "lucide-react";
 import { BrandLockup } from "@/components/BrandLogo";
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import ThemeToggle from "@/components/dashboard/ThemeToggle";
 import AgentChatTopbarButton from "@/components/dashboard/agent-chat/AgentChatTopbarButton";
 import { usePendingApprovals } from "@/components/dashboard/PendingApprovalsProvider";
@@ -55,7 +62,6 @@ export default function Topbar({
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [observeOpen, setObserveOpen] = useState(false);
   const observeRef = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState("");
   const [syncedAgo, setSyncedAgo] = useState("nu");
 
   const settingsActive = pathname.startsWith("/dashboard/instellingen");
@@ -99,10 +105,6 @@ export default function Topbar({
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [observeOpen]);
-
-  const filtered = quickLinks.filter((l) =>
-    l.label.toLowerCase().includes(query.toLowerCase()),
-  );
 
   const liveNotifications = [
     ...pendingItems.slice(0, 6).map((item) => ({
@@ -303,39 +305,37 @@ export default function Topbar({
             aria-label="Zoeken in dashboard"
             className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl"
           >
-            <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-              <Search size={16} className="text-zinc-500" />
-              <input
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Zoek een pagina…"
-                className="flex-1 bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
-              />
-              <button
-                type="button"
-                onClick={() => setSearchOpen(false)}
-                className="text-xs text-zinc-500 hover:text-zinc-300"
-              >
-                Esc
-              </button>
-            </div>
-            <div className="max-h-72 overflow-y-auto p-2">
-              {filtered.map((link) => (
+            <Command>
+              <div className="flex items-center border-b border-zinc-700/45 pr-3">
+                <div className="flex-1">
+                  <CommandInput placeholder="Zoek een pagina…" />
+                </div>
                 <button
-                  key={link.href}
                   type="button"
-                  onClick={() => {
-                    setSearchOpen(false);
-                    router.push(link.href);
-                  }}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-zinc-200 transition-colors hover:bg-white/5"
+                  onClick={() => setSearchOpen(false)}
+                  className="text-xs text-zinc-500 hover:text-zinc-300"
                 >
-                  {link.label}
-                  <ArrowHint />
+                  Esc
                 </button>
-              ))}
-            </div>
+              </div>
+              <CommandList>
+                {quickLinks.map((link) => (
+                  <CommandItem
+                    key={link.href}
+                    value={link.label}
+                    onSelect={() => {
+                      setSearchOpen(false);
+                      router.push(link.href);
+                    }}
+                    className="justify-between"
+                  >
+                    {link.label}
+                    <ArrowHint />
+                  </CommandItem>
+                ))}
+                <CommandEmpty>Geen pagina gevonden.</CommandEmpty>
+              </CommandList>
+            </Command>
           </div>
         </div>
       )}

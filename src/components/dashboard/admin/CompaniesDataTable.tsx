@@ -33,17 +33,17 @@ import {
   type CompanyStatus,
   type ManagedCompany,
 } from "@/components/dashboard/admin/companies-data";
-import { Badge, type BadgeVariant } from "@/components/dashboard/admin/ui/badge";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/dashboard/admin/ui/card";
-import { Button } from "@/components/dashboard/admin/ui/button";
-import { Input } from "@/components/dashboard/admin/ui/input";
-import { Select } from "@/components/dashboard/admin/ui/select";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -51,7 +51,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/dashboard/admin/ui/table";
+} from "@/components/ui/table";
 
 const pageSize = 8;
 

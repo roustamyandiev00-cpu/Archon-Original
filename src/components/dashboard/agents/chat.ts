@@ -1,9 +1,14 @@
-import OpenAI from "openai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiConfig } from "@/app/dashboard/instellingen/settings";
 import type { CustomAgent } from "@/components/dashboard/agents/config";
 import { CAPABILITY_OPTIONS } from "@/components/dashboard/agents/config";
 import { fetchRetrievalContext } from "@/components/dashboard/agents/memory";
+import { runChatCompletion } from "@/lib/ai/client";
+import { llmIsConfigured } from "@/lib/ai/config";
+import {
+  assertAiCreditsAvailable,
+  deductAiCredits,
+} from "@/lib/ai/credits";
 
 export type AgentChatTurn = {
   role: "user" | "agent";
@@ -136,11 +141,23 @@ export async function generateAgentChatReply(input: {
 }): Promise<{
   reply?: AgentChatReply;
   useFallback?: boolean;
-  fallbackReason?: "no_api_key" | "error";
+  fallbackReason?: "no_api_key" | "no_credits" | "error";
   error?: string;
 }> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return { useFallback: true, fallbackReason: "no_api_key" };
+  if (!llmIsConfigured()) return { useFallback: true, fallbackReason: "no_api_key" };
+
+  const creditCheck = await assertAiCreditsAvailable(
+    input.supabase,
+    input.companyId,
+    "chat",
+  );
+  if (!creditCheck.ok) {
+    return {
+      useFallback: true,
+      fallbackReason: "no_credits",
+      error: creditCheck.error,
+    };
+  }
 
   const trimmed = input.message.trim();
   if (!trimmed) return { error: "Leeg bericht." };
@@ -184,11 +201,9 @@ export async function generateAgentChatReply(input: {
     .join("\n");
 
   try {
-    const client = new OpenAI({ apiKey });
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+    const { result, error } = await runChatCompletion({
       temperature: 0.5,
-      response_format: { type: "json_object" },
+      jsonMode: true,
       messages: [
         { role: "system", content: system },
         {
@@ -203,9 +218,24 @@ export async function generateAgentChatReply(input: {
       ],
     });
 
-    const content = completion.choices[0]?.message?.content ?? "";
-    const reply = parseReply(content);
+    if (error || !result) {
+      return { useFallback: true, fallbackReason: "error", error: error ?? "Leeg antwoord." };
+    }
+
+    const reply = parseReply(result.content);
     if (!reply) return { useFallback: true, fallbackReason: "error" };
+
+    await deductAiCredits(input.supabase, {
+      companyId: input.companyId,
+      userId: input.userId,
+      action: "chat",
+      metadata: {
+        model: result.model,
+        provider: result.provider,
+        tokens: result.totalTokens,
+      },
+    });
+
     return { reply };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "AI-chat mislukt.";

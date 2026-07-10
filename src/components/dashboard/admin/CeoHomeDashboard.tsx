@@ -29,14 +29,14 @@ import {
   statusLabel,
   type KpiMetric,
 } from "@/components/dashboard/admin/ceo-demo-data";
-import { Badge } from "@/components/dashboard/admin/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/dashboard/admin/ui/card";
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -44,7 +44,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/dashboard/admin/ui/table";
+} from "@/components/ui/table";
 import { DemoBadge } from "@/components/dashboard/mission";
 import type { CeoDashboardData } from "@/components/dashboard/admin/ceo-demo-data";
 

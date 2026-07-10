@@ -69,6 +69,9 @@ export async function requestNovaOfferte(input: {
     ai,
     standaardBtw: extras.standaardBtw,
     images: input.images,
+    supabase,
+    companyId,
+    userId: user.id,
   });
 
   if (!draft) {

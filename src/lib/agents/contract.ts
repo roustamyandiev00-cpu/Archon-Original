@@ -1,5 +1,11 @@
-import OpenAI from "openai";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiConfig } from "@/app/dashboard/instellingen/settings";
+import { runChatCompletion } from "@/lib/ai/client";
+import { llmIsConfigured } from "@/lib/ai/config";
+import {
+  assertAiCreditsAvailable,
+  deductAiCredits,
+} from "@/lib/ai/credits";
 
 export type ContractSection = {
   heading: string;
@@ -115,12 +121,25 @@ function parseDraft(raw: string): SamenwerkingContractDraft | null {
 export async function generateSamenwerkingContractDraft(input: {
   context: ContractContext;
   ai: AiConfig;
+  supabase?: SupabaseClient;
+  companyId?: number;
+  userId?: string | null;
 }): Promise<{ draft?: SamenwerkingContractDraft; error?: string }> {
-  const apiKey = process.env.OPENAI_API_KEY;
   const ctx = input.context;
 
-  if (!apiKey) {
+  if (!llmIsConfigured()) {
     return { draft: fallbackDraft(ctx) };
+  }
+
+  if (input.supabase && input.companyId != null) {
+    const creditCheck = await assertAiCreditsAvailable(
+      input.supabase,
+      input.companyId,
+      "contract_draft",
+    );
+    if (!creditCheck.ok) {
+      return { error: creditCheck.error, draft: fallbackDraft(ctx) };
+    }
   }
 
   const agentName = input.ai.agentNaam.trim() || "Nova";
@@ -154,19 +173,30 @@ export async function generateSamenwerkingContractDraft(input: {
     .join("\n");
 
   try {
-    const client = new OpenAI({ apiKey });
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+    const { result, error } = await runChatCompletion({
       temperature: 0.35,
-      response_format: { type: "json_object" },
+      jsonMode: true,
       messages: [
         { role: "system", content: system },
         { role: "user", content: userContent },
       ],
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "";
-    const draft = parseDraft(raw) ?? fallbackDraft(ctx);
+    if (error || !result) {
+      return { draft: fallbackDraft(ctx) };
+    }
+
+    const draft = parseDraft(result.content) ?? fallbackDraft(ctx);
+
+    if (input.supabase && input.companyId != null) {
+      await deductAiCredits(input.supabase, {
+        companyId: input.companyId,
+        userId: input.userId,
+        action: "contract_draft",
+        metadata: { model: result.model, tokens: result.totalTokens },
+      });
+    }
+
     return { draft };
   } catch (err) {
     console.error("generateSamenwerkingContractDraft:", err);

@@ -12,13 +12,13 @@ import FacturenDataTable, {
   type FactuurListItem,
 } from "@/components/dashboard/facturen/FacturenDataTable";
 import FacturenSectionNav from "@/components/dashboard/facturen/FacturenSectionNav";
-import { Badge } from "@/components/dashboard/admin/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/dashboard/admin/ui/card";
+} from "@/components/ui/card";
 import { formatEuro } from "@/lib/offertes";
 
 export default function FacturenListView({

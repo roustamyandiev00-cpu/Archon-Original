@@ -35,22 +35,48 @@ async function loadTrialStatus(
   return computeTrialStatus(data?.created_at, data?.subscription_status);
 }
 
+async function loadImpersonatedCompanyName(
+  supabase: Awaited<ReturnType<typeof getCompanyContext>>["supabase"],
+  companyId: number,
+): Promise<string> {
+  const { data } = await supabase
+    .from("bedrijven")
+    .select("naam")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  return data?.naam ?? `Bedrijf #${companyId}`;
+}
+
 export const getDashboardContext = cache(async function getDashboardContext() {
   const previewCookie = await isPreviewMode();
   const base = await getCompanyContext();
 
   if (base.user) {
+    if (base.impersonating && base.companyId) {
+      const impersonatedCompanyName = await loadImpersonatedCompanyName(
+        base.supabase,
+        base.companyId,
+      );
+      return {
+        ...base,
+        isPreviewMode: false,
+        trial: null,
+        impersonatedCompanyName,
+      };
+    }
+
     const trial = base.companyId
       ? await loadTrialStatus(base.supabase, base.companyId)
       : null;
-    return { ...base, isPreviewMode: false, trial };
+    return { ...base, isPreviewMode: false, trial, impersonatedCompanyName: null };
   }
 
   if (previewCookie) {
-    return { ...base, isPreviewMode: true, trial: null };
+    return { ...base, isPreviewMode: true, trial: null, impersonatedCompanyName: null };
   }
 
-  return { ...base, isPreviewMode: false, trial: null };
+  return { ...base, isPreviewMode: false, trial: null, impersonatedCompanyName: null };
 });
 
 type WriteAccessError = { error: string };
@@ -63,6 +89,13 @@ type WriteAccessOk = {
 
 export async function requireWriteAccess(): Promise<WriteAccessError | WriteAccessOk> {
   const ctx = await getCompanyContext();
+
+  if (ctx.impersonating) {
+    return {
+      error:
+        "Alleen-lezen weergave: wijzigingen zijn uitgeschakeld tijdens 'Bekijk als bedrijf'.",
+    };
+  }
 
   if (!ctx.user && (await isPreviewMode())) {
     return {

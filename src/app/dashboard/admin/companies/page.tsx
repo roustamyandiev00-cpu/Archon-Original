@@ -11,14 +11,14 @@ import {
   getCompaniesStats,
 } from "@/lib/admin/platform-data";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
-import { Badge } from "@/components/dashboard/admin/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/dashboard/admin/ui/card";
+} from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "Companies — CEO Dashboard — ArchonPro",

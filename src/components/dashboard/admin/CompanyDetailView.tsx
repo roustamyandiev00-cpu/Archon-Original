@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
@@ -22,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import CompanyAiUsageChart from "@/components/dashboard/admin/CompanyAiUsageChart";
+import { actAsCompanyAction } from "@/app/dashboard/admin/impersonation-actions";
 import {
   formatCurrency,
   formatDate,
@@ -46,15 +46,15 @@ import type {
   SecurityEvent,
   SystemNote,
 } from "@/components/dashboard/admin/company-detail-data";
-import { Badge, type BadgeVariant } from "@/components/dashboard/admin/ui/badge";
-import { Button } from "@/components/dashboard/admin/ui/button";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/dashboard/admin/ui/card";
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -62,8 +62,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/dashboard/admin/ui/table";
-import { cn } from "@/components/dashboard/admin/ui/utils";
+} from "@/components/ui/table";
+import { cn } from "@/components/ui/utils";
 
 type TabId =
   | "overview"
@@ -135,7 +135,24 @@ export default function CompanyDetailView({
   detail: CompanyDetail;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [viewAsError, setViewAsError] = useState<string | null>(null);
+  const [viewAsPending, setViewAsPending] = useState(false);
   const { company } = detail;
+
+  async function handleViewAsCompany() {
+    setViewAsError(null);
+    setViewAsPending(true);
+    try {
+      await actAsCompanyAction(Number(company.id));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Onbekende fout.";
+      if (!message.includes("NEXT_REDIRECT")) {
+        setViewAsError(message);
+      }
+    } finally {
+      setViewAsPending(false);
+    }
+  }
 
   const headerMetrics = useMemo(
     () => [
@@ -216,10 +233,10 @@ export default function CompanyDetailView({
             </div>
 
             <div className="flex flex-wrap gap-2 xl:justify-end">
-              <ActionLink href="/dashboard">
+              <ActionButton onClick={handleViewAsCompany} disabled={viewAsPending}>
                 <ExternalLink size={15} />
-                Open Company Dashboard
-              </ActionLink>
+                {viewAsPending ? "Bezig..." : "Bekijk als dit bedrijf"}
+              </ActionButton>
               <ActionButton onClick={() => setActiveTab("billing")}>
                 <CreditCard size={15} />
                 View Billing
@@ -238,6 +255,11 @@ export default function CompanyDetailView({
               </Button>
             </div>
           </div>
+          {viewAsError && (
+            <p className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+              {viewAsError}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 divide-y divide-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3 xl:grid-cols-6">
@@ -871,27 +893,19 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 function ActionButton({
   children,
   onClick,
+  disabled,
 }: {
   children: ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
-    <Button type="button" variant="secondary" onClick={onClick}>
+    <Button type="button" variant="secondary" onClick={onClick} disabled={disabled}>
       {children}
     </Button>
   );
 }
 
-function ActionLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/15 px-3 text-sm font-medium text-sky-100 transition-colors hover:bg-sky-500/20"
-    >
-      {children}
-    </Link>
-  );
-}
 
 function eventIcon(type: ActivityEvent["type"]) {
   const icons: Record<ActivityEvent["type"], ReactNode> = {

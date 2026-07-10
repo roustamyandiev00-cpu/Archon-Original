@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft, Shield } from "lucide-react";
 import { adminNavItems } from "@/components/dashboard/admin/admin-nav";
-import { cn } from "@/components/dashboard/admin/ui/utils";
+import { cn } from "@/components/ui/utils";
 
 export default function AdminSidebar() {
   const pathname = usePathname();

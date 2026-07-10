@@ -1,5 +1,5 @@
 import type { SelectHTMLAttributes } from "react";
-import { cn } from "@/components/dashboard/admin/ui/utils";
+import { cn } from "@/components/ui/utils";
 
 export function Select({
   className,

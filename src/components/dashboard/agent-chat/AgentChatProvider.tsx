@@ -504,7 +504,7 @@ export function AgentChatProvider({
                       {
                         id: `hint-${Date.now()}`,
                         role: "agent",
-                        text: "⚠️ **Echte AI is nog niet actief** — `OPENAI_API_KEY` ontbreekt in je omgeving. Ik antwoord met basisfuncties (navigatie, geheugen, goedkeuringen). Voeg de key toe in `.env.local` en herstart de dev-server.",
+                        text: "⚠️ **Echte AI is nog niet actief** — `GROQ_API_KEY` ontbreekt in je omgeving (of fallback: `OPENAI_API_KEY`). Ik antwoord met basisfuncties (navigatie, geheugen, goedkeuringen). Voeg de key toe in `.env.local` en herstart de dev-server.",
                         time: "Nu",
                       },
                     ],
@@ -513,6 +513,32 @@ export function AgentChatProvider({
               } catch {
                 /* negeer */
               }
+            }
+
+            if (
+              "useFallback" in llm &&
+              llm.useFallback &&
+              llm.fallbackReason === "no_credits"
+            ) {
+              setHistoryByAgent((prev) => ({
+                ...prev,
+                [agent.id]: [
+                  ...(prev[agent.id] ?? starterFor(agent)),
+                  {
+                    id: `credits-${Date.now()}`,
+                    role: "agent",
+                    text:
+                      llm.error ??
+                      "⚠️ **Onvoldoende AI-tegoed.** Koop extra credits zodra betaling live is, of vraag een admin om tegoed toe te voegen.",
+                    time: "Nu",
+                  },
+                ],
+              }));
+              setView((current) => {
+                if (current !== "open") setHasUnread(true);
+                return current;
+              });
+              return;
             }
           }
 

@@ -18,7 +18,7 @@ import {
   type SamenwerkingContractRow,
 } from "@/lib/werkposts/contracts";
 
-const CONTRACT_BUCKET = "werkpost-media";
+const CONTRACT_BUCKET = "company-private";
 
 export type { SamenwerkingContractRow };
 
@@ -178,6 +178,9 @@ export async function generateSamenwerkingContract(
   const ai = await loadMergedAiConfig(supabase, companyId, user.id);
   const { draft, error: aiError } = await generateSamenwerkingContractDraft({
     ai,
+    supabase,
+    companyId,
+    userId: user.id,
     context: {
       partyAName: ctx.partyAName,
       partyBName: ctx.partyBName,

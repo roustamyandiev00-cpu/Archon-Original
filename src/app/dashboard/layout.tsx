@@ -10,7 +10,11 @@ import AgentChatWidget from "@/components/dashboard/agent-chat/AgentChatWidget";
 import { AgentNavigationProvider } from "@/components/dashboard/agent-navigation/AgentNavigationProvider";
 import { ProactiveAgentProvider } from "@/components/dashboard/ProactiveAgentProvider";
 import { PendingApprovalsProvider } from "@/components/dashboard/PendingApprovalsProvider";
-import { PreviewBanner, TrialBanner } from "@/components/dashboard/AccessBanners";
+import {
+  ImpersonationBanner,
+  PreviewBanner,
+  TrialBanner,
+} from "@/components/dashboard/AccessBanners";
 import DashboardSidePreview from "@/components/dashboard/DashboardSidePreview";
 import {
   DashboardMain,
@@ -37,11 +41,14 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const ctx = await getDashboardContext();
-  const { isPreviewMode, trial, supabase, companyId, user } = ctx;
-  const showTrialBanner = !isPreviewMode && trial && trial.active && !trial.isPaid;
-  const showSidePreview = Boolean(user) && !isPreviewMode;
-  const topbarOffset = isPreviewMode || showTrialBanner ? "top-28" : "top-14";
-  const mainTop = isPreviewMode || showTrialBanner ? "pt-28" : "pt-14";
+  const { isPreviewMode, trial, supabase, companyId, user, impersonating, impersonatedCompanyName } = ctx;
+  const showTrialBanner =
+    !isPreviewMode && !impersonating && trial && trial.active && !trial.isPaid;
+  const showImpersonationBanner = impersonating && Boolean(impersonatedCompanyName);
+  const showSidePreview = Boolean(user) && !isPreviewMode && !impersonating;
+  const showExtraBanner = isPreviewMode || showTrialBanner || showImpersonationBanner;
+  const topbarOffset = showExtraBanner ? "top-28" : "top-14";
+  const mainTop = showExtraBanner ? "pt-28" : "pt-14";
   const topbarSummary = await loadTopbarSummary(supabase, companyId);
   const userAgentName = user
     ? await loadUserAgentName(supabase, user.id)
@@ -71,6 +78,9 @@ export default async function DashboardLayout({
       <Topbar initial={topbarSummary} />
       {isPreviewMode && <PreviewBanner />}
       {showTrialBanner && <TrialBanner trial={trial} />}
+      {showImpersonationBanner && (
+        <ImpersonationBanner companyName={impersonatedCompanyName!} />
+      )}
       <DashboardMain
         id="dashboard-main"
         tabIndex={-1}

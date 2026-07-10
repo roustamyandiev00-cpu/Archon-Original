@@ -7,7 +7,7 @@ import FactuurDocumentPreview, {
   FACTUUR_PAPER_MAX_SCALE,
   FACTUUR_PAPER_WIDTH,
 } from "@/components/dashboard/facturen/FactuurDocumentPreview";
-import { Button } from "@/components/dashboard/admin/ui/button";
+import { Button } from "@/components/ui/button";
 import type { FactuurDocumentType } from "@/lib/facturen";
 import type { BedrijfLite } from "@/lib/documentData";
 import type { OfferteLijnInput } from "@/lib/offertes";
@@ -55,11 +55,23 @@ export default function FactuurInvoicePreview(props: Props) {
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-200/80 px-4 py-4 dark:border-white/10">
         <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">Preview</h2>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" size="sm">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => window.print()}
+          >
             <Printer size={14} />
             Afdrukken
           </Button>
-          <Button type="button" variant="primary" size="sm" className="border-zinc-200 bg-zinc-100 text-zinc-950 hover:bg-white dark:border-white/20 dark:bg-zinc-100 dark:text-zinc-950">
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            disabled
+            title="Beschikbaar zodra de factuur is opgeslagen"
+            className="border-zinc-200 bg-zinc-100 text-zinc-950 hover:bg-white dark:border-white/20 dark:bg-zinc-100 dark:text-zinc-950"
+          >
             <Download size={14} />
             PDF downloaden
           </Button>

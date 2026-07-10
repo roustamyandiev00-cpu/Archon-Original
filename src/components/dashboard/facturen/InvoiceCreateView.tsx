@@ -15,10 +15,11 @@ import {
 import FactuurInvoicePreview from "@/components/dashboard/facturen/FactuurInvoicePreview";
 import FacturenSectionNav from "@/components/dashboard/facturen/FacturenSectionNav";
 import type { FactuurDocumentContext } from "@/components/dashboard/facturen/FactuurForm";
-import { Badge } from "@/components/dashboard/admin/ui/badge";
-import { Button } from "@/components/dashboard/admin/ui/button";
-import { Input } from "@/components/dashboard/admin/ui/input";
-import { Select } from "@/components/dashboard/admin/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -26,7 +27,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/dashboard/admin/ui/table";
+} from "@/components/ui/table";
 import { formatEuro, type OfferteLijnInput } from "@/lib/offertes";
 import type { FactuurDocumentType } from "@/lib/facturen";
 import type { BedrijfLite } from "@/lib/documentData";
@@ -224,19 +225,19 @@ export default function InvoiceCreateView(props: Props) {
         </div>
 
         {customers.length > 0 ? (
-          <Select
+          <Combobox
+            className="mb-3"
             value={customerId}
-            onChange={(e) => onCustomerIdChange(e.target.value)}
-            className="mb-3 h-9"
-          >
-            <option value="">— Kies een klant —</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.company_name ? ` (${c.company_name})` : ""}
-              </option>
-            ))}
-          </Select>
+            onChange={onCustomerIdChange}
+            placeholder="— Kies een klant —"
+            searchPlaceholder="Zoek op naam of bedrijf..."
+            emptyText="Geen klant gevonden."
+            options={customers.map((c) => ({
+              value: String(c.id),
+              label: c.company_name ? `${c.name} (${c.company_name})` : c.name,
+              description: c.email ?? undefined,
+            }))}
+          />
         ) : null}
 
         {(customers.length === 0 || customerId === "") && (

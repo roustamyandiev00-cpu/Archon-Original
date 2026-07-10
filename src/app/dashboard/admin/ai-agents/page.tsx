@@ -3,14 +3,14 @@ import type { Metadata } from "next";
 import { Bot, CheckCircle2, Clock3, Zap } from "lucide-react";
 import { fetchAiFleetOverview } from "@/lib/admin/platform-data";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
-import { Badge } from "@/components/dashboard/admin/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/dashboard/admin/ui/card";
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -18,7 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/dashboard/admin/ui/table";
+} from "@/components/ui/table";
 
 export const metadata: Metadata = {
   title: "AI Agents — CEO Dashboard — ArchonPro",

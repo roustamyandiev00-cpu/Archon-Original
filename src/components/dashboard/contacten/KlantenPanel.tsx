@@ -6,8 +6,8 @@ import { Download, Plus, SlidersHorizontal } from "lucide-react";
 import ContactenDataTable from "@/components/dashboard/contacten/ContactenDataTable";
 import KlantForm, { type KlantRecord } from "@/components/dashboard/contacten/KlantForm";
 import { deleteKlant } from "@/app/dashboard/contacten/actions";
-import { Badge } from "@/components/dashboard/admin/ui/badge";
-import { Button } from "@/components/dashboard/admin/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function KlantenPanel({ klanten }: { klanten: KlantRecord[] }) {
   const router = useRouter();
