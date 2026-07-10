@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageHero, { type HeroVariant } from "@/components/PageHero";
+import JsonLd from "@/components/seo/JsonLd";
 import { createClient } from "@/lib/supabase/server";
+import { articleJsonLd, buildPageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { BookOpen } from "lucide-react";
 
@@ -21,6 +24,48 @@ const variantByType: Record<string, HeroVariant> = {
   update: "mesh",
 };
 
+const fallbackAfbeeldingen: Record<string, string> = {
+  "sneller-offertes-met-ai": "/blog/sneller-offertes-met-ai.png",
+  "e-facturatie-peppol": "/blog/e-facturatie-peppol.png",
+  "5-tips-snellere-betalingen": "/blog/5-tips-snellere-betalingen.png",
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+  const { data: article } = await supabase
+    .from("artikelen")
+    .select("titel, samenvatting, afbeelding_url, thumbnail_url")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (!article) {
+    return { title: "Artikel niet gevonden | ArchonPro" };
+  }
+
+  const image =
+    article.afbeelding_url ??
+    article.thumbnail_url ??
+    fallbackAfbeeldingen[slug] ??
+    undefined;
+
+  return buildPageMetadata({
+    title: `${article.titel} | ArchonPro Blog`,
+    description:
+      article.samenvatting ??
+      "Tips en nieuws over CRM, facturatie en Peppol voor Belgische bouwbedrijven.",
+    path: `/blog/${slug}`,
+    type: "article",
+    ogImage: image,
+    keywords: ["bouw CRM", "facturatie", "Peppol", "ArchonPro blog"],
+  });
+}
+
 export default async function ArticlePage({
   params,
 }: {
@@ -31,7 +76,9 @@ export default async function ArticlePage({
 
   const { data: article } = await supabase
     .from("artikelen")
-    .select("titel, samenvatting, inhoud, type, auteur, published_at")
+    .select(
+      "titel, samenvatting, inhoud, type, auteur, published_at, afbeelding_url, thumbnail_url",
+    )
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();
@@ -47,8 +94,24 @@ export default async function ArticlePage({
     .filter(Boolean)
     .join(" · ");
 
+  const image =
+    article.afbeelding_url ??
+    article.thumbnail_url ??
+    fallbackAfbeeldingen[slug] ??
+    null;
+
   return (
     <>
+      <JsonLd
+        data={articleJsonLd({
+          title: article.titel,
+          description: article.samenvatting ?? "",
+          path: `/blog/${slug}`,
+          datePublished: article.published_at,
+          author: article.auteur,
+          image,
+        })}
+      />
       <Navbar />
       <main>
         <PageHero
@@ -67,9 +130,9 @@ export default async function ArticlePage({
 
         {article.inhoud && (
           <section className="mx-auto max-w-3xl px-6 py-16">
-            <div className="whitespace-pre-line text-base leading-8 text-zinc-400">
+            <article className="whitespace-pre-line text-base leading-8 text-zinc-400">
               {article.inhoud}
-            </div>
+            </article>
           </section>
         )}
       </main>

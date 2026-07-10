@@ -8,15 +8,16 @@ const ROUTES = [
   "/login",
   "/prijzen",
   "/functies",
+  "/functies/peppol",
+  "/functies/facturen",
+  "/functies/schatting",
+  "/functies/ai-metgezel",
+  "/functies/integraties",
   "/blog",
   "/gemeenschap",
   "/over",
   "/bouwnetwerk",
-  "/functies/ai-metgezel",
-  "/functies/schatting",
-  "/functies/facturen",
-  "/functies/peppol",
-  "/functies/integraties",
+  "/contact",
 ];
 
 /** Laadt veelgebruikte pagina's alvast in voor snellere knoppen. */

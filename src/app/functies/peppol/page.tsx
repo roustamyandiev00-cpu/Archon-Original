@@ -18,12 +18,23 @@ import Navbar from "@/components/Navbar";
 import PageHero from "@/components/PageHero";
 import Faq from "@/components/Faq";
 import Footer from "@/components/Footer";
+import JsonLd from "@/components/seo/JsonLd";
+import { buildPageMetadata, faqJsonLd } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Peppol & E-facturatie — Verplicht in België sinds 2026 | ArchonPro",
   description:
     "Verstuur en ontvang e-facturen via het Peppol-netwerk. ArchonPro koppelt met het Billit Access Point — UBL BIS Billing 3.0, Belgische kopersreferentie en Peppol First.",
-};
+  keywords: [
+    "Peppol België",
+    "e-facturatie bouw",
+    "Billit access point",
+    "UBL BIS Billing 3.0",
+    "e-facturatie verplicht 2026",
+    "PEPPOL CRM",
+  ],
+  path: "/functies/peppol",
+});
 
 const faqItems = [
   {
@@ -133,6 +144,7 @@ const integrationOptions = [
 export default function PeppolPage() {
   return (
     <>
+      <JsonLd data={faqJsonLd(faqItems)} />
       <Navbar />
       <main>
         <Hero />

@@ -48,6 +48,10 @@ next-env.d.ts
 .firecrawl/
 supabase/.temp/
 
+# python script cache
+__pycache__/
+*.pyc
+
 # duplicate lockfile (project uses pnpm)
 package-lock.json
 

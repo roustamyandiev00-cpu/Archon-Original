@@ -6,12 +6,15 @@ import Features from "@/components/Features";
 import Realtime from "@/components/Realtime";
 import Genius from "@/components/Genius";
 import Footer from "@/components/Footer";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Functies — Alles voor bouwbedrijven | ArchonPro",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Functies — CRM voor bouwbedrijven | ArchonPro",
   description:
-    "Offertes, facturen, projectopvolging, AI-inbox en automatisering — alles wat je nodig hebt in één CRM-werkruimte voor de bouw.",
-};
+    "Offertes, facturen, Peppol e-facturatie, projectopvolging, AI-inbox en automatisering — alles wat Belgische bouwbedrijven nodig hebben in één CRM-werkruimte.",
+  path: "/functies",
+  keywords: ["CRM functies bouw", "bouwsoftware features", "offertes facturen"],
+});
 
 export default function FunctiesPage() {
   return (

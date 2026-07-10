@@ -29,10 +29,16 @@ import {
   DashboardTourProvider,
   DashboardTourUi,
 } from "@/components/onboarding/DashboardTourShell";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Dashboard — ArchonPro",
-  description: "Mission control voor je offertes, facturen, leads en AI-agents.",
+  ...buildPageMetadata({
+    title: "Dashboard — ArchonPro",
+    description: "Mission control voor je offertes, facturen, leads en AI-agents.",
+    path: "/dashboard",
+    noIndex: true,
+  }),
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export default async function DashboardLayout({

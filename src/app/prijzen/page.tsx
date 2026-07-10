@@ -4,12 +4,15 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
 import Pricing from "@/components/Pricing";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Prijzen — Pakketten voor vakmensen | ArchonPro",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Prijzen — CRM voor bouwbedrijven | ArchonPro",
   description:
-    "Kies een ArchonPro-pakket dat past bij je bedrijf: Starter, Pro of Business. Van offertes en facturen tot projectopvolging, klantenportaal en slimme automatisering. 14 dagen gratis proberen.",
-};
+    "Transparante prijzen voor Belgische bouw-KMO's. Starter, Professional en Business — inclusief Peppol e-facturatie. 14 dagen gratis proberen, maandelijks opzegbaar.",
+  path: "/prijzen",
+  keywords: ["CRM prijzen bouw", "facturatie software prijs", "Peppol kosten"],
+});
 
 export default function PrijzenPage() {
   return (

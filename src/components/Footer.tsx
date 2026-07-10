@@ -7,6 +7,7 @@ const columns = [
     links: [
       { label: "Offertes", href: "/functies/schatting" },
       { label: "Facturen", href: "/functies/facturen" },
+      { label: "Peppol & E-facturen", href: "/functies/peppol" },
       { label: "Klanten", href: "/functies" },
       { label: "AI-agents", href: "/functies/ai-metgezel" },
     ],
