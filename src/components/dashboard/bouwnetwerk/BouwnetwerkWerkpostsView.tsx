@@ -1,11 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Eye,
+  ExternalLink,
   HardHat,
   MessageSquare,
   Plus,
 } from "lucide-react";
 import GlowCard from "@/components/dashboard/GlowCard";
+import WerkpostForm from "@/components/werkposts/WerkpostForm";
 import {
   formatDate,
   statusMeta,
@@ -20,12 +25,42 @@ export default function BouwnetwerkWerkpostsView({
   posts: WerkpostRow[];
   preview: boolean;
 }) {
+  const router = useRouter();
   const open = posts.filter((p) => p.status === "open").length;
   const inBehandeling = posts.filter((p) => p.status === "in_behandeling").length;
   const totaalReacties = posts.reduce((s, p) => s + (p.aantal_reacties ?? 0), 0);
 
   return (
     <div className="space-y-5">
+      {!preview && (
+        <div id="plaatsen-werkpost">
+          <GlowCard innerClassName="p-5 sm:p-6">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-zinc-100">
+                Werkpost plaatsen
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Zichtbaar op de publieke{" "}
+                <Link
+                  href="/bouwnetwerk"
+                  className="inline-flex items-center gap-0.5 font-medium text-sky-400 hover:text-sky-300"
+                >
+                  Bouwnetwerk-feed
+                  <ExternalLink size={12} />
+                </Link>
+                , net als op de community-pagina.
+              </p>
+            </div>
+          </div>
+          <WerkpostForm
+            embedded
+            onCreated={() => router.refresh()}
+          />
+          </GlowCard>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           { label: "Actieve posts", value: open, color: "text-emerald-400" },
@@ -72,12 +107,17 @@ export default function BouwnetwerkWerkpostsView({
                 </p>
               </div>
               {!preview && (
-                <Link
-                  href="/dashboard/werkposts/nieuw"
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById("plaatsen-werkpost")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
                   className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400"
                 >
                   <Plus size={16} /> Eerste werkpost plaatsen
-                </Link>
+                </button>
               )}
             </div>
           </div>

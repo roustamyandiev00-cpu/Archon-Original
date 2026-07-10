@@ -57,6 +57,9 @@ export async function updateSettings(input: SettingsInput) {
     },
     standaardBtw: num(input.standaardBtw, 21),
     agents: oldExtras.agents,
+    incasso: {
+      deurwaarderEmail: input.incasso.deurwaarderEmail.trim(),
+    },
   };
 
   const patch = {
@@ -86,6 +89,33 @@ export async function updateSettings(input: SettingsInput) {
     .eq("id", companyId);
 
   if (error) return { error: error.message };
+
+  const { data: existingEmailSettings } = await supabase
+    .from("factuur_email_instellingen")
+    .select("id")
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  const emailSettingsPatch = {
+    herinnering_actief: input.ai.betalingsherinneringen,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existingEmailSettings) {
+    await supabase
+      .from("factuur_email_instellingen")
+      .update(emailSettingsPatch)
+      .eq("bedrijf_id", companyId);
+  } else {
+    await supabase.from("factuur_email_instellingen").insert({
+      bedrijf_id: companyId,
+      herinnering_actief: input.ai.betalingsherinneringen,
+      herinnering_dagen_na: 7,
+      herinnering_herhaal_dagen: 7,
+      herinnering_max_aantal: 3,
+      betaallink_in_email: false,
+    });
+  }
 
   await syncCompanyLegalEntity(supabase, companyId);
 

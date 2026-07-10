@@ -4901,6 +4901,93 @@ export type Database = {
           },
         ]
       }
+      samenwerking_contracts: {
+        Row: {
+          ai_prompt: string | null
+          channel_id: string
+          created_at: string
+          created_by_company_id: number
+          draft_html: string
+          draft_json: Json
+          id: string
+          party_a_company_id: number
+          party_a_signed_at: string | null
+          party_a_signed_by: string | null
+          party_a_signer_name: string | null
+          party_b_company_id: number
+          party_b_signed_at: string | null
+          party_b_signed_by: string | null
+          party_b_signer_name: string | null
+          pdf_storage_path: string | null
+          status: string
+          titel: string
+          updated_at: string
+          werkpost_id: string | null
+          werkpost_reactie_id: string | null
+        }
+        Insert: {
+          ai_prompt?: string | null
+          channel_id: string
+          created_at?: string
+          created_by_company_id: number
+          draft_html: string
+          draft_json?: Json
+          id?: string
+          party_a_company_id: number
+          party_a_signed_at?: string | null
+          party_a_signed_by?: string | null
+          party_a_signer_name?: string | null
+          party_b_company_id: number
+          party_b_signed_at?: string | null
+          party_b_signed_by?: string | null
+          party_b_signer_name?: string | null
+          pdf_storage_path?: string | null
+          status?: string
+          titel: string
+          updated_at?: string
+          werkpost_id?: string | null
+          werkpost_reactie_id?: string | null
+        }
+        Update: {
+          ai_prompt?: string | null
+          channel_id?: string
+          created_at?: string
+          created_by_company_id?: number
+          draft_html?: string
+          draft_json?: Json
+          id?: string
+          party_a_company_id?: number
+          party_a_signed_at?: string | null
+          party_a_signed_by?: string | null
+          party_a_signer_name?: string | null
+          party_b_company_id?: number
+          party_b_signed_at?: string | null
+          party_b_signed_by?: string | null
+          party_b_signer_name?: string | null
+          pdf_storage_path?: string | null
+          status?: string
+          titel?: string
+          updated_at?: string
+          werkpost_id?: string | null
+          werkpost_reactie_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "samenwerking_contracts_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "bouwnetwerk_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samenwerking_contracts_werkpost_id_fkey"
+            columns: ["werkpost_id"]
+            isOneToOne: false
+            referencedRelation: "werkposts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       werkposts: {
         Row: {
           aantal_personen: number

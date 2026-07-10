@@ -73,7 +73,15 @@ export async function runProactiveAgentScan(): Promise<{
   const alerts: ProactiveAlert[] = [];
   let proposed = 0;
 
-  const [followUpOffertes, overdueFacturen, acceptedOffertes, facturenForOffertes] =
+  const { data: bedrijfRow } = await supabase
+    .from("bedrijven")
+    .select("ai_assistant")
+    .eq("id", companyId)
+    .maybeSingle();
+  const companyExtras = parseExtras(bedrijfRow?.ai_assistant ?? null);
+  const betalingsherinneringenEnabled = companyExtras.ai.betalingsherinneringen;
+
+  const [followUpOffertes, overdueFacturen, acceptedOffertes, facturenForOffertes, emailSettingsRes] =
     await Promise.all([
       supabase
         .from("offertes")
@@ -103,6 +111,15 @@ export async function runProactiveAgentScan(): Promise<{
         .select("offerte_id")
         .eq("bedrijf_id", companyId)
         .not("offerte_id", "is", null),
+      betalingsherinneringenEnabled
+        ? supabase
+            .from("factuur_email_instellingen")
+            .select(
+              "herinnering_actief, herinnering_dagen_na, herinnering_herhaal_dagen, herinnering_max_aantal",
+            )
+            .eq("bedrijf_id", companyId)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
   const invoicedOfferteIds = new Set(
@@ -158,6 +175,9 @@ export async function runProactiveAgentScan(): Promise<{
   }
 
   for (const factuur of overdueFacturen.data ?? []) {
+    if (!betalingsherinneringenEnabled) continue;
+    if (emailSettingsRes.data?.herinnering_actief === false) continue;
+
     const fingerprint = `factuur ${factuur.nummer}`;
     if (
       (await hasRecentLog(supabase, companyId, fingerprint)) ||
@@ -165,24 +185,6 @@ export async function runProactiveAgentScan(): Promise<{
     ) {
       continue;
     }
-
-    const emailSettingsRes = await supabase
-      .from("factuur_email_instellingen")
-      .select(
-        "herinnering_dagen_na, herinnering_herhaal_dagen, herinnering_max_aantal",
-      )
-      .eq("bedrijf_id", companyId)
-      .maybeSingle();
-
-    const { data: bedrijf } = await supabase
-      .from("bedrijven")
-      .select("ai_assistant")
-      .eq("id", companyId)
-      .maybeSingle();
-
-    const extras = parseExtras(bedrijf?.ai_assistant ?? null) as {
-      incasso?: { deurwaarderEmail?: string };
-    };
 
     const incassoSettings: IncassoEmailSettings = {
       herinneringDagenNa:
@@ -195,7 +197,7 @@ export async function runProactiveAgentScan(): Promise<{
         emailSettingsRes.data?.herinnering_max_aantal ??
         DEFAULT_INCASSO_SETTINGS.herinneringMaxAantal,
       deurwaarderEmail:
-        extras.incasso?.deurwaarderEmail?.trim() ||
+        companyExtras.incasso?.deurwaarderEmail?.trim() ||
         process.env.INCASSO_DEURWAARDER_EMAIL?.trim() ||
         null,
     };

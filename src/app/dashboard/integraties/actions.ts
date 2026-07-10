@@ -155,7 +155,7 @@ export async function connectIntegration(
       .eq("id", companyId);
   }
 
-  revalidatePath("/dashboard/integraties");
+  revalidatePath("/dashboard/instellingen");
   revalidatePath("/dashboard/instellingen");
   return { ok: true, status };
 }
@@ -182,7 +182,7 @@ export async function disconnectIntegration(provider: string) {
 
   if (error) return { error: error.message };
 
-  revalidatePath("/dashboard/integraties");
+  revalidatePath("/dashboard/instellingen");
   revalidatePath("/dashboard/instellingen");
   return { ok: true };
 }
@@ -325,7 +325,7 @@ export async function sendSlackTestNotification() {
     .eq("bedrijf_id", companyId)
     .eq("provider", "slack");
 
-  revalidatePath("/dashboard/integraties");
+  revalidatePath("/dashboard/instellingen");
   revalidatePath("/dashboard/instellingen");
   return { ok: true };
 }

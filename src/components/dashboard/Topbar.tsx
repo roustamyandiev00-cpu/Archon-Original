@@ -1,23 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Search, Bell, Radio, Activity, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Search,
+  Bell,
+  Radio,
+  Activity,
+  X,
+  Settings,
+  ChevronDown,
+  BarChart3,
+  LineChart,
+} from "lucide-react";
 import { BrandLockup } from "@/components/BrandLogo";
 import ThemeToggle from "@/components/dashboard/ThemeToggle";
 import AgentChatTopbarButton from "@/components/dashboard/agent-chat/AgentChatTopbarButton";
 import { usePendingApprovals } from "@/components/dashboard/PendingApprovalsProvider";
 import type { TopbarSummary } from "@/components/dashboard/mission-data";
+import {
+  SIDEBAR_SETTINGS,
+  TOPBAR_OBSERVEER_ITEMS,
+} from "@/components/dashboard/sidebar-nav";
 
 const quickLinks = [
-  { label: "Overzicht", href: "/dashboard" },
+  { label: "Overzicht", href: "/dashboard/overzicht" },
   { label: "Offertes", href: "/dashboard/offertes" },
   { label: "Facturen", href: "/dashboard/facturen" },
   { label: "Leads / CRM", href: "/dashboard/leads" },
   { label: "Contacten", href: "/dashboard/contacten" },
   { label: "Automatisaties", href: "/dashboard/automatisaties" },
   { label: "Instellingen", href: "/dashboard/instellingen" },
+  ...TOPBAR_OBSERVEER_ITEMS.map((item) => ({
+    label: item.label,
+    href: item.href,
+  })),
 ];
 
 function euro(n: number) {
@@ -31,11 +49,16 @@ export default function Topbar({
   initial: TopbarSummary;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { items: pendingItems } = usePendingApprovals();
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [observeOpen, setObserveOpen] = useState(false);
+  const observeRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [syncedAgo, setSyncedAgo] = useState("nu");
+
+  const settingsActive = pathname.startsWith("/dashboard/instellingen");
 
   useEffect(() => {
     const tick = () => {
@@ -59,11 +82,23 @@ export default function Topbar({
       if (e.key === "Escape") {
         setSearchOpen(false);
         setNotifyOpen(false);
+        setObserveOpen(false);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (!observeOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (observeRef.current && !observeRef.current.contains(e.target as Node)) {
+        setObserveOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [observeOpen]);
 
   const filtered = quickLinks.filter((l) =>
     l.label.toLowerCase().includes(query.toLowerCase()),
@@ -112,6 +147,68 @@ export default function Topbar({
             </button>
 
             <AgentChatTopbarButton />
+
+            <div className="relative hidden sm:block" ref={observeRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setObserveOpen((v) => !v);
+                  setNotifyOpen(false);
+                }}
+                aria-expanded={observeOpen}
+                aria-haspopup="menu"
+                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-100"
+              >
+                Observeer
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform ${observeOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {observeOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-[calc(100%+0.35rem)] z-50 w-52 rounded-xl border border-white/10 bg-zinc-950 py-1 shadow-2xl"
+                >
+                  {TOPBAR_OBSERVEER_ITEMS.map((item) => {
+                    const Icon =
+                      item.label === "Analytics"
+                        ? LineChart
+                        : item.label === "KPI's"
+                          ? BarChart3
+                          : Search;
+                    return (
+                      <button
+                        key={item.href}
+                        type="button"
+                        role="menuitem"
+                        disabled
+                        title="Binnenkort beschikbaar"
+                        className="flex w-full cursor-not-allowed items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-500"
+                      >
+                        <Icon size={14} aria-hidden />
+                        {item.label}
+                        <span className="ml-auto rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-zinc-600">
+                          Soon
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <Link
+              href={SIDEBAR_SETTINGS.href}
+              aria-label={SIDEBAR_SETTINGS.label}
+              className={`relative grid h-8 w-8 place-items-center rounded-lg transition-colors hover:bg-white/5 ${
+                settingsActive
+                  ? "bg-sky-500/15 text-sky-300"
+                  : "text-zinc-400 hover:text-zinc-100"
+              }`}
+            >
+              <Settings size={16} aria-hidden />
+            </Link>
 
             <ThemeToggle />
 

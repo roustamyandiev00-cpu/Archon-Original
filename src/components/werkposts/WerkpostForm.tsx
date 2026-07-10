@@ -27,9 +27,12 @@ const sectionHeaderClass = "flex items-center gap-2 pb-3 mb-4 border-b border-wh
 
 export default function WerkpostForm({
   onCreated,
+  embedded = false,
 }: {
   /** Waar naartoe navigeren na succesvol plaatsen. Default: dashboard-detail. */
   onCreated?: (id: string) => void;
+  /** Verberg annuleerknop (inline op Bouwnetwerk-dashboard). */
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [titel, setTitel] = useState("");
@@ -423,13 +426,15 @@ export default function WerkpostForm({
 
       {/* Actieknop */}
       <div className="flex items-center justify-end gap-3 pt-2">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
-        >
-          Annuleren
-        </button>
+        {!embedded && (
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+          >
+            Annuleren
+          </button>
+        )}
         <button
           type="submit"
           disabled={loading}

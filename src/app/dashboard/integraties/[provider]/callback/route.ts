@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { getCompanyContext } from "@/lib/company";
-import { untyped } from "@/lib/integraties";
+import { untyped, integratiesSettingsUrl } from "@/lib/integraties";
 import { exchangeCodeForTokens, oauthConfig, oauthRedirectUri } from "@/lib/oauth";
 
 export const runtime = "nodejs";
@@ -12,7 +12,7 @@ export async function GET(
   ctx: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await ctx.params;
-  const dashboard = new URL("/dashboard/integraties", req.nextUrl.origin);
+  const dashboard = integratiesSettingsUrl(req.nextUrl.origin);
 
   const cfg = oauthConfig(provider);
   if (!cfg) {

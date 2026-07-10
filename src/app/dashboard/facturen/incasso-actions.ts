@@ -14,6 +14,8 @@ import {
   stageLabel,
 } from "@/components/dashboard/facturen/incasso";
 import { requireWriteAccess } from "@/components/dashboard/context";
+import { sendEmailViaCompanySmtp } from "@/app/dashboard/instellingen/smtp-actions";
+import { generateFactuurPdfBuffer } from "@/components/dashboard/email/factuurPdfBuffer";
 
 export type ExecuteIncassoInput = {
   factuurId: number;
@@ -95,7 +97,32 @@ async function loadFactuurContext(
       : Promise.resolve({ data: null }),
   ]);
 
-  const customer = customerRes.data;
+  let customer = customerRes.data;
+  if (!customer?.email && factuur.klant) {
+    const klantName = factuur.klant.trim();
+    const { data: byName } = await supabase
+      .from("customers")
+      .select("email, phone, address, postcode, city")
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .ilike("name", klantName)
+      .limit(1)
+      .maybeSingle();
+
+    if (byName) {
+      customer = byName;
+    } else {
+      const { data: byCompanyName } = await supabase
+        .from("customers")
+        .select("email, phone, address, postcode, city")
+        .eq("company_id", companyId)
+        .eq("is_active", true)
+        .ilike("company_name", klantName)
+        .limit(1)
+        .maybeSingle();
+      customer = byCompanyName ?? customer;
+    }
+  }
   const address = customer
     ? [customer.address, customer.postcode, customer.city]
         .filter(Boolean)
@@ -141,6 +168,48 @@ async function reminderHistory(
   });
 }
 
+async function deliverIncassoEmail(
+  supabase: SupabaseClient,
+  companyId: number,
+  factuurId: number,
+  to: string,
+  subject: string,
+  body: string,
+): Promise<
+  | { mode: "smtp"; messageId: string }
+  | { mode: "mailto"; mailto: string }
+  | { error: string }
+> {
+  const pdfResult = await generateFactuurPdfBuffer(
+    supabase,
+    companyId,
+    factuurId,
+  );
+  const attachments =
+    "buffer" in pdfResult
+      ? [{ filename: pdfResult.fileName, content: pdfResult.buffer }]
+      : undefined;
+
+  const sent = await sendEmailViaCompanySmtp(supabase, companyId, {
+    to,
+    subject,
+    text: body,
+    attachments,
+  });
+
+  if ("ok" in sent && sent.ok === true) {
+    return { mode: "smtp", messageId: sent.messageId };
+  }
+
+  if ("smtpMissing" in sent && sent.smtpMissing) {
+    return { mode: "mailto", mailto: mailtoUrl(to, subject, body) };
+  }
+
+  return {
+    error: "error" in sent ? sent.error : "E-mail verzenden mislukt.",
+  };
+}
+
 export async function executeIncassoStep(
   input: ExecuteIncassoInput & {
     supabase: SupabaseClient;
@@ -177,11 +246,20 @@ export async function executeIncassoStep(
     if (!bailiffEmail) {
       return {
         error:
-          "Geen deurwaarder-e-mailadres ingesteld. Zet INCASSO_DEURWAARDER_EMAIL in .env of incasso.deurwaarderEmail in bedrijfsinstellingen.",
+          "Geen deurwaarder-e-mailadres ingesteld. Vul dit in bij Instellingen → AI-agent, of zet INCASSO_DEURWAARDER_EMAIL in .env.",
       };
     }
 
     const bailiffMail = buildBailiffEmail(ctx, history);
+    const delivery = await deliverIncassoEmail(
+      supabase,
+      companyId,
+      factuurId,
+      bailiffEmail,
+      bailiffMail.subject,
+      bailiffMail.body,
+    );
+    if ("error" in delivery) return { error: delivery.error };
 
     await supabase.from("reminders").insert({
       company_id: companyId,
@@ -213,15 +291,16 @@ export async function executeIncassoStep(
       created_by_user_id: userId,
       agent_name: agentName,
       action_type: "forward_to_bailiff",
-      message: `Incassodossier doorgestuurd naar deurwaarder voor factuur ${ctx.nummer} (${ctx.klant}).`,
+      message: `Incassodossier doorgestuurd naar deurwaarder voor factuur ${ctx.nummer} (${ctx.klant})${
+        delivery.mode === "smtp" ? " via SMTP" : ""
+      }.`,
       output_json: {
         factuurId,
         bailiffEmail,
-        bailiffMailto: mailtoUrl(
-          bailiffEmail,
-          bailiffMail.subject,
-          bailiffMail.body,
-        ),
+        emailSent: delivery.mode === "smtp",
+        messageId: delivery.mode === "smtp" ? delivery.messageId : undefined,
+        bailiffMailto:
+          delivery.mode === "mailto" ? delivery.mailto : undefined,
         pdfUrl: ctx.pdfUrl,
         dossier: bailiffMail.body,
       },
@@ -235,11 +314,9 @@ export async function executeIncassoStep(
     return {
       ok: true as const,
       route: `/dashboard/facturen/${factuurId}`,
-      bailiffMailto: mailtoUrl(
-        bailiffEmail,
-        bailiffMail.subject,
-        bailiffMail.body,
-      ),
+      emailSent: delivery.mode === "smtp",
+      bailiffMailto:
+        delivery.mode === "mailto" ? delivery.mailto : undefined,
     };
   }
 
@@ -250,6 +327,15 @@ export async function executeIncassoStep(
   }
 
   const mail = buildCustomerEmail(stage, ctx);
+  const delivery = await deliverIncassoEmail(
+    supabase,
+    companyId,
+    factuurId,
+    ctx.customerEmail,
+    mail.subject,
+    mail.body,
+  );
+  if ("error" in delivery) return { error: delivery.error };
 
   await supabase.from("reminders").insert({
     company_id: companyId,
@@ -284,13 +370,17 @@ export async function executeIncassoStep(
       stage === "ingebrekestelling"
         ? "send_formal_notice"
         : "send_payment_reminder",
-    message: `${stageLabel(stage)} verstuurd voor factuur ${ctx.nummer} naar ${ctx.customerEmail}.`,
+    message: `${stageLabel(stage)} verstuurd voor factuur ${ctx.nummer} naar ${ctx.customerEmail}${
+      delivery.mode === "smtp" ? " via SMTP" : ""
+    }.`,
     output_json: {
       factuurId,
       stage,
       recipientEmail: ctx.customerEmail,
       subject: mail.subject,
-      mailto: mailtoUrl(ctx.customerEmail, mail.subject, mail.body),
+      emailSent: delivery.mode === "smtp",
+      messageId: delivery.mode === "smtp" ? delivery.messageId : undefined,
+      mailto: delivery.mode === "mailto" ? delivery.mailto : undefined,
       pdfUrl: ctx.pdfUrl,
     },
   });
@@ -303,7 +393,8 @@ export async function executeIncassoStep(
   return {
     ok: true as const,
     route: `/dashboard/facturen/${factuurId}`,
-    mailto: mailtoUrl(ctx.customerEmail, mail.subject, mail.body),
+    emailSent: delivery.mode === "smtp",
+    mailto: delivery.mode === "mailto" ? delivery.mailto : undefined,
   };
 }
 

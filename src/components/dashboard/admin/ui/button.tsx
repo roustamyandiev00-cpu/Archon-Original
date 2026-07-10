@@ -4,6 +4,8 @@ import { cn } from "@/components/dashboard/admin/ui/utils";
 const variants = {
   default:
     "border-sky-500/40 bg-sky-500/15 text-sky-100 hover:bg-sky-500/20",
+  primary:
+    "border-[color:var(--color-primary)] bg-[color:var(--color-primary)] text-black hover:opacity-95",
   secondary:
     "border-white/10 bg-white/[0.06] text-zinc-100 hover:bg-white/[0.09]",
   ghost:

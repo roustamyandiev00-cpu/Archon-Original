@@ -24,7 +24,6 @@ import {
   formatEuro,
   formatLogin,
   formatRelative,
-  getCeoDashboardData,
   planBadgeVariant,
   statusBadgeVariant,
   statusLabel,
@@ -47,6 +46,7 @@ import {
   TableRow,
 } from "@/components/dashboard/admin/ui/table";
 import { DemoBadge } from "@/components/dashboard/mission";
+import type { CeoDashboardData } from "@/components/dashboard/admin/ceo-demo-data";
 
 const kpiIcons: Record<KpiMetric["icon"], ReactNode> = {
   mrr: <DollarSign size={18} />,
@@ -68,8 +68,13 @@ const kpiTone: Record<KpiMetric["tone"], string> = {
   cyan: "bg-cyan-500/10 text-cyan-400",
 };
 
-export default function CeoHomeDashboard() {
-  const data = getCeoDashboardData();
+export default function CeoHomeDashboard({
+  data,
+  live = false,
+}: {
+  data: CeoDashboardData;
+  live?: boolean;
+}) {
 
   return (
     <div className="space-y-8">
@@ -97,7 +102,11 @@ export default function CeoHomeDashboard() {
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <DemoBadge />
+            {live ? (
+              <Badge variant="success">Live data</Badge>
+            ) : (
+              <DemoBadge />
+            )}
             <span className="text-xs text-zinc-500">
               Laatste sync{" "}
               <span className="font-mono text-zinc-400">
@@ -150,7 +159,7 @@ export default function CeoHomeDashboard() {
                   Laatst actieve klanten op het ArchonPro-platform
                 </CardDescription>
               </div>
-              <Badge variant="info">127 totaal</Badge>
+              <Badge variant="info">{data.companies.length} totaal</Badge>
             </CardHeader>
             <CardContent className="px-0 pb-0">
               <Table>

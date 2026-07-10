@@ -162,7 +162,7 @@ function Hero() {
       accent="het Peppol-netwerk"
       subtitle="Conform Belgische wetgeving sinds 2026. ArchonPro genereert UBL BIS Billing 3.0, valideert verplichte velden en verstuurt via het Billit Peppol Access Point — zonder je CRM te verlaten."
       primary={{ label: "Start 14 dagen gratis", href: "/register" }}
-      secondary={{ label: "Peppol instellen", href: "/dashboard/integraties" }}
+      secondary={{ label: "Peppol instellen", href: "/dashboard/instellingen?tab=integraties" }}
       visual={
         <div className="rounded-3xl border border-emerald-500/20 bg-zinc-900/60 p-5 backdrop-blur-xl sm:p-6">
           <div className="flex items-center justify-between">
@@ -246,7 +246,7 @@ function AccessSection() {
               <Bullet>Verbindingstest in Integraties</Bullet>
             </ul>
             <Link
-              href="/dashboard/integraties"
+              href="/dashboard/instellingen?tab=integraties"
               className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-sky-400 hover:text-sky-300"
             >
               Peppol koppelen <ArrowRight size={14} />

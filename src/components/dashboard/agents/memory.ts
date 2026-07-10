@@ -56,6 +56,16 @@ export async function saveAgentMemory(
     embedding,
     metadata: input.metadata ?? null,
   });
+
+  if (input.userId) {
+    await syncMemoryToKnowledgeBase(supabase, {
+      companyId: input.companyId,
+      userId: input.userId,
+      content,
+      memoryType: input.memoryType,
+      importance: input.importance,
+    });
+  }
 }
 
 export async function saveAgentMemories(
@@ -110,6 +120,92 @@ export async function fetchRelevantMemories(
 
   if (!recent?.length) return "";
   return recent.map((m) => `- [${m.memory_type}] ${m.content}`).join("\n");
+}
+
+export async function fetchRelevantKnowledge(
+  supabase: SupabaseClient,
+  companyId: number,
+  query: string,
+  limit = 4,
+): Promise<string> {
+  const embedding = await generateEmbedding(query);
+  if (!embedding) return "";
+
+  const { data } = await supabase.rpc("search_knowledge", {
+    p_company_id: companyId,
+    p_query_embedding: embedding,
+    p_limit: limit,
+    p_threshold: 0.45,
+  });
+
+  if (!data?.length) return "";
+
+  return data
+    .map(
+      (k: { type: string; title: string; content: string }) =>
+        `- [${k.type}] ${k.title}: ${k.content.slice(0, 400)}`,
+    )
+    .join("\n");
+}
+
+/** Combineert agentgeheugen + kennisbank voor RAG-context in prompts. */
+export async function fetchRetrievalContext(
+  supabase: SupabaseClient,
+  companyId: number,
+  query: string,
+  options?: { memoryLimit?: number; knowledgeLimit?: number },
+): Promise<string> {
+  const [memories, knowledge] = await Promise.all([
+    fetchRelevantMemories(
+      supabase,
+      companyId,
+      query,
+      options?.memoryLimit ?? 6,
+    ),
+    fetchRelevantKnowledge(
+      supabase,
+      companyId,
+      query,
+      options?.knowledgeLimit ?? 4,
+    ),
+  ]);
+
+  const parts: string[] = [];
+  if (memories) parts.push(`Geheugen:\n${memories}`);
+  if (knowledge) parts.push(`Kennisbank:\n${knowledge}`);
+  return parts.join("\n\n");
+}
+
+const KNOWLEDGE_SYNC_TYPES = new Set<MemoryType>([
+  "fact",
+  "preference",
+  "instruction",
+  "context",
+]);
+
+async function syncMemoryToKnowledgeBase(
+  supabase: SupabaseClient,
+  input: {
+    companyId: number;
+    userId: string;
+    content: string;
+    memoryType: MemoryType;
+    importance?: number;
+  },
+) {
+  if ((input.importance ?? 5) < 6) return;
+  if (!KNOWLEDGE_SYNC_TYPES.has(input.memoryType)) return;
+
+  const embedding = await generateEmbedding(input.content);
+  await supabase.from("ai_knowledge_base").insert({
+    company_id: input.companyId,
+    user_id: input.userId,
+    title: input.content.slice(0, 80),
+    content: input.content,
+    type: input.memoryType,
+    source: "agent_memory",
+    embedding,
+  });
 }
 
 export function memoriesFromOffertePayload(
@@ -185,6 +281,32 @@ export function memoriesFromExecutedAction(input: {
       memoryType: "interaction",
       importance: 6,
       metadata: { offerteId },
+    });
+    return memories;
+  }
+
+  if (
+    actionType === "send_payment_reminder" ||
+    actionType === "send_formal_notice"
+  ) {
+    const factuurId = payload.factuurId as number | undefined;
+    const stage = payload.stage as string | undefined;
+    memories.push({
+      content: `${agentName} heeft ${stage ?? "een incassostap"} uitgevoerd voor factuur #${factuurId ?? "?"}.`,
+      memoryType: "interaction",
+      importance: 7,
+      metadata: { factuurId, stage },
+    });
+    return memories;
+  }
+
+  if (actionType === "forward_to_bailiff") {
+    const factuurId = payload.factuurId as number | undefined;
+    memories.push({
+      content: `${agentName} heeft een incassodossier doorgestuurd naar de deurwaarder voor factuur #${factuurId ?? "?"}.`,
+      memoryType: "interaction",
+      importance: 8,
+      metadata: { factuurId },
     });
     return memories;
   }

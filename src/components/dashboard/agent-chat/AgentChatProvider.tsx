@@ -76,10 +76,11 @@ const AgentChatContext = createContext<AgentChatContextValue | null>(null);
 
 const STORAGE_VIEW_KEY = "archon.agent-chat.view";
 const STORAGE_POSITION_KEY = "archon.agent-chat.position";
+const FALLBACK_HINT_KEY = "archon.agent-chat.fallback-hint";
 
 function starterFor(agent: ChatAgent): AgentChatMessage[] {
   const intros: Record<string, string> = {
-    nova: "Ik ben Nova, je AI-metgezel. Vraag me om offertes, facturen of opvolging — ik zet acties klaar ter goedkeuring. Via het AI Control Center zie je live agent-status en recente acties.",
+    nova: `Ik ben ${agent.name}, je AI-metgezel. Vraag me om offertes, facturen of opvolging — ik zet acties klaar ter goedkeuring. Via het AI Control Center zie je live agent-status en recente acties.`,
     schatter:
       "Ik ben Schatter en regel je offertes. Geef me een taak — bijvoorbeeld een offerte opstellen of een verzonden offerte opvolgen.",
     facturatie:
@@ -217,22 +218,33 @@ function clampChatPosition(position: { x: number; y: number }) {
   };
 }
 
+function novaAgentWithName(name?: string): ChatAgent {
+  const display = name?.trim() || NOVA_AGENT.name;
+  return { ...NOVA_AGENT, name: display };
+}
+
 export function AgentChatProvider({
   children,
   companyId,
+  userAgentName = "Nova",
 }: {
   children: ReactNode;
   companyId: number | null;
+  userAgentName?: string;
 }) {
   const router = useRouter();
   const { navigateTo } = useAgentNavigation();
+  const primaryAgent = useMemo(
+    () => novaAgentWithName(userAgentName),
+    [userAgentName],
+  );
   const [view, setView] = useState<AgentChatView>("minimized");
   const [position, setPositionState] = useState({ x: 16, y: 72 });
   const [positionReady, setPositionReady] = useState(false);
-  const [activeAgent, setActiveAgent] = useState<ChatAgent>(NOVA_AGENT);
+  const [activeAgent, setActiveAgent] = useState<ChatAgent>(primaryAgent);
   const [historyByAgent, setHistoryByAgent] = useState<
     Record<string, AgentChatMessage[]>
-  >({ nova: starterFor(NOVA_AGENT) });
+  >(() => ({ nova: starterFor(primaryAgent) }));
   const [isTyping, setIsTyping] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
 
@@ -244,6 +256,15 @@ export function AgentChatProvider({
   } | null>(null);
 
   const messages = historyByAgent[activeAgent.id] ?? starterFor(activeAgent);
+
+  useEffect(() => {
+    setActiveAgent((prev) => (prev.id === "nova" ? primaryAgent : prev));
+    setHistoryByAgent((prev) => {
+      const welcome = prev.nova?.[0];
+      if (!welcome || welcome.id !== "welcome-nova") return prev;
+      return { ...prev, nova: starterFor(primaryAgent) };
+    });
+  }, [primaryAgent]);
 
   useEffect(() => {
     setView(readStoredView());
@@ -412,65 +433,90 @@ export function AgentChatProvider({
       setIsTyping(true);
 
       const supabase = createClient();
-
       const priorMessages = historyByAgent[agent.id] ?? starterFor(agent);
 
-      window.setTimeout(async () => {
+      void (async () => {
         let replyText = "";
         let replyOptions: string[] | undefined = undefined;
         const q = trimmed.toLowerCase();
 
-        if (companyId && !chatState) {
-          const history = [...priorMessages, userMessage]
-            .filter((m) => !m.id.startsWith("welcome-"))
-            .slice(-10)
-            .map((m) => ({
-              role: m.role,
-              text: m.text,
-            }));
+        try {
+          if (companyId && !chatState) {
+            const history = [...priorMessages, userMessage]
+              .filter((m) => !m.id.startsWith("welcome-"))
+              .slice(-10)
+              .map((m) => ({
+                role: m.role,
+                text: m.text,
+              }));
 
-          const llm = await sendAgentChatMessage({
-            agentId: agent.id,
-            history,
-            message: trimmed,
-          });
-
-          if ("ok" in llm && llm.ok) {
-            replyText = llm.text;
-            replyOptions = llm.options;
-            if (llm.navigateTo) {
-              navigateTo(llm.navigateTo, { minimizeChat: true });
-            }
-            if (llm.openControlCenter) {
-              dispatchOpenControlCenter();
-            }
-            if (llm.remembered) {
-              replyText += "\n\n_Ik heb dit opgeslagen in je geheugen._";
-            }
-
-            setHistoryByAgent((prev) => ({
-              ...prev,
-              [agent.id]: [
-                ...(prev[agent.id] ?? starterFor(agent)),
-                {
-                  id: `a-${Date.now()}`,
-                  role: "agent",
-                  text: replyText,
-                  time: "Nu",
-                  options: replyOptions,
-                },
-              ],
-            }));
-            setIsTyping(false);
-            setView((current) => {
-              if (current !== "open") setHasUnread(true);
-              return current;
+            const llm = await sendAgentChatMessage({
+              agentId: agent.id,
+              history,
+              message: trimmed,
             });
-            return;
-          }
-        }
 
-        if (
+            if ("ok" in llm && llm.ok) {
+              replyText = llm.text;
+              replyOptions = llm.options;
+              if (llm.navigateTo) {
+                navigateTo(llm.navigateTo, { minimizeChat: true });
+              }
+              if (llm.openControlCenter) {
+                dispatchOpenControlCenter();
+              }
+              if (llm.remembered) {
+                replyText += "\n\n_Ik heb dit opgeslagen in je geheugen._";
+              }
+
+              setHistoryByAgent((prev) => ({
+                ...prev,
+                [agent.id]: [
+                  ...(prev[agent.id] ?? starterFor(agent)),
+                  {
+                    id: `a-${Date.now()}`,
+                    role: "agent",
+                    text: replyText,
+                    time: "Nu",
+                    options: replyOptions,
+                  },
+                ],
+              }));
+              setView((current) => {
+                if (current !== "open") setHasUnread(true);
+                return current;
+              });
+              return;
+            }
+
+            if (
+              "useFallback" in llm &&
+              llm.useFallback &&
+              llm.fallbackReason === "no_api_key"
+            ) {
+              try {
+                if (!sessionStorage.getItem(FALLBACK_HINT_KEY)) {
+                  sessionStorage.setItem(FALLBACK_HINT_KEY, "1");
+                  setHistoryByAgent((prev) => ({
+                    ...prev,
+                    [agent.id]: [
+                      ...(prev[agent.id] ?? starterFor(agent)),
+                      {
+                        id: `hint-${Date.now()}`,
+                        role: "agent",
+                        text: "⚠️ **Echte AI is nog niet actief** — `OPENAI_API_KEY` ontbreekt in je omgeving. Ik antwoord met basisfuncties (navigatie, geheugen, goedkeuringen). Voeg de key toe in `.env.local` en herstart de dev-server.",
+                        time: "Nu",
+                      },
+                    ],
+                  }));
+                }
+              } catch {
+                /* negeer */
+              }
+            }
+          }
+
+          if (
           q.includes("bekijk goedkeuring") ||
           q.includes("goedkeuringen") ||
           q === "goedkeuren" ||
@@ -763,7 +809,6 @@ export function AgentChatProvider({
           }
         }
 
-        // 3. APPEND AGENT RESPONSE
         setHistoryByAgent((prev) => ({
           ...prev,
           [agent.id]: [
@@ -777,12 +822,14 @@ export function AgentChatProvider({
             },
           ],
         }));
-        setIsTyping(false);
         setView((current) => {
           if (current !== "open") setHasUnread(true);
           return current;
         });
-      }, 700);
+        } finally {
+          setIsTyping(false);
+        }
+      })();
     },
     [activeAgent, chatState, companyId, router, navigateTo, historyByAgent],
   );

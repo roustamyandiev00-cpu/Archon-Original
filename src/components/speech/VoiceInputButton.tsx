@@ -25,13 +25,14 @@ const variantClass: Record<NonNullable<VoiceInputButtonProps["variant"]>, string
 export default function VoiceInputButton({
   onTranscript,
   label = "Spreek je antwoord",
-  listeningLabel = "Luisteren… tik om te stoppen",
+  listeningLabel = "Luisteren… houd spatie ingedrukt",
   className = "",
   variant = "sky",
   size = "md",
 }: VoiceInputButtonProps) {
   const { isListening, supported, toggle } = useSpeechInput({
     onFinal: onTranscript,
+    spaceKey: true,
   });
 
   if (!supported) return null;
@@ -54,7 +55,7 @@ export default function VoiceInputButton({
       } ${className}`}
     >
       {isListening ? <MicOff size={size === "sm" ? 14 : 16} /> : <Mic size={size === "sm" ? 14 : 16} />}
-      {isListening ? listeningLabel : label}
+      {isListening ? listeningLabel : `${label} (of spatie)`}
     </button>
   );
 }

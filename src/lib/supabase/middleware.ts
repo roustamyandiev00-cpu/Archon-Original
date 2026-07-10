@@ -53,8 +53,14 @@ export async function updateSession(request: NextRequest) {
   try {
     const { data, error } = await supabase.auth.getUser();
     if (error) {
-      authCheckFailed = true;
-      console.error("[auth] getUser error in middleware:", error.message);
+      const msg = error.message ?? "";
+      const sessionMissing =
+        msg.includes("Auth session missing") ||
+        error.name === "AuthSessionMissingError";
+      if (!sessionMissing) {
+        authCheckFailed = true;
+        console.error("[auth] getUser error in middleware:", msg);
+      }
     } else {
       user = data.user;
     }

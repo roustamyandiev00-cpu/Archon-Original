@@ -129,6 +129,7 @@ export async function createFactuur(input: CreateFactuurInput) {
     documentType: input.documentType,
   });
 
-  revalidatePath("/dashboard/facturen");
+    revalidatePath("/dashboard/facturen");
+    revalidatePath("/dashboard/facturen/nieuw");
   return { id: factuur.id as number };
 }

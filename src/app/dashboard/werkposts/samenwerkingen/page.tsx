@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
+import {
+  mapSamenwerkingContractRow,
+  type SamenwerkingContractRow,
+} from "@/lib/werkposts/contracts";
 import SamenwerkingenClient, {
   type Samenwerking,
   type AfspraakRow,
@@ -42,7 +46,12 @@ function messagePreview(
   return content.replace(/\s+/g, " ").trim();
 }
 
-export default async function SamenwerkingenPage() {
+export default async function SamenwerkingenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ channel?: string }>;
+}) {
+  const { channel: initialChannelId } = await searchParams;
   const { supabase, companyId } = await getCompanyContext();
 
   let samenwerkingen: Samenwerking[] = [];
@@ -50,8 +59,19 @@ export default async function SamenwerkingenPage() {
   let myReviews: { target_company_id: number; rating: number; commentaar: string }[] = [];
   const counterpartRatings: Record<number, { avg: number; count: number }> = {};
   let pendingReacties: PendingReactie[] = [];
+  const contractsByChannel: Record<string, SamenwerkingContractRow> = {};
+  const companyNames: Record<number, string> = {};
 
   if (companyId) {
+    const { data: myBedrijf } = await supabase
+      .from("bedrijven_directory")
+      .select("id, naam")
+      .eq("id", companyId)
+      .maybeSingle();
+    if (myBedrijf?.id != null) {
+      companyNames[myBedrijf.id] = myBedrijf.naam ?? `Bedrijf #${myBedrijf.id}`;
+    }
+
     const { data: myPosts } = await supabase
       .from("werkposts")
       .select("id, titel")
@@ -135,7 +155,10 @@ export default async function SamenwerkingenPage() {
           .select("id, naam")
           .in("id", counterpartIds);
         for (const b of bedrijven ?? []) {
-          if (b.id != null) naamMap.set(b.id, b.naam ?? `Bedrijf #${b.id}`);
+          if (b.id != null) {
+            naamMap.set(b.id, b.naam ?? `Bedrijf #${b.id}`);
+            companyNames[b.id] = b.naam ?? `Bedrijf #${b.id}`;
+          }
         }
 
         // Reviews van de ingelogde gebruiker ophalen.
@@ -262,6 +285,20 @@ export default async function SamenwerkingenPage() {
           };
         })
         .filter((a) => a.channelId && channelIds.includes(a.channelId));
+
+      const { data: contractRows } = await supabase
+        .from("samenwerking_contracts")
+        .select("*")
+        .in("channel_id", channelIds)
+        .neq("status", "void");
+
+      for (const row of contractRows ?? []) {
+        if (row.channel_id) {
+          contractsByChannel[row.channel_id] = mapSamenwerkingContractRow(
+            row as Record<string, unknown>,
+          );
+        }
+      }
     }
   }
 
@@ -299,6 +336,9 @@ export default async function SamenwerkingenPage() {
           myReviews={myReviews}
           counterpartRatings={counterpartRatings}
           pendingReacties={pendingReacties}
+          initialChannelId={initialChannelId ?? null}
+          contractsByChannel={contractsByChannel}
+          companyNames={companyNames}
         />
       )}
     </div>

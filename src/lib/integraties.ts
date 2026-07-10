@@ -139,6 +139,37 @@ export const INTEGRATION_PROVIDERS: ProviderMeta[] = [
   },
 ];
 
+/** Instellingen-tab voor integraties (sidebar-link verwijderd). */
+export const INTEGRATIES_SETTINGS_TAB = "integraties" as const;
+
+export function integratiesSettingsHref(
+  query?: Record<string, string | undefined>,
+) {
+  const params = new URLSearchParams({ tab: INTEGRATIES_SETTINGS_TAB });
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value) params.set(key, value);
+    }
+  }
+  return `/dashboard/instellingen?${params.toString()}`;
+}
+
+export function integratiesSettingsUrl(origin: string) {
+  return new URL(integratiesSettingsHref(), origin);
+}
+
+/** Alle providers op de instellingenpagina: boekhouding/Peppol + app-koppelingen. */
+export function allSettingsIntegrationProviders(): ProviderMeta[] {
+  const seen = new Set<string>();
+  const merged: ProviderMeta[] = [];
+  for (const provider of [...INTEGRATION_PROVIDERS, ...APP_INTEGRATION_PROVIDERS]) {
+    if (seen.has(provider.id)) continue;
+    seen.add(provider.id);
+    merged.push(provider);
+  }
+  return merged;
+}
+
 /** App-koppelingen op de Instellingen-pagina (zoals archonpro-crm). */
 export const APP_INTEGRATION_PROVIDERS: ProviderMeta[] = [
   {

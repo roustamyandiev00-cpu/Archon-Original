@@ -7,9 +7,10 @@ import {
 } from "lucide-react";
 import CompaniesDataTable from "@/components/dashboard/admin/CompaniesDataTable";
 import {
-  getCompaniesManagementData,
+  fetchManagedCompanies,
   getCompaniesStats,
-} from "@/components/dashboard/admin/companies-data";
+} from "@/lib/admin/platform-data";
+import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { Badge } from "@/components/dashboard/admin/ui/badge";
 import {
   Card,
@@ -37,8 +38,9 @@ const statTones = {
   suspended: "bg-rose-500/10 text-rose-400",
 } as const;
 
-export default function CompaniesPage() {
-  const companies = getCompaniesManagementData();
+export default async function CompaniesPage() {
+  const { serviceSupabase } = await requirePlatformAdmin();
+  const companies = await fetchManagedCompanies(serviceSupabase);
   const stats = getCompaniesStats(companies);
 
   return (
@@ -52,13 +54,12 @@ export default function CompaniesPage() {
             Companies Management
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-            Enterprise overview of customer companies, subscriptions, AI usage,
-            revenue, storage, and account status.
+            Live overzicht van alle klanten, abonnementen, AI-verbruik en status.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="info">CEO module</Badge>
-          <Badge>Demo data</Badge>
+          <Badge variant="success">Live data</Badge>
         </div>
       </header>
 

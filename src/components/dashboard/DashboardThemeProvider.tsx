@@ -13,7 +13,6 @@ import {
   isDashboardTheme,
   type DashboardTheme,
 } from "@/components/dashboard/theme";
-import "./dashboard-theme.css";
 
 type ThemeContextValue = {
   theme: DashboardTheme;

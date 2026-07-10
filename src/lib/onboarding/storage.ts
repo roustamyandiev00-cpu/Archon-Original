@@ -5,6 +5,8 @@ export const INTRO_SEEN_KEY = "archonpro-intro-seen-v5";
 
 /** @deprecated Gebruik NOVA_SPEECH_KEY */
 export const LANDING_TOUR_SPEECH_KEY = NOVA_SPEECH_KEY;
+/** @deprecated Gebruik DASHBOARD_TOUR_DONE_KEY */
+export const LANDING_TOUR_DONE_KEY = DASHBOARD_TOUR_DONE_KEY;
 
 export type OnboardingProfile = {
   intent?: string;
@@ -45,6 +47,15 @@ export function resetDashboardTour() {
   localStorage.removeItem(DASHBOARD_TOUR_DONE_KEY);
 }
 
+/** @deprecated Gebruik isDashboardTourDone */
+export const isLandingTourDone = isDashboardTourDone;
+
+/** @deprecated Gebruik markDashboardTourDone */
+export const markLandingTourDone = markDashboardTourDone;
+
+/** @deprecated Gebruik resetDashboardTour */
+export const resetLandingTour = resetDashboardTour;
+
 export function isSpeechEnabled(): boolean {
   if (typeof window === "undefined") return true;
   const stored =
@@ -61,4 +72,14 @@ export function setSpeechEnabled(enabled: boolean) {
 export function isIntroSeen(): boolean {
   if (typeof window === "undefined") return true;
   return sessionStorage.getItem(INTRO_SEEN_KEY) === "1";
+}
+
+export function markIntroSeen() {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(INTRO_SEEN_KEY, "1");
+}
+
+export function resetIntroSeen() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(INTRO_SEEN_KEY);
 }

@@ -14,10 +14,15 @@ export type AiConfig = {
 };
 
 /** Instellingen zonder eigen databasekolom, samen bewaard als JSON. */
+export type IncassoConfig = {
+  deurwaarderEmail: string;
+};
+
 export type Extras = {
   ai: AiConfig;
   standaardBtw: number;
   agents?: CustomAgent[];
+  incasso?: IncassoConfig;
 };
 
 export type SettingsInput = {
@@ -43,6 +48,8 @@ export type SettingsInput = {
   invoiceTemplate: string;
   // AI-agent
   ai: AiConfig;
+  // Incasso
+  incasso: IncassoConfig;
 };
 
 /** Ingebouwde sjabloonstijlen om uit te kiezen. */
@@ -101,34 +108,51 @@ export const defaultExtras: Extras = {
  * databasewijziging nodig hebben. Oudere platte tekst wordt als
  * AI-instructie behandeld.
  */
+export const defaultIncassoConfig: IncassoConfig = {
+  deurwaarderEmail: "",
+};
+
 export function parseExtras(raw: string | null): Extras {
-  if (!raw) return { ai: { ...defaultAiConfig }, standaardBtw: 21 };
+  if (!raw) {
+    return {
+      ai: { ...defaultAiConfig },
+      standaardBtw: 21,
+      incasso: { ...defaultIncassoConfig },
+    };
+  }
   try {
     const parsed = JSON.parse(raw) as Partial<Extras> & Partial<AiConfig>;
     if (parsed && typeof parsed === "object") {
-      // Nieuw formaat: { ai, standaardBtw }
       if ("ai" in parsed && parsed.ai) {
         return {
           ai: { ...defaultAiConfig, ...parsed.ai },
           standaardBtw:
             typeof parsed.standaardBtw === "number" ? parsed.standaardBtw : 21,
           agents: Array.isArray(parsed.agents) ? parsed.agents : undefined,
+          incasso: {
+            ...defaultIncassoConfig,
+            ...(parsed.incasso ?? {}),
+          },
         };
       }
-      // Tussenformaat: platte AiConfig
       if ("toon" in parsed) {
         return {
           ai: { ...defaultAiConfig, ...(parsed as Partial<AiConfig>) },
           standaardBtw: 21,
+          incasso: { ...defaultIncassoConfig },
         };
       }
     }
   } catch {
-    // geen JSON: behandel als vrije instructietekst
     return {
       ai: { ...defaultAiConfig, instructies: raw },
       standaardBtw: 21,
+      incasso: { ...defaultIncassoConfig },
     };
   }
-  return { ai: { ...defaultAiConfig }, standaardBtw: 21 };
+  return {
+    ai: { ...defaultAiConfig },
+    standaardBtw: 21,
+    incasso: { ...defaultIncassoConfig },
+  };
 }

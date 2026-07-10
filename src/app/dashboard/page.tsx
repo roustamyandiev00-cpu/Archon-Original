@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 export const metadata = { title: "Dashboard — ArchonPro" };
 
-/** Standaard landing: Command Center. */
+/** Standaard landing: Overzicht (referentie-dashboard). */
 export default function DashboardPage() {
-  redirect("/dashboard/command-center");
+  redirect("/dashboard/overzicht");
 }

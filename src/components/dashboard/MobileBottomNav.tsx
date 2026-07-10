@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LayoutGrid } from "lucide-react";
 import MobileMoreSheet from "@/components/dashboard/MobileMoreSheet";
 import {
@@ -14,9 +14,18 @@ type Props = {
   isPreviewMode?: boolean;
 };
 
+const subscribeToClient = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export default function MobileBottomNav({ isPreviewMode = false }: Props) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToClient,
+    clientSnapshot,
+    serverSnapshot,
+  );
   const activeId = getActiveMobileTabId(pathname);
   const scrollRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
@@ -27,6 +36,7 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
   }, [pathname]);
 
   useEffect(() => {
+    if (!mounted) return;
     const container = scrollRef.current;
     const indicator = indicatorRef.current;
     if (!container || !indicator) return;
@@ -48,13 +58,14 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
       block: "nearest",
       inline: "center",
     });
-  }, [activeId, pathname]);
+  }, [activeId, mounted, pathname]);
 
   return (
     <>
       <nav
-        className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.06] bg-zinc-950/92 backdrop-blur-xl lg:hidden"
+        className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.06] bg-zinc-950/92 backdrop-blur-xl lg:hidden"
         aria-label="Mobiele navigatie"
+        suppressHydrationWarning
       >
         <div className="relative">
           <span
@@ -68,7 +79,7 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
             className="relative flex items-stretch gap-0.5 overflow-x-auto px-2 pt-1.5 pb-[calc(0.35rem+env(safe-area-inset-bottom))] snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {MOBILE_SWIPE_TABS.map((tab) => {
-              const active = activeId === tab.id;
+              const active = mounted && activeId === tab.id;
               return (
                 <Link
                   key={tab.id}
@@ -76,6 +87,7 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
                   prefetch
                   aria-current={active ? "page" : undefined}
                   data-mobile-nav-active={active ? "true" : undefined}
+                  data-no-swipe
                   className={`relative z-[1] flex min-w-[4.25rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-medium transition-colors ${
                     active
                       ? "text-sky-400"
@@ -96,25 +108,28 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
 
             <button
               type="button"
-              data-mobile-nav-active={activeId === "more" ? "true" : undefined}
+              data-mobile-nav-active={
+                mounted && activeId === "more" ? "true" : undefined
+              }
+              data-no-swipe
               onClick={() => setMoreOpen(true)}
               aria-label="Meer menu"
               aria-expanded={moreOpen}
               aria-controls="mobile-more-sheet"
               className={`relative z-[1] flex min-w-[4.25rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-medium transition-colors ${
-                activeId === "more"
+                mounted && activeId === "more"
                   ? "text-sky-400"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               <span
                 className={`grid h-8 w-8 place-items-center rounded-xl transition-colors ${
-                  activeId === "more" ? "bg-sky-500/12" : "bg-transparent"
+                  mounted && activeId === "more" ? "bg-sky-500/12" : "bg-transparent"
                 }`}
               >
                 <LayoutGrid
                   size={18}
-                  strokeWidth={activeId === "more" ? 2.25 : 1.75}
+                  strokeWidth={mounted && activeId === "more" ? 2.25 : 1.75}
                 />
               </span>
               <span>Meer</span>

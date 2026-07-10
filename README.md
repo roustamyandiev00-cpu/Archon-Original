@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ArchonPro
 
-## Getting Started
+Next.js dashboard for ArchonPro — CRM, facturen, offertes, agent-chat, en admin tooling.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework:** Next.js 16 (App Router) + React 19
+- **Package manager:** pnpm (gebruik geen npm/yarn lockfiles)
+- **Database:** Supabase
+- **Styling:** Tailwind CSS 4
+
+## Projectstructuur
+
+```
+src/app/          # App Router pages en server actions
+src/components/   # UI-componenten
+src/lib/          # Business logic, integraties, Supabase helpers
+supabase/         # Migraties
+public/           # Statische assets
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Entry point: `src/app/page.tsx` (niet `app/page.tsx`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Lokaal starten
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm install
+cp .env.example .env.local   # vul Supabase- en API-keys in
+pnpm dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+Mobiel op LAN:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev:mobile
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Commando | Doel |
+|----------|------|
+| `pnpm dev` | Development server |
+| `pnpm build` | Production build |
+| `pnpm start` | Production server |
+| `pnpm lint` | ESLint |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Belangrijk voor agents
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Dashboard-referentie:** `docs/reference/dashboard-overzicht-reference.png` + `docs/reference/dashboard-design.md`
+- Standaard dashboard: `/dashboard/overzicht` (niet Command Center)
+- Facturen/offertes lopen via **server actions** in `src/app/dashboard/facturen/` — er is geen `/api/documents` REST-endpoint.
+- Gebruik `pnpm`, niet `npm install`.
+- `.env.local` is lokaal en staat in `.gitignore`.
+- Gescrapete docs in `.firecrawl/` horen niet in de repo (cache, geen bron van waarheid).

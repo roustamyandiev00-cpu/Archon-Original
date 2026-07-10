@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiConfig } from "@/app/dashboard/instellingen/settings";
 import type { CustomAgent } from "@/components/dashboard/agents/config";
 import { CAPABILITY_OPTIONS } from "@/components/dashboard/agents/config";
-import { fetchRelevantMemories } from "@/components/dashboard/agents/memory";
+import { fetchRetrievalContext } from "@/components/dashboard/agents/memory";
 
 export type AgentChatTurn = {
   role: "user" | "agent";
@@ -133,15 +133,20 @@ export async function generateAgentChatReply(input: {
   ai: AiConfig;
   history: AgentChatTurn[];
   message: string;
-}): Promise<{ reply?: AgentChatReply; useFallback?: boolean; error?: string }> {
+}): Promise<{
+  reply?: AgentChatReply;
+  useFallback?: boolean;
+  fallbackReason?: "no_api_key" | "error";
+  error?: string;
+}> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return { useFallback: true };
+  if (!apiKey) return { useFallback: true, fallbackReason: "no_api_key" };
 
   const trimmed = input.message.trim();
   if (!trimmed) return { error: "Leeg bericht." };
 
-  const [memoryContext, crmSnapshot] = await Promise.all([
-    fetchRelevantMemories(input.supabase, input.companyId, trimmed),
+  const [retrievalContext, crmSnapshot] = await Promise.all([
+    fetchRetrievalContext(input.supabase, input.companyId, trimmed),
     loadCrmSnapshot(input.supabase, input.companyId),
   ]);
 
@@ -162,8 +167,8 @@ export async function generateAgentChatReply(input: {
     input.ai.vakgebied ? `Vakgebied: ${input.ai.vakgebied}` : "",
     input.ai.instructies ? `Bedrijfsinstructies: ${input.ai.instructies}` : "",
     `Toestemmingsniveau: ${input.agent.toestemming}. Bij "voorstellen" zet je acties klaar ter goedkeuring; bij "versturen" mag je directer handelen.`,
-    memoryContext
-      ? `Geheugen over dit bedrijf:\n${memoryContext}`
+    retrievalContext
+      ? `Relevante context over dit bedrijf:\n${retrievalContext}`
       : "Nog weinig geheugen — leer voorkeuren en prijzen wanneer de gebruiker die deelt.",
     `Live CRM-snapshot:\n${crmSnapshot}`,
     "Antwoord ALLEEN met geldig JSON (geen markdown).",
@@ -200,10 +205,10 @@ export async function generateAgentChatReply(input: {
 
     const content = completion.choices[0]?.message?.content ?? "";
     const reply = parseReply(content);
-    if (!reply) return { useFallback: true };
+    if (!reply) return { useFallback: true, fallbackReason: "error" };
     return { reply };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "AI-chat mislukt.";
-    return { useFallback: true, error: msg };
+    return { useFallback: true, fallbackReason: "error", error: msg };
   }
 }

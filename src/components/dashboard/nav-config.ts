@@ -7,7 +7,6 @@ import {
   Zap,
   HardHat,
   Settings,
-  Plug,
   Bot,
   CalendarDays,
   Tags,
@@ -90,7 +89,6 @@ export const MOBILE_MORE_LINKS: MoreLink[] = [
   { label: "Prijslijst", href: "/dashboard/prijslijst", icon: Tags },
   { label: "AI Assistent", href: "/dashboard/nova-agents", icon: Bot },
   { label: "Activiteiten", href: "/dashboard/activiteit", icon: List },
-  { label: "Integraties", href: "/dashboard/integraties", icon: Plug },
   { label: "Instellingen", href: "/dashboard/instellingen", icon: Settings },
 ];
 

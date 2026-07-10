@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/components/dashboard/dashboard-theme.css";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
 import MobileBottomNav from "@/components/dashboard/MobileBottomNav";
@@ -18,6 +19,8 @@ import {
 } from "@/components/dashboard/DashboardSidePanel";
 import { getDashboardContext } from "@/components/dashboard/context";
 import { loadTopbarSummary } from "@/components/dashboard/mission-data";
+import { loadUserAgentName } from "@/lib/agents/userAi";
+import { isPlatformAdmin } from "@/lib/platform-admin";
 import {
   DashboardTourProvider,
   DashboardTourUi,
@@ -40,10 +43,16 @@ export default async function DashboardLayout({
   const topbarOffset = isPreviewMode || showTrialBanner ? "top-28" : "top-14";
   const mainTop = isPreviewMode || showTrialBanner ? "pt-28" : "pt-14";
   const topbarSummary = await loadTopbarSummary(supabase, companyId);
+  const userAgentName = user
+    ? await loadUserAgentName(supabase, user.id)
+    : "Nova";
+  const showCeoConsole = user
+    ? await isPlatformAdmin(user.id, user.email)
+    : false;
 
   return (
     <DashboardThemeProvider>
-      <AgentChatProvider companyId={companyId}>
+      <AgentChatProvider companyId={companyId} userAgentName={userAgentName}>
       <DashboardTourProvider>
       <AgentNavigationProvider>
       <ProactiveAgentProvider enabled={!isPreviewMode && Boolean(companyId)}>
@@ -58,7 +67,7 @@ export default async function DashboardLayout({
       >
         Ga naar inhoud
       </a>
-      <Sidebar isPreviewMode={isPreviewMode} />
+      <Sidebar isPreviewMode={isPreviewMode} showCeoConsole={showCeoConsole} />
       <Topbar initial={topbarSummary} />
       {isPreviewMode && <PreviewBanner />}
       {showTrialBanner && <TrialBanner trial={trial} />}

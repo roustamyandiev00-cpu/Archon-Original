@@ -70,7 +70,7 @@ const inputClass =
 export default function RegisterOnboardingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/dashboard/command-center?tour=1";
+  const redirectTo = searchParams.get("redirect") ?? "/dashboard/overzicht?tour=1";
   const refFromUrl = searchParams.get("ref")?.trim() ?? "";
   const prefillEmail = searchParams.get("email") ?? "";
 

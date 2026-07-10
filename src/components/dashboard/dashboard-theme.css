@@ -2,6 +2,40 @@
 
 .dashboard-root[data-theme="dark"] {
   color-scheme: dark;
+  /* Map to global refined palette for consistency */
+  --dash-bg: var(--color-bg);
+  --dash-surface: var(--color-surface);
+  --dash-elevated: var(--color-card);
+  --dash-border: var(--color-border);
+  --dash-border-strong: rgba(255,255,255,0.12);
+}
+
+.dashboard-root[data-theme="dark"].bg-zinc-950 {
+  background-color: var(--dash-bg) !important;
+}
+
+/* Factuur / Studio Admin-achtige kaarten */
+.dashboard-root[data-theme="dark"] .invoice-create-form,
+.dashboard-root[data-theme="dark"] .invoice-create-preview-shell {
+  background-color: var(--dash-surface) !important;
+  border-color: var(--dash-border) !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-section {
+  background-color: color-mix(in srgb, var(--dash-elevated) 55%, transparent) !important;
+  border-color: var(--dash-border) !important;
+}
+
+.dashboard-root[data-theme="light"] .invoice-create-form,
+.dashboard-root[data-theme="light"] .invoice-create-preview-shell {
+  background-color: #ffffff !important;
+  border-color: rgba(24, 24, 27, 0.1) !important;
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.04);
+}
+
+.dashboard-root[data-theme="light"] .invoice-create-section {
+  background-color: #fafafa !important;
+  border-color: rgba(24, 24, 27, 0.08) !important;
 }
 
 .dashboard-root[data-theme="light"] {
@@ -28,6 +62,20 @@
   background-color: var(--dash-bg) !important;
 }
 
+.dashboard-root[data-theme="light"] .bg-zinc-800,
+.dashboard-root[data-theme="light"] .bg-zinc-800\/90,
+.dashboard-root[data-theme="light"] .bg-zinc-800\/70,
+.dashboard-root[data-theme="light"] .bg-zinc-800\/50,
+.dashboard-root[data-theme="light"] .bg-zinc-800\/40 {
+  background-color: var(--dash-elevated) !important;
+}
+
+.dashboard-root[data-theme="light"] .border-zinc-700\/40,
+.dashboard-root[data-theme="light"] .border-zinc-700\/45,
+.dashboard-root[data-theme="light"] .border-zinc-600\/50 {
+  border-color: var(--dash-border) !important;
+}
+
 .dashboard-root[data-theme="light"] .bg-zinc-900,
 .dashboard-root[data-theme="light"] .bg-zinc-900\/85,
 .dashboard-root[data-theme="light"] .bg-zinc-900\/70,
@@ -37,8 +85,12 @@
   background-color: var(--dash-surface) !important;
 }
 
-.dashboard-root[data-theme="light"] .bg-zinc-800 {
+.dashboard-root[data-theme="light"] .invoice-preview-canvas {
   background-color: var(--dash-elevated) !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-preview-canvas {
+  background-color: color-mix(in srgb, var(--dash-elevated) 70%, black 10%) !important;
 }
 
 .dashboard-root[data-theme="light"] .bg-white\/5,
@@ -103,7 +155,7 @@
 
 /* Banners — donkere tekst op gekleurde achtergronden */
 .dashboard-root[data-theme="light"] .text-sky-100 {
-  color: #0c4a6e !important;
+  color: var(--color-primary-600) !important;
 }
 
 .dashboard-root[data-theme="light"] .text-amber-100 {
@@ -115,12 +167,12 @@
 }
 
 .dashboard-root[data-theme="light"] .text-sky-300 {
-  color: #0369a1 !important;
+  color: var(--color-primary) !important;
 }
 
 /* Sidebar active / nav */
 .dashboard-root[data-theme="light"] .text-sky-200 {
-  color: #075985 !important;
+  color: var(--color-primary) !important;
 }
 
 .dashboard-root[data-theme="light"] .group-hover\:text-zinc-300:hover,
@@ -186,7 +238,7 @@
 
 /* Accent badges blijven leesbaar */
 .dashboard-root[data-theme="light"] .text-sky-400 {
-  color: #0284c7 !important;
+  color: var(--color-primary) !important;
 }
 
 .dashboard-root[data-theme="light"] .text-emerald-400 {
@@ -333,6 +385,22 @@
   .mobile-swipe-shell {
     overflow: visible;
   }
+
+  .facturen-create-shell {
+    height: calc(100dvh - 6.5rem);
+    max-height: calc(100dvh - 6.5rem);
+    overflow: hidden;
+  }
+
+  .facturen-create-shell .mobile-swipe-dots {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .facturen-create-shell {
+    min-height: 0;
+  }
 }
 
 .mobile-more-sheet {
@@ -477,4 +545,10 @@
 
 .dashboard-root[data-theme="light"] .samenwerkingen-chat {
   color-scheme: dark;
+}
+
+.samenwerkingen-chat {
+  --chat-sidebar-width: 200px;
+  --chat-list-width: 320px;
+  --chat-profile-width: 280px;
 }

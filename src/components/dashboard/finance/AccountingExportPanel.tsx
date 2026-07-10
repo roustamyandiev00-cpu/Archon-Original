@@ -137,7 +137,7 @@ export default function AccountingExportPanel({
           <p className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-4 py-3 text-sm text-amber-200/90">
             Koppel een boekhoudprovider via{" "}
             <Link
-              href="/dashboard/integraties"
+              href="/dashboard/instellingen?tab=integraties"
               className="font-medium text-orange-300 hover:text-orange-200"
             >
               Integraties

@@ -73,7 +73,7 @@ export default function MercuriusPanel({
         {!peppolConnected && (
           <p className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-4 py-3 text-sm text-amber-200/90">
             Koppel eerst Peppol in{" "}
-            <Link href="/dashboard/integraties" className="text-orange-300 hover:text-orange-200">
+            <Link href="/dashboard/instellingen?tab=integraties" className="text-orange-300 hover:text-orange-200">
               Integraties
             </Link>
             .

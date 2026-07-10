@@ -15,6 +15,10 @@ import {
 import type { OfferteLijnInput } from "@/lib/offertes";
 import type { FactuurDocumentType } from "@/lib/facturen";
 
+export const FACTUUR_PAPER_WIDTH = 760;
+export const FACTUUR_PAPER_HEIGHT = 980;
+export const FACTUUR_PAPER_MAX_SCALE = 0.6;
+
 type PreviewCustomer = {
   id: number;
   name: string;
@@ -41,6 +45,7 @@ export default function FactuurDocumentPreview({
   notities,
   lines,
   nummer,
+  bare = false,
 }: {
   templateId?: string;
   defaultTemplate: string;
@@ -55,6 +60,8 @@ export default function FactuurDocumentPreview({
   notities: string;
   lines: OfferteLijnInput[];
   nummer?: string;
+  /** Volledige papiergrootte; schaal wordt door FactuurInvoicePreview geregeld. */
+  bare?: boolean;
 }) {
   const renderId = resolveDocumentTemplateId(templateId, defaultTemplate);
   const templateLabel = archonTemplateMeta(renderId)?.label ?? "Sjabloon";
@@ -117,6 +124,24 @@ export default function FactuurDocumentPreview({
     renderId,
     vervaldatum,
   ]);
+
+  const paper = (
+    <div
+      className="overflow-hidden rounded-lg bg-white shadow-[0_24px_80px_-24px_rgba(0,0,0,0.85)]"
+      style={{ width: FACTUUR_PAPER_WIDTH, height: FACTUUR_PAPER_HEIGHT }}
+    >
+      <iframe
+        title="Factuurvoorbeeld"
+        srcDoc={html}
+        className="border-0 bg-white"
+        style={{ width: FACTUUR_PAPER_WIDTH, height: FACTUUR_PAPER_HEIGHT }}
+      />
+    </div>
+  );
+
+  if (bare) {
+    return paper;
+  }
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">

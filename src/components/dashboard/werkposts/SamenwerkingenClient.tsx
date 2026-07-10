@@ -10,6 +10,7 @@ import {
   HardHat,
   Paperclip,
   FileText,
+  FileSignature,
   MessageCircle,
   CalendarPlus,
   CalendarDays,
@@ -28,8 +29,15 @@ import {
   Plus,
   Star,
   Settings,
-  CornerUpLeft,
   ArrowLeft,
+  ChevronDown,
+  Filter,
+  PanelRightClose,
+  PanelRightOpen,
+  Building2,
+  Clock,
+  Tag,
+  UserRound,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { sendMessage, sendAttachments } from "@/app/dashboard/comms/actions";
@@ -39,6 +47,12 @@ import {
   submitCompanyReview,
   type AfspraakInput,
 } from "@/app/dashboard/werkposts/samenwerkingen/actions";
+import {
+  contractNeedsMySignature,
+  countContractsAwaitingSignature,
+  type SamenwerkingContractRow,
+} from "@/lib/werkposts/contracts";
+import SamenwerkingContractPanel from "@/components/dashboard/werkposts/SamenwerkingContractPanel";
 
 type Attachment = {
   url: string;
@@ -86,7 +100,10 @@ type MessageRow = {
   created_at: string | null;
 };
 
-type Tab = "chat" | "documenten" | "afspraken";
+type InboxFilter = "alle" | "actief" | "gesloten";
+type ProfileTab = "details" | "bestanden" | "activiteit" | "contract";
+type ComposerMode = "reply" | "note";
+type ConversationGroup = "Vastgezet" | "Vandaag" | "Gisteren" | "Ouder";
 
 type RichMessage = {
   replyTo?: {
@@ -142,14 +159,6 @@ function formatDateTime(iso: string | null): string {
   });
 }
 
-function formatTimeOnly(iso: string | null): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleTimeString("nl-NL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 const statusMeta: Record<string, { label: string; className: string }> = {
   gepland: { label: "Gepland", className: "bg-sky-500/10 text-sky-300" },
   bevestigd: {
@@ -193,14 +202,6 @@ function downloadIcs(a: AfspraakRow, organisator: string) {
   URL.revokeObjectURL(url);
 }
 
-// Double checkmark helper
-const DoubleCheck = ({ read }: { read: boolean }) => (
-  <span className="flex items-center -space-x-1.5 select-none ml-1">
-    <Check size={13} className={read ? "text-sky-400" : "text-zinc-500"} />
-    <Check size={13} className={read ? "text-sky-400" : "text-zinc-500"} />
-  </span>
-);
-
 function getAvatarGradient(name: string) {
   const gradients = [
     "from-sky-500 to-cyan-600",
@@ -214,6 +215,95 @@ function getAvatarGradient(name: string) {
   return gradients[sum % gradients.length];
 }
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatRelativeTime(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Zojuist";
+  if (diffMin < 60) return `${diffMin}m`;
+  if (isSameDay(date, now)) {
+    return date.toLocaleTimeString("nl-NL", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(date, yesterday)) return "Gisteren";
+  return date.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+}
+
+function formatThreadDate(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function isActiveConversation(s: Samenwerking) {
+  if (!s.lastMessageAt) return true;
+  const days =
+    (Date.now() - new Date(s.lastMessageAt).getTime()) / (1000 * 60 * 60 * 24);
+  return days <= 14;
+}
+
+function isClosedConversation(s: Samenwerking) {
+  if (!s.lastMessageAt) return false;
+  const days =
+    (Date.now() - new Date(s.lastMessageAt).getTime()) / (1000 * 60 * 60 * 24);
+  return days > 30;
+}
+
+function getConversationGroup(s: Samenwerking): ConversationGroup {
+  if (s.werkpostTitel) return "Vastgezet";
+  if (!s.lastMessageAt) return "Ouder";
+  const date = new Date(s.lastMessageAt);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(date, now)) return "Vandaag";
+  if (isSameDay(date, yesterday)) return "Gisteren";
+  return "Ouder";
+}
+
+function groupConversations(list: Samenwerking[]) {
+  const order: ConversationGroup[] = [
+    "Vastgezet",
+    "Vandaag",
+    "Gisteren",
+    "Ouder",
+  ];
+  const buckets = new Map<ConversationGroup, Samenwerking[]>();
+  for (const group of order) buckets.set(group, []);
+  for (const item of list) {
+    buckets.get(getConversationGroup(item))!.push(item);
+  }
+  return order
+    .map((group) => ({ group, items: buckets.get(group)! }))
+    .filter((entry) => entry.items.length > 0);
+}
+
 export default function SamenwerkingenClient({
   samenwerkingen,
   afspraken,
@@ -221,6 +311,9 @@ export default function SamenwerkingenClient({
   myReviews = [],
   counterpartRatings = {},
   pendingReacties = [],
+  initialChannelId,
+  contractsByChannel: initialContractsByChannel = {},
+  companyNames = {},
 }: {
   samenwerkingen: Samenwerking[];
   afspraken: AfspraakRow[];
@@ -228,13 +321,38 @@ export default function SamenwerkingenClient({
   myReviews?: { target_company_id: number; rating: number; commentaar: string }[];
   counterpartRatings?: Record<number, { avg: number; count: number }>;
   pendingReacties?: PendingReactie[];
+  initialChannelId?: string | null;
+  contractsByChannel?: Record<string, SamenwerkingContractRow>;
+  companyNames?: Record<number, string>;
 }) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string | null>(
-    samenwerkingen[0]?.channelId ?? null,
-  );
+  const resolvedInitial =
+    initialChannelId &&
+    samenwerkingen.some((s) => s.channelId === initialChannelId)
+      ? initialChannelId
+      : (samenwerkingen[0]?.channelId ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(resolvedInitial);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>("chat");
+  const [contractsByChannel, setContractsByChannel] = useState(
+    initialContractsByChannel,
+  );
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (
+      initialChannelId &&
+      samenwerkingen.some((s) => s.channelId === initialChannelId)
+    ) {
+      setSelectedId(initialChannelId);
+      setMobileChatOpen(true);
+    }
+  }, [initialChannelId, samenwerkingen]);
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("alle");
+  const [profileTab, setProfileTab] = useState<ProfileTab>("details");
+  const [composerMode, setComposerMode] = useState<ComposerMode>("reply");
+  const [showContactPanel, setShowContactPanel] = useState(false);
+  const [afsprakenModalOpen, setAfsprakenModalOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loadedChannelId, setLoadedChannelId] = useState<string | null>(null);
   const loading = selectedId !== null && loadedChannelId !== selectedId;
@@ -264,6 +382,30 @@ export default function SamenwerkingenClient({
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
   const selected = samenwerkingen.find((s) => s.channelId === selectedId);
+  const selectedContract = selectedId
+    ? contractsByChannel[selectedId] ?? null
+    : null;
+
+  function updateChannelContract(
+    channelId: string,
+    contract: SamenwerkingContractRow | null,
+  ) {
+    setContractsByChannel((prev) => {
+      const next = { ...prev };
+      if (contract) next[channelId] = contract;
+      else delete next[channelId];
+      return next;
+    });
+  }
+
+  const contractPartyAName = selectedContract
+    ? (companyNames[selectedContract.partyACompanyId] ??
+      `Bedrijf #${selectedContract.partyACompanyId}`)
+    : (companyNames[companyId] ?? `Bedrijf #${companyId}`);
+  const contractPartyBName = selectedContract
+    ? (companyNames[selectedContract.partyBCompanyId] ??
+      `Bedrijf #${selectedContract.partyBCompanyId}`)
+    : (selected?.counterpartNaam ?? "Partner");
 
   const hasReviewed = (cid: number) => {
     return myReviews.some((r) => r.target_company_id === cid);
@@ -356,8 +498,8 @@ export default function SamenwerkingenClient({
   }, [selectedId]);
 
   useEffect(() => {
-    if (tab === "chat") bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, tab]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const documents = useMemo(() => {
     const items: { att: Attachment; at: string | null; mine: boolean }[] = [];
@@ -379,15 +521,40 @@ export default function SamenwerkingenClient({
     [afspraken, selectedId],
   );
 
-  // Filtered partner list based on search
   const filteredSamenwerkingen = useMemo(() => {
-    if (!searchQuery.trim()) return samenwerkingen;
-    const q = searchQuery.toLowerCase();
-    return samenwerkingen.filter((s) =>
-      s.counterpartNaam.toLowerCase().includes(q) ||
-      (s.werkpostTitel && s.werkpostTitel.toLowerCase().includes(q))
+    let list = samenwerkingen;
+    if (inboxFilter === "actief") {
+      list = list.filter(isActiveConversation);
+    } else if (inboxFilter === "gesloten") {
+      list = list.filter(isClosedConversation);
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(
+      (s) =>
+        s.counterpartNaam.toLowerCase().includes(q) ||
+        (s.werkpostTitel && s.werkpostTitel.toLowerCase().includes(q)),
     );
-  }, [samenwerkingen, searchQuery]);
+  }, [samenwerkingen, searchQuery, inboxFilter]);
+
+  const conversationGroups = useMemo(
+    () => groupConversations(filteredSamenwerkingen),
+    [filteredSamenwerkingen],
+  );
+
+  const inboxCounts = useMemo(
+    () => ({
+      alle: samenwerkingen.length,
+      actief: samenwerkingen.filter(isActiveConversation).length,
+      gesloten: samenwerkingen.filter(isClosedConversation).length,
+    }),
+    [samenwerkingen],
+  );
+
+  const pendingSignatureCount = useMemo(
+    () => countContractsAwaitingSignature(contractsByChannel, companyId),
+    [contractsByChannel, companyId],
+  );
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -462,94 +629,145 @@ export default function SamenwerkingenClient({
   }
 
   return (
-    <div className="samenwerkingen-chat relative flex h-[min(820px,calc(100dvh-8.5rem))] min-h-[520px] overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950 shadow-2xl shadow-black/40">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-sky-500/[0.07] via-indigo-500/[0.04] to-transparent" />
-      
-      {/* 1. Left Narrow Navigation Bar (~60px) */}
-      <div className="relative hidden w-[60px] flex-col items-center justify-between border-r border-zinc-800/80 bg-zinc-900/70 py-4 backdrop-blur sm:flex shrink-0">
-        <div className="flex flex-col items-center gap-5 w-full">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-zinc-950 shadow-md">
-            <Handshake size={20} />
+    <div className="samenwerkingen-chat relative grid h-[min(820px,calc(100dvh-8.5rem))] min-h-[520px] overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950 shadow-2xl shadow-black/40 lg:grid-cols-[auto_minmax(0,320px)_minmax(0,1fr)] xl:grid-cols-[auto_minmax(0,320px)_minmax(0,1fr)_280px]">
+      {/* 1. Inbox-sidebar (shadcn-stijl) */}
+      <aside
+        className={`relative hidden shrink-0 flex-col border-r border-zinc-800/80 bg-zinc-900/60 lg:flex ${
+          sidebarCollapsed ? "w-[68px]" : "w-[200px]"
+        }`}
+      >
+        <div className="flex items-center gap-2 border-b border-zinc-800/80 px-3 py-3.5">
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-500 text-zinc-950">
+            <Handshake size={16} />
           </div>
-          
-          <div className="h-[1px] w-8 bg-white/10 my-1" />
-
-          {/* Navigation Tabs */}
-          <button
-            onClick={() => {
-              setTab("chat");
-              setMobileChatOpen(false);
-            }}
-            title="Chats"
-            className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all ${
-              tab === "chat"
-                ? "bg-sky-500/15 text-sky-400"
-                : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-            }`}
-          >
-            <MessageCircle size={20} />
-            {tab === "chat" && (
-              <span className="absolute left-0 top-3 h-5 w-[3px] rounded-r-full bg-sky-400" />
-            )}
-            {samenwerkingen.length > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-sky-500 px-1 text-[9px] font-bold text-zinc-950">
-                {Math.min(samenwerkingen.length, 9)}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setTab("documenten")}
-            title="Documenten"
-            className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all ${
-              tab === "documenten"
-                ? "bg-sky-500/15 text-sky-400"
-                : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-            }`}
-          >
-            <FileText size={20} />
-            {tab === "documenten" && (
-              <span className="absolute left-0 top-3 h-5 w-[3px] rounded-r-full bg-sky-400" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setTab("afspraken")}
-            title="Afspraken"
-            className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-all ${
-              tab === "afspraken"
-                ? "bg-sky-500/15 text-sky-400"
-                : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-            }`}
-          >
-            <CalendarDays size={20} />
-            {tab === "afspraken" && (
-              <span className="absolute left-0 top-3 h-5 w-[3px] rounded-r-full bg-sky-400" />
-            )}
-          </button>
+          {!sidebarCollapsed && (
+            <span className="truncate text-sm font-semibold text-zinc-100">
+              Bouwnetwerk
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-col items-center gap-4 w-full" ref={settingsMenuRef}>
-          {selected?.counterpartId && (
-            <button
-              onClick={() => openReview(selected.counterpartId!)}
-              title={hasReviewed(selected.counterpartId!) ? "Beoordeling bewerken" : "Beoordeel partner"}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-amber-400 hover:bg-white/5 transition-all"
-            >
-              <Star size={18} fill={hasReviewed(selected.counterpartId!) ? "currentColor" : "none"} />
-            </button>
+        <div className="flex-1 overflow-y-auto px-2 py-3">
+          <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            {sidebarCollapsed ? "·" : "Inbox"}
+          </p>
+          <nav className="space-y-0.5">
+            {[
+              {
+                id: "chats" as const,
+                label: "Samenwerkingen",
+                icon: MessageCircle,
+                badge: samenwerkingen.length,
+              },
+              {
+                id: "reacties" as const,
+                label: "Openstaande reacties",
+                icon: HardHat,
+                badge: pendingReacties.length,
+                href: "/dashboard/werkposts",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              const content = (
+                <>
+                  <Icon size={16} className="shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1 truncate text-left">{item.label}</span>
+                      {item.badge ? (
+                        <span className="rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold text-sky-300">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </>
+                  )}
+                </>
+              );
+              const className = `flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                item.id === "chats"
+                  ? "bg-sky-500/10 text-sky-300"
+                  : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+              }`;
+              return item.href ? (
+                <Link key={item.id} href={item.href} className={className}>
+                  {content}
+                </Link>
+              ) : (
+                <button key={item.id} type="button" className={className}>
+                  {content}
+                </button>
+              );
+            })}
+          </nav>
+
+          {!sidebarCollapsed && (
+            <>
+              <p className="mb-1.5 mt-5 px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                Kanalen
+              </p>
+              <nav className="space-y-0.5">
+                {[
+                  { label: "Directe chats", count: samenwerkingen.length },
+                  {
+                    label: "Projectgekoppeld",
+                    count: samenwerkingen.filter((s) => s.werkpostId).length,
+                  },
+                  { label: "Met afspraken", count: afspraken.length },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+                  >
+                    <span className="truncate">{item.label}</span>
+                    <span className="text-[10px] font-semibold text-zinc-500">
+                      {item.count}
+                    </span>
+                  </button>
+                ))}
+              </nav>
+
+              <p className="mb-1.5 mt-5 px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                Weergaven
+              </p>
+              <nav className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => setInboxFilter("actief")}
+                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+                >
+                  <span>Actieve partners</span>
+                  <span className="text-[10px] font-semibold text-zinc-500">
+                    {inboxCounts.actief}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInboxFilter("gesloten")}
+                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+                >
+                  <span>Inactief</span>
+                  <span className="text-[10px] font-semibold text-zinc-500">
+                    {inboxCounts.gesloten}
+                  </span>
+                </button>
+              </nav>
+            </>
           )}
+        </div>
+
+        <div className="border-t border-zinc-800/80 p-2" ref={settingsMenuRef}>
           <div className="relative">
             <button
               type="button"
-              title="Instellingen"
               onClick={() => setSettingsMenuOpen((open) => !open)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/5 hover:text-zinc-300 transition-all"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
             >
-              <Settings size={18} />
+              <Settings size={16} />
+              {!sidebarCollapsed && <span>Instellingen</span>}
             </button>
             {settingsMenuOpen && (
-              <div className="absolute bottom-0 left-full z-50 ml-2 w-56 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 py-1.5 shadow-2xl">
+              <div className="absolute bottom-full left-0 z-50 mb-2 w-56 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 py-1.5 shadow-2xl">
                 <Link
                   href="/dashboard/werkposts"
                   onClick={() => setSettingsMenuOpen(false)}
@@ -558,16 +776,6 @@ export default function SamenwerkingenClient({
                   <HardHat size={14} className="text-sky-400" />
                   Bouwnetwerk beheer
                 </Link>
-                {selected?.werkpostId && (
-                  <Link
-                    href={`/dashboard/werkposts/${selected.werkpostId}`}
-                    onClick={() => setSettingsMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-200 hover:bg-white/5"
-                  >
-                    <FileText size={14} className="text-cyan-400" />
-                    Gekoppelde werkpost
-                  </Link>
-                )}
                 <Link
                   href="/bouwnetwerk"
                   onClick={() => setSettingsMenuOpen(false)}
@@ -579,288 +787,330 @@ export default function SamenwerkingenClient({
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            className="mt-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-300"
+          >
+            {sidebarCollapsed ? (
+              <PanelRightOpen size={16} />
+            ) : (
+              <>
+                <PanelRightClose size={16} />
+                <span>Inklappen</span>
+              </>
+            )}
+          </button>
         </div>
-      </div>
+      </aside>
 
-      {/* 2. Middle Panel: Partners / Chats list (~300px) */}
+      {/* 2. Gesprekkenlijst */}
       <div
-        className={`relative flex w-full flex-col border-r border-zinc-800/80 bg-zinc-900/50 sm:w-[340px] shrink-0 ${
-          mobileChatOpen ? "hidden md:flex" : "flex"
+        className={`relative flex min-w-0 flex-col border-r border-zinc-800/80 bg-zinc-900/40 ${
+          mobileChatOpen ? "hidden lg:flex" : "flex"
         }`}
       >
-        
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4">
-          <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Chats</h2>
-          <div className="relative" ref={newChatMenuRef}>
+        <div className="flex items-center justify-between border-b border-zinc-800/80 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="text-base font-semibold text-zinc-100">Inbox</h2>
+            {pendingSignatureCount > 0 && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                <FileSignature size={10} />
+                {pendingSignatureCount} te tekenen
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              title="Nieuw gesprek"
-              onClick={() => setNewChatMenuOpen((open) => !open)}
-              className="relative grid h-9 w-9 place-items-center rounded-full text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+              className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+              aria-label="Filter"
             >
-              <Plus size={20} />
-              {pendingReacties.length > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-sky-500 px-1 text-[9px] font-bold text-zinc-950">
-                  {Math.min(pendingReacties.length, 9)}
-                </span>
-              )}
+              <Filter size={15} />
             </button>
-
-            {newChatMenuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 py-1.5 shadow-2xl">
-                <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Start een samenwerking
-                </p>
-                <Link
-                  href="/dashboard/werkposts"
-                  onClick={() => setNewChatMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-200 transition-colors hover:bg-white/5"
-                >
-                  <HardHat size={15} className="text-sky-400" />
-                  Naar Bouwnetwerk beheer
-                </Link>
-                <Link
-                  href="/dashboard/werkposts/nieuw"
-                  onClick={() => setNewChatMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-200 transition-colors hover:bg-white/5"
-                >
-                  <Plus size={15} className="text-sky-400" />
-                  Nieuwe werkpost plaatsen
-                </Link>
-                <Link
-                  href="/bouwnetwerk"
-                  onClick={() => setNewChatMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-200 transition-colors hover:bg-white/5"
-                >
-                  <Handshake size={15} className="text-violet-400" />
-                  Publieke feed bekijken
-                </Link>
+            <div className="relative" ref={newChatMenuRef}>
+              <button
+                type="button"
+                title="Nieuw gesprek"
+                onClick={() => setNewChatMenuOpen((open) => !open)}
+                className="relative grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+              >
+                <Plus size={18} />
                 {pendingReacties.length > 0 && (
-                  <>
-                    <div className="my-1.5 h-px bg-white/10" />
-                    <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400/90">
-                      {pendingReacties.length} openstaande reactie
-                      {pendingReacties.length === 1 ? "" : "s"}
-                    </p>
-                    {pendingReacties.slice(0, 5).map((r) => (
-                      <Link
-                        key={r.id}
-                        href={`/dashboard/werkposts/${r.werkpostId}`}
-                        onClick={() => setNewChatMenuOpen(false)}
-                        className="block px-3 py-2 transition-colors hover:bg-white/5"
-                      >
-                        <span className="block truncate text-sm font-medium text-zinc-100">
-                          {r.companyNaam}
-                        </span>
-                        <span className="block truncate text-[11px] text-zinc-500">
-                          {r.werkpostTitel}
-                        </span>
-                      </Link>
-                    ))}
-                  </>
+                  <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-sky-500 px-1 text-[9px] font-bold text-zinc-950">
+                    {Math.min(pendingReacties.length, 9)}
+                  </span>
                 )}
-              </div>
-            )}
+              </button>
+              {newChatMenuOpen && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 py-1.5 shadow-2xl">
+                  <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Start een samenwerking
+                  </p>
+                  <Link
+                    href="/dashboard/werkposts"
+                    onClick={() => setNewChatMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-200 hover:bg-white/5"
+                  >
+                    <HardHat size={15} className="text-sky-400" />
+                    Naar Bouwnetwerk beheer
+                  </Link>
+                  <Link
+                    href="/dashboard/werkposts/nieuw"
+                    onClick={() => setNewChatMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-sm text-zinc-200 hover:bg-white/5"
+                  >
+                    <Plus size={15} className="text-sky-400" />
+                    Nieuwe werkpost plaatsen
+                  </Link>
+                  {pendingReacties.length > 0 && (
+                    <>
+                      <div className="my-1.5 h-px bg-white/10" />
+                      {pendingReacties.slice(0, 5).map((r) => (
+                        <Link
+                          key={r.id}
+                          href={`/dashboard/werkposts/${r.werkpostId}`}
+                          onClick={() => setNewChatMenuOpen(false)}
+                          className="block px-3 py-2 hover:bg-white/5"
+                        >
+                          <span className="block truncate text-sm font-medium text-zinc-100">
+                            {r.companyNaam}
+                          </span>
+                          <span className="block truncate text-[11px] text-zinc-500">
+                            {r.werkpostTitel}
+                          </span>
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="px-3 pb-3">
-          <div className="relative flex items-center rounded-xl border border-zinc-800/80 bg-zinc-950/60 px-3 py-2 text-zinc-300">
-            <Search size={16} className="text-zinc-400 mr-2 shrink-0" />
+        <div className="border-b border-zinc-800/80 px-3 py-2">
+          <div className="flex gap-1 rounded-lg bg-zinc-950/60 p-1">
+            {(
+              [
+                ["alle", "Alle"],
+                ["actief", "Actief"],
+                ["gesloten", "Gesloten"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setInboxFilter(key)}
+                className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                  inboxFilter === key
+                    ? "bg-zinc-800 text-zinc-100 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                {label}
+                <span className="ml-1 text-zinc-600">({inboxCounts[key]})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-3 py-2">
+          <div className="flex items-center rounded-lg border border-zinc-800/80 bg-zinc-950/50 px-3 py-2">
+            <Search size={15} className="mr-2 shrink-0 text-zinc-500" />
             <input
               type="text"
-              placeholder="Zoek"
+              placeholder="Zoek gesprekken"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
             />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="text-zinc-500 hover:text-zinc-300">
-                <X size={14} />
-              </button>
-            )}
           </div>
         </div>
 
-        {/* List items */}
         <div className="flex-1 overflow-y-auto">
           {samenwerkingen.length === 0 ? (
             <div className="grid place-items-center px-6 py-10 text-center">
               <div className="max-w-[240px] space-y-4">
-                <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-sky-500/20 bg-sky-500/10 text-sky-400">
+                <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-400">
                   <Handshake size={22} />
                 </span>
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-zinc-200">
-                    Nog geen chats
-                  </p>
-                  <p className="text-xs leading-relaxed text-zinc-500">
-                    Accepteer een reactie op een werkpost in Bouwnetwerk — je
-                    gesprekken met partners verschijnen hier.
-                  </p>
-                </div>
+                <p className="text-sm font-semibold text-zinc-200">Nog geen chats</p>
+                <p className="text-xs leading-relaxed text-zinc-500">
+                  Accepteer een reactie op een werkpost om te starten.
+                </p>
                 <SamenwerkingStartActions pendingCount={pendingReacties.length} />
               </div>
             </div>
           ) : filteredSamenwerkingen.length === 0 ? (
             <div className="px-4 py-8 text-center text-xs text-zinc-500">
-              Geen partners gevonden
+              Geen gesprekken gevonden
             </div>
           ) : (
-            filteredSamenwerkingen.map((s) => {
-              const active = selectedId === s.channelId;
-              const initials = s.counterpartNaam
-                .split(" ")
-                .map((w) => w[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase();
-              
-              return (
+            conversationGroups.map(({ group, items }) => (
+              <div key={group}>
                 <button
-                  key={s.channelId}
-                  onClick={() => {
-                    setSelectedId(s.channelId);
-                    setLoadedChannelId(null);
-                    setTab("chat");
-                    setMobileChatOpen(true);
-                  }}
-                  className={`flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-zinc-800/40 ${
-                    active ? "border-l-2 border-sky-500 bg-sky-500/5" : "border-l-2 border-transparent"
-                  }`}
+                  type="button"
+                  className="flex w-full items-center gap-1.5 px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-zinc-500"
                 >
-                  {/* Circular Avatar */}
-                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr ${getAvatarGradient(s.counterpartNaam)} text-sm font-bold text-white shadow-sm`}>
-                    {initials}
-                  </div>
-
-                  <div className="min-w-0 flex-1 border-b border-white/[0.04] pb-3.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[15px] font-medium text-zinc-100">
-                        {s.counterpartNaam}
-                      </span>
-                      {s.lastMessageAt && (
-                        <span className="text-[11px] text-sky-400/80 shrink-0">
-                          {formatTimeOnly(s.lastMessageAt)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-1">
-                      {s.lastMessagePreview ? (
-                        <span className="truncate text-[13px] text-zinc-500">
-                          {s.lastMessagePreview}
-                        </span>
-                      ) : s.werkpostTitel ? (
-                        <span className="flex items-center gap-1 truncate text-[13px] text-zinc-500">
-                          <HardHat size={12} className="shrink-0" /> {s.werkpostTitel}
-                        </span>
-                      ) : (
-                        <span className="truncate text-[13px] text-zinc-600">
-                          Start het gesprek…
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <ChevronDown size={12} />
+                  {group}
                 </button>
-              );
-            })
+                {items.map((s) => {
+                  const active = selectedId === s.channelId;
+                  const channelContract = contractsByChannel[s.channelId] ?? null;
+                  const needsSignature = contractNeedsMySignature(
+                    channelContract,
+                    companyId,
+                  );
+                  return (
+                    <button
+                      key={s.channelId}
+                      onClick={() => {
+                        setSelectedId(s.channelId);
+                        setLoadedChannelId(null);
+                        setMobileChatOpen(true);
+                        if (needsSignature) {
+                          setProfileTab("contract");
+                          setContractModalOpen(true);
+                        }
+                      }}
+                      className={`flex w-full gap-3 border-b border-zinc-800/50 px-4 py-3 text-left transition-colors hover:bg-zinc-800/30 ${
+                        active ? "bg-sky-500/5" : ""
+                      } ${needsSignature ? "bg-amber-500/[0.04]" : ""}`}
+                    >
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr text-xs font-bold text-white ${getAvatarGradient(s.counterpartNaam)}`}
+                      >
+                        {getInitials(s.counterpartNaam)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="truncate text-sm font-medium text-zinc-100">
+                            {s.counterpartNaam}
+                          </span>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {needsSignature && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-950">
+                                <FileSignature size={9} />
+                                Teken
+                              </span>
+                            )}
+                            <span className="text-[10px] text-zinc-500">
+                              {formatRelativeTime(s.lastMessageAt)}
+                            </span>
+                          </div>
+                        </div>
+                        {s.werkpostTitel && (
+                          <p className="mt-0.5 truncate text-xs font-medium text-zinc-300">
+                            {s.werkpostTitel}
+                          </p>
+                        )}
+                        <p
+                          className={`mt-0.5 line-clamp-2 text-xs ${
+                            needsSignature
+                              ? "font-medium text-amber-300/90"
+                              : "text-zinc-500"
+                          }`}
+                        >
+                          {needsSignature
+                            ? "Contract wacht op jouw handtekening"
+                            : (s.lastMessagePreview ?? "Start het gesprek…")}
+                        </p>
+                      </div>
+                      {group === "Vastgezet" && !needsSignature && (
+                        <Pin size={12} className="mt-1 shrink-0 text-sky-400/80" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))
           )}
         </div>
       </div>
 
-      {/* 3. Right Panel: Workspace */}
+      {/* 3. Berichtenthread */}
       <div
-        className={`relative flex flex-1 flex-col bg-zinc-950 min-w-0 ${
-          mobileChatOpen ? "flex" : "hidden md:flex"
+        className={`relative flex min-w-0 flex-col bg-zinc-950 transition-transform duration-300 ease-out ${
+          mobileChatOpen ? "flex" : "hidden lg:flex"
         }`}
       >
         {selected ? (
           <>
-            {/* Header */}
-            <div className="flex h-[60px] items-center justify-between border-b border-zinc-800/80 bg-zinc-900/70 px-3 py-2 backdrop-blur sm:px-4 shrink-0">
-              <div className="flex items-center gap-2 min-w-0 sm:gap-3">
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-900/50 px-3 sm:px-4">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setMobileChatOpen(false)}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-zinc-300 hover:bg-white/5 md:hidden"
-                  aria-label="Terug naar chats"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-zinc-300 hover:bg-white/5 lg:hidden"
+                  aria-label="Terug naar inbox"
                 >
                   <ArrowLeft size={18} />
                 </button>
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr ${getAvatarGradient(selected.counterpartNaam)} text-xs font-bold text-white`}>
-                  {selected.counterpartNaam.slice(0, 2).toUpperCase()}
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr text-xs font-bold text-white ${getAvatarGradient(selected.counterpartNaam)}`}
+                >
+                  {getInitials(selected.counterpartNaam)}
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm font-semibold text-zinc-100">
-                      {selected.counterpartNaam}
-                    </p>
-                    {selected.counterpartId && counterpartRatings[selected.counterpartId] && (
-                      <span className="inline-flex items-center gap-0.5 rounded bg-zinc-950 border border-white/5 px-1.5 py-0.5 text-[9px] font-bold text-zinc-400">
-                        <span className="text-amber-400">★</span>
-                        <span className="text-zinc-300">{counterpartRatings[selected.counterpartId].avg.toFixed(1)}</span>
-                      </span>
-                    )}
-                  </div>
-                  <p className="truncate text-[10px] text-zinc-500">Bouwnetwerk-partner</p>
+                  <p className="truncate text-sm font-semibold text-zinc-100">
+                    {selected.counterpartNaam}
+                  </p>
+                  <p className="truncate text-xs text-zinc-500">
+                    {selected.werkpostTitel ?? "Bouwnetwerk-partner"}
+                  </p>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-3.5 text-zinc-300 shrink-0">
-                {tab === "chat" && (
-                  <>
-                    <button
-                      onClick={() => handleSendMockCall("video-oproep")}
-                      title="Videobellen (Mock)"
-                      className="p-1.5 rounded-full hover:bg-white/5 text-zinc-300 hover:text-zinc-100 transition-colors"
-                    >
-                      <Video size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleSendMockCall("spraakoproep")}
-                      title="Bellen (Mock)"
-                      className="p-1.5 rounded-full hover:bg-white/5 text-zinc-300 hover:text-zinc-100 transition-colors"
-                    >
-                      <Phone size={16} />
-                    </button>
-                  </>
-                )}
-                
-                {selected.counterpartId && (
-                  <button
-                    onClick={() => openReview(selected.counterpartId!)}
-                    className="hidden lg:inline-flex items-center gap-1 rounded-full border border-white/10 bg-zinc-950/40 px-2.5 py-1 text-[11px] font-semibold text-zinc-300 hover:bg-white/5 transition-colors"
-                  >
-                    ★ {hasReviewed(selected.counterpartId!) ? "Beoordeling bewerken" : "Beoordeel partner"}
-                  </button>
-                )}
-
-                {/* Mobile Tab Switcher */}
-                <div className="flex items-center gap-1 rounded-full border border-white/5 bg-zinc-950/40 p-0.5 sm:hidden">
-                  {(["chat", "documenten", "afspraken"] as Tab[]).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTab(t)}
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize transition-colors ${
-                        tab === t ? "bg-sky-500 text-zinc-950" : "text-zinc-400"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-
+              <div className="flex shrink-0 items-center gap-1 text-zinc-400">
+                <button
+                  type="button"
+                  onClick={() => setContractModalOpen(true)}
+                  className="relative grid h-8 w-8 place-items-center rounded-lg hover:bg-white/5 hover:text-sky-300"
+                  title="Contract opstellen"
+                >
+                  <FileSignature size={16} />
+                  {selectedContract &&
+                    contractNeedsMySignature(selectedContract, companyId) && (
+                      <span className="absolute -right-0.5 -top-0.5 grid h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-zinc-900" />
+                    )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendMockCall("video-oproep")}
+                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-white/5 hover:text-zinc-100"
+                  title="Videobellen"
+                >
+                  <Video size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendMockCall("spraakoproep")}
+                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-white/5 hover:text-zinc-100"
+                  title="Bellen"
+                >
+                  <Phone size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowContactPanel(true);
+                    setProfileTab("details");
+                  }}
+                  className="grid h-8 w-8 place-items-center rounded-lg hover:bg-white/5 hover:text-zinc-100 xl:hidden"
+                  title="Partnerprofiel"
+                >
+                  <UserRound size={16} />
+                </button>
                 <div className="relative" ref={moreMenuRef}>
                   <button
                     type="button"
                     onClick={() => setMoreMenuOpen((open) => !open)}
-                    className="p-1.5 rounded-full hover:bg-white/5 text-zinc-300 hover:text-zinc-100 transition-colors"
+                    className="grid h-8 w-8 place-items-center rounded-lg hover:bg-white/5 hover:text-zinc-100"
                     aria-label="Meer opties"
                   >
-                    <MoreVertical size={18} />
+                    <MoreVertical size={16} />
                   </button>
                   {moreMenuOpen && (
                     <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-900 py-1.5 shadow-2xl">
@@ -884,30 +1134,31 @@ export default function SamenwerkingenClient({
                           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5"
                         >
                           <Star size={14} className="text-amber-400" />
-                          {hasReviewed(selected.counterpartId!) ? "Beoordeling bewerken" : "Beoordeel partner"}
+                          Beoordeel partner
                         </button>
                       )}
                       <button
                         type="button"
                         onClick={() => {
                           setMoreMenuOpen(false);
-                          setTab("documenten");
+                          setContractModalOpen(true);
                         }}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5"
                       >
-                        <FileText size={14} className="text-cyan-400" />
-                        Documenten
+                        <FileSignature size={14} className="text-sky-400" />
+                        Contract
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           setMoreMenuOpen(false);
-                          setTab("afspraken");
+                          setProfileTab("bestanden");
+                          setShowContactPanel(true);
                         }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5 xl:hidden"
                       >
-                        <CalendarDays size={14} className="text-sky-400" />
-                        Afspraken
+                        <FileText size={14} className="text-cyan-400" />
+                        Bestanden
                       </button>
                     </div>
                   )}
@@ -915,81 +1166,160 @@ export default function SamenwerkingenClient({
               </div>
             </div>
 
-            {/* Matched Werkpost Pin Banner */}
-            {selected.werkpostTitel && tab === "chat" && (
-              <div className="flex items-center gap-2 border-b border-zinc-800/60 bg-zinc-900/40 px-4 py-2.5 text-xs text-zinc-300 shrink-0">
-                <Pin size={12} className="text-sky-400 shrink-0" />
-                {selected.werkpostId ? (
-                  <Link
-                    href={`/dashboard/werkposts/${selected.werkpostId}`}
-                    className="truncate transition-colors hover:text-sky-300"
-                  >
-                    <span className="text-zinc-500">Gekoppeld · </span>
-                    {selected.werkpostTitel}
-                  </Link>
-                ) : (
-                  <span className="truncate">
-                    <span className="text-zinc-500">Vastgezet · </span>
-                    {selected.werkpostTitel}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Tab Views */}
-            <div className="flex-1 min-h-0 relative flex flex-col">
-              {tab === "chat" && (
-                <ChatPanel
-                  loading={loading}
-                  messages={messages}
-                  companyId={companyId}
-                  text={text}
-                  setText={setText}
-                  replyTo={replyTo}
-                  setReplyTo={setReplyTo}
-                  sending={sending}
-                  uploading={uploading}
-                  uploadError={uploadError}
-                  sendError={sendError}
-                  fileRef={fileRef}
-                  bottomRef={bottomRef}
-                  onSend={handleSend}
-                  onFiles={handleFiles}
-                  onSendMockAudio={handleSendMockAudio}
-                  onSendMockCall={handleSendMockCall}
-                  counterpartNaam={selected.counterpartNaam}
-                />
-              )}
-
-              {tab === "documenten" && (
-                <DocumentsPanel
-                  loading={loading}
-                  documents={documents}
-                  uploading={uploading}
-                  uploadError={uploadError}
-                  docRef={docRef}
-                  onFiles={handleFiles}
-                />
-              )}
-
-              {tab === "afspraken" && (
-                <AfsprakenPanel
-                  channelId={selectedId!}
-                  counterpartId={selected.counterpartId}
-                  counterpartNaam={selected.counterpartNaam}
-                  afspraken={channelAfspraken}
-                />
-              )}
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <ChatPanel
+                loading={loading}
+                messages={messages}
+                companyId={companyId}
+                text={text}
+                setText={setText}
+                replyTo={replyTo}
+                setReplyTo={setReplyTo}
+                sending={sending}
+                uploading={uploading}
+                uploadError={uploadError}
+                sendError={sendError}
+                fileRef={fileRef}
+                bottomRef={bottomRef}
+                onSend={handleSend}
+                onFiles={handleFiles}
+                onSendMockAudio={handleSendMockAudio}
+                composerMode={composerMode}
+                setComposerMode={setComposerMode}
+                counterpartNaam={selected.counterpartNaam}
+                threadStartDate={selected.lastMessageAt}
+              />
             </div>
           </>
         ) : (
           <EmptyWorkspace
-            tab={tab}
             hasChats={samenwerkingen.length > 0}
             pendingCount={pendingReacties.length}
           />
         )}
       </div>
+
+      {/* 4. Partnerprofiel (desktop) */}
+      {selected && (
+        <aside className="hidden min-w-0 flex-col border-l border-zinc-800/80 bg-zinc-900/30 xl:flex">
+          <PartnerProfilePanel
+            selected={selected}
+            profileTab={profileTab}
+            setProfileTab={setProfileTab}
+            documents={documents}
+            channelAfspraken={channelAfspraken}
+            counterpartRatings={counterpartRatings}
+            hasReviewed={hasReviewed}
+            onOpenReview={openReview}
+            loading={loading}
+            uploading={uploading}
+            uploadError={uploadError}
+            docRef={docRef}
+            onFiles={handleFiles}
+            onPlanAfspraak={() => setAfsprakenModalOpen(true)}
+            companyId={companyId}
+            contract={selectedContract}
+            contractPartyAName={contractPartyAName}
+            contractPartyBName={contractPartyBName}
+            onContractChange={(c) =>
+              selectedId && updateChannelContract(selectedId, c)
+            }
+          />
+        </aside>
+      )}
+
+      {/* Mobiel partnerprofiel */}
+      {showContactPanel && selected && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-zinc-950/70 backdrop-blur-sm xl:hidden">
+          <button
+            type="button"
+            className="absolute inset-0"
+            aria-label="Sluit profiel"
+            onClick={() => setShowContactPanel(false)}
+          />
+          <div className="relative flex h-full w-full max-w-sm flex-col border-l border-zinc-800/80 bg-zinc-900 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setShowContactPanel(false)}
+              className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-white/5"
+            >
+              <X size={16} />
+            </button>
+            <PartnerProfilePanel
+              selected={selected}
+              profileTab={profileTab}
+              setProfileTab={setProfileTab}
+              documents={documents}
+              channelAfspraken={channelAfspraken}
+              counterpartRatings={counterpartRatings}
+              hasReviewed={hasReviewed}
+              onOpenReview={openReview}
+              loading={loading}
+              uploading={uploading}
+              uploadError={uploadError}
+              docRef={docRef}
+              onFiles={handleFiles}
+              onPlanAfspraak={() => {
+                setShowContactPanel(false);
+                setAfsprakenModalOpen(true);
+              }}
+              companyId={companyId}
+              contract={selectedContract}
+              contractPartyAName={contractPartyAName}
+              contractPartyBName={contractPartyBName}
+              onContractChange={(c) =>
+                selectedId && updateChannelContract(selectedId, c)
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Afspraken modal */}
+      {afsprakenModalOpen && selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 p-4 backdrop-blur-sm">
+          <div className="relative flex h-[min(640px,90dvh)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setAfsprakenModalOpen(false)}
+              className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-white/5"
+            >
+              <X size={16} />
+            </button>
+            <AfsprakenPanel
+              channelId={selectedId!}
+              counterpartId={selected.counterpartId}
+              counterpartNaam={selected.counterpartNaam}
+              afspraken={channelAfspraken}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Contract modal */}
+      {contractModalOpen && selected && selectedId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 p-4 backdrop-blur-sm">
+          <div className="relative flex max-h-[min(720px,92dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setContractModalOpen(false)}
+              className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-white/5"
+            >
+              <X size={16} />
+            </button>
+            <div className="overflow-y-auto p-5 sm:p-6">
+              <SamenwerkingContractPanel
+                channelId={selectedId}
+                companyId={companyId}
+                partyAName={contractPartyAName}
+                partyBName={contractPartyBName}
+                initialContract={selectedContract}
+                onContractChange={(c) => updateChannelContract(selectedId, c)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Review Modal */}
       {reviewModalOpen && selected && (
@@ -1110,56 +1440,27 @@ function SamenwerkingStartActions({ pendingCount }: { pendingCount: number }) {
 }
 
 function EmptyWorkspace({
-  tab,
   hasChats,
   pendingCount,
 }: {
-  tab: Tab;
   hasChats: boolean;
   pendingCount: number;
 }) {
-  const tabCopy: Record<Tab, { title: string; body: string; icon: typeof MessageCircle }> = {
-    chat: {
-      title: "Samenwerkingen",
-      body: hasChats
-        ? "Kies een chat links om te beginnen met praten."
-        : "Chat, deel documenten en plan afspraken met partners uit het Bouwnetwerk. Accepteer een reactie op een werkpost om te starten.",
-      icon: MessageCircle,
-    },
-    documenten: {
-      title: "Documenten",
-      body: hasChats
-        ? "Selecteer een gesprek om gedeelde bestanden te bekijken."
-        : "Zodra je een samenwerking start, kun je hier documenten en foto's delen.",
-      icon: FileText,
-    },
-    afspraken: {
-      title: "Afspraken",
-      body: hasChats
-        ? "Selecteer een gesprek om afspraken te plannen met je partner."
-        : "Plan afspraken zodra je een reactie hebt geaccepteerd en een chat is gestart.",
-      icon: CalendarDays,
-    },
-  };
-
-  const copy = tabCopy[tab];
-  const Icon = copy.icon;
-
   return (
-    <div className="grid flex-1 place-items-center border-b-4 border-sky-500/30 p-6 text-center text-zinc-500">
+    <div className="grid flex-1 place-items-center p-6 text-center text-zinc-500">
       <div className="max-w-sm space-y-4">
-        <span className="mx-auto grid h-20 w-20 place-items-center rounded-2xl border border-zinc-800 bg-zinc-900/80 text-sky-400/90">
-          <Icon size={tab === "chat" ? 40 : 34} strokeWidth={1.5} />
+        <span className="mx-auto grid h-16 w-16 place-items-center rounded-xl border border-zinc-800 bg-zinc-900/80 text-sky-400/90">
+          <MessageCircle size={32} strokeWidth={1.5} />
         </span>
         <div className="space-y-1.5">
-          <h3 className="text-xl font-light text-zinc-200">{copy.title}</h3>
-          <p className="text-sm leading-relaxed text-zinc-500">{copy.body}</p>
+          <h3 className="text-lg font-medium text-zinc-200">Samenwerkingen</h3>
+          <p className="text-sm leading-relaxed text-zinc-500">
+            {hasChats
+              ? "Kies een gesprek in de inbox om te beginnen."
+              : "Chat, deel documenten en plan afspraken met partners uit het Bouwnetwerk."}
+          </p>
         </div>
         {!hasChats && <SamenwerkingStartActions pendingCount={pendingCount} />}
-        <p className="flex items-center justify-center gap-1.5 text-xs text-zinc-600">
-          <MessageCircle size={13} />
-          Berichten worden veilig opgeslagen in je werkruimte
-        </p>
       </div>
     </div>
   );
@@ -1186,8 +1487,10 @@ function ChatPanel({
   onSend,
   onFiles,
   onSendMockAudio,
-  onSendMockCall,
+  composerMode,
+  setComposerMode,
   counterpartNaam,
+  threadStartDate,
 }: {
   loading: boolean;
   messages: MessageRow[];
@@ -1205,10 +1508,11 @@ function ChatPanel({
   onSend: (e: React.FormEvent) => void;
   onFiles: (list: FileList | null) => void;
   onSendMockAudio: () => void;
-  onSendMockCall: (type: "spraakoproep" | "video-oproep") => void;
+  composerMode: ComposerMode;
+  setComposerMode: (mode: ComposerMode) => void;
   counterpartNaam: string;
+  threadStartDate: string | null;
 }) {
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const quickEmojis = ["👍", "✅", "🙏", "📎", "🏗️", "📅", "💬", "🔧"];
@@ -1227,17 +1531,9 @@ function ChatPanel({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [showEmojiPicker]);
 
-  const mineBubble =
-    "rounded-2xl rounded-br-md border border-sky-500/25 bg-gradient-to-br from-sky-500/20 via-sky-500/10 to-indigo-500/10 text-zinc-100 shadow-[0_8px_24px_-12px_rgba(14,165,233,0.35)]";
-  const theirBubble =
-    "rounded-2xl rounded-bl-md border border-zinc-700/70 bg-zinc-800/80 text-zinc-100";
-
   return (
     <>
-      {/* Messages Feed */}
-      <div className="relative flex-1 space-y-3 overflow-y-auto bg-zinc-950 px-5 py-5 scrollbar-thin scrollbar-thumb-zinc-800">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.06),transparent_55%)]" />
-        <div className="relative">
+      <div className="flex-1 overflow-y-auto bg-zinc-950 px-4 py-4 sm:px-6">
         {loading ? (
           <div
             role="status"
@@ -1248,318 +1544,604 @@ function ChatPanel({
             <span className="sr-only">Berichten laden</span>
           </div>
         ) : messages.length === 0 ? (
-          <p className="text-center text-sm text-zinc-500 mt-8">
+          <p className="mt-8 text-center text-sm text-zinc-500">
             Nog geen berichten. Stuur het eerste bericht hieronder.
           </p>
         ) : (
-          messages.map((m) => {
-            const isMine = m.sender_company_id === companyId;
-            const attachments = parseAttachments(m.attachments);
-            const rich = parseRichMessage(m.content);
+          <div className="space-y-4">
+            {threadStartDate && (
+              <div className="flex justify-center">
+                <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-[11px] font-medium text-zinc-500">
+                  {formatThreadDate(threadStartDate)}
+                </span>
+              </div>
+            )}
+            {messages.map((m) => {
+              const isMine = m.sender_company_id === companyId;
+              const attachments = parseAttachments(m.attachments);
+              const rich = parseRichMessage(m.content);
+              const senderName = isMine ? "Jij" : counterpartNaam;
 
-            if (rich?.callType) {
-              const isVideo = rich.callType === "video-oproep";
               return (
-                <div key={m.id} className={`mb-3 flex ${isMine ? "justify-end" : "justify-start"}`}>
-                  <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm ${isMine ? mineBubble : theirBubble}`}>
-                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-sky-500/15 text-sky-400">
-                      {isVideo ? <Video size={15} /> : <Phone size={15} />}
-                    </span>
-                    <div>
-                      <p className="font-semibold text-xs capitalize">{rich.callType}</p>
-                      <p className="text-[10px] text-zinc-400">{rich.duration} · {formatTimeOnly(m.created_at)}</p>
-                    </div>
+                <div key={m.id} className="group flex gap-3">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${
+                      isMine
+                        ? "bg-gradient-to-tr from-sky-500 to-cyan-600"
+                        : `bg-gradient-to-tr ${getAvatarGradient(counterpartNaam)}`
+                    }`}
+                  >
+                    {getInitials(senderName)}
                   </div>
-                </div>
-              );
-            }
-
-            if (rich?.audioUrl) {
-              return (
-                <div key={m.id} className={`mb-3 flex ${isMine ? "justify-end" : "justify-start"}`}>
-                  <div className={`flex min-w-[285px] items-center gap-3 rounded-2xl p-3.5 ${isMine ? mineBubble : theirBubble}`}>
-                    <button className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-zinc-950/40 text-sky-400 hover:bg-zinc-950/60">
-                      <svg className="ml-0.5 h-4 w-4 fill-current" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </button>
-                    <div className="flex flex-1 flex-col">
-                      <div className="flex h-8 select-none items-end gap-0.5">
-                        {[4, 10, 16, 8, 12, 22, 14, 8, 18, 12, 16, 6, 10, 14, 20, 12, 8, 16, 12, 6, 8, 14, 10, 4].map((h, idx) => (
-                          <span
-                            key={idx}
-                            className="w-[3px] rounded-full bg-sky-400/50"
-                            style={{ height: `${h}px` }}
-                          />
-                        ))}
-                      </div>
-                      <div className="mt-1.5 flex items-center justify-between text-[9px] text-zinc-400">
-                        <span>{rich.audioDuration || "0:07"}</span>
-                        <span className="flex items-center">
-                          {formatTimeOnly(m.created_at)}
-                          {isMine && <DoubleCheck read={true} />}
-                        </span>
-                      </div>
+                  <div className="min-w-0 flex-1 max-w-[85%]">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="text-xs font-semibold text-zinc-200">
+                        {senderName}
+                      </span>
+                      <span className="text-[10px] text-zinc-500">
+                        {formatRelativeTime(m.created_at)}
+                      </span>
                     </div>
-                  </div>
-                </div>
-              );
-            }
-
-            return (
-              <div
-                key={m.id}
-                className={`group mb-3 flex ${isMine ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`relative max-w-[72%] px-3.5 py-2.5 text-sm ${
-                    isMine ? mineBubble : theirBubble
-                  }`}
-                >
-                  {rich?.replyTo && (
-                    <div className="mb-2 rounded-xl border-l-2 border-sky-400 bg-zinc-950/30 p-2 text-xs">
-                      <p className="font-semibold text-sky-400">{rich.replyTo.sender}</p>
-                      <p className="truncate text-zinc-300 opacity-90">{rich.replyTo.content}</p>
-                    </div>
-                  )}
-
-                  {attachments.length > 0 && (
-                    <div className="mb-1.5 space-y-2">
-                      {attachments.map((att, i) =>
-                        att.isImage ? (
-                          <a
-                            key={`${att.url}-${i}`}
-                            href={att.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block overflow-hidden rounded-xl border border-white/5 bg-black/10"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={att.url}
-                              alt={att.name}
-                              loading="lazy"
-                              className="max-h-48 w-full object-cover transition-transform duration-200 hover:scale-[1.02]"
-                            />
-                          </a>
-                        ) : (
-                          <a
-                            key={`${att.url}-${i}`}
-                            href={att.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 rounded-xl border border-white/5 bg-black/10 px-2.5 py-2 text-xs font-medium text-zinc-100"
-                          >
-                            <FileText size={15} className="text-sky-400" />
-                            <span className="flex-1 truncate">{att.name}</span>
-                            <Download size={14} className="opacity-60 hover:opacity-100" />
-                          </a>
-                        ),
+                    <div
+                      className={`rounded-lg border px-3 py-2.5 text-sm ${
+                        isMine
+                          ? "border-sky-500/20 bg-sky-500/5 text-zinc-100"
+                          : "border-zinc-800 bg-zinc-900/80 text-zinc-100"
+                      }`}
+                    >
+                      {rich?.replyTo && (
+                        <div className="mb-2 rounded-md border-l-2 border-sky-400 bg-zinc-950/40 p-2 text-xs">
+                          <p className="font-semibold text-sky-400">
+                            {rich.replyTo.sender}
+                          </p>
+                          <p className="truncate text-zinc-400">
+                            {rich.replyTo.content}
+                          </p>
+                        </div>
+                      )}
+                      {rich?.callType && (
+                        <div className="flex items-center gap-2 text-xs">
+                          {rich.callType === "video-oproep" ? (
+                            <Video size={14} className="text-sky-400" />
+                          ) : (
+                            <Phone size={14} className="text-sky-400" />
+                          )}
+                          <span className="capitalize">{rich.callType}</span>
+                          {rich.duration && (
+                            <span className="text-zinc-500">· {rich.duration}</span>
+                          )}
+                        </div>
+                      )}
+                      {rich?.audioUrl && (
+                        <div className="flex items-center gap-2 text-xs text-zinc-300">
+                          <Mic size={14} className="text-sky-400" />
+                          Spraakbericht {rich.audioDuration ?? ""}
+                        </div>
+                      )}
+                      {attachments.length > 0 && (
+                        <div className="mb-2 space-y-2">
+                          {attachments.map((att, i) =>
+                            att.isImage ? (
+                              <a
+                                key={`${att.url}-${i}`}
+                                href={att.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block overflow-hidden rounded-md border border-zinc-800"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={att.url}
+                                  alt={att.name}
+                                  loading="lazy"
+                                  className="max-h-48 w-full object-cover"
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                key={`${att.url}-${i}`}
+                                href={att.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950/50 px-2.5 py-2 text-xs"
+                              >
+                                <FileText size={14} className="text-sky-400" />
+                                <span className="truncate">{att.name}</span>
+                              </a>
+                            ),
+                          )}
+                        </div>
+                      )}
+                      {rich?.text && (
+                        <p className="whitespace-pre-wrap leading-relaxed">
+                          {rich.text}
+                        </p>
                       )}
                     </div>
-                  )}
-
-                  <div>
-                    {rich?.text && <p className="whitespace-pre-wrap pr-8 leading-relaxed">{rich.text}</p>}
-                    <span className="absolute bottom-1.5 right-2.5 flex select-none items-center text-[10px] text-zinc-400">
-                      {formatTimeOnly(m.created_at)}
-                      {isMine && <DoubleCheck read={true} />}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setReplyTo(m)}
+                      className="mt-1 hidden text-[10px] text-zinc-500 hover:text-sky-400 group-hover:inline-flex"
+                    >
+                      Antwoorden
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => setReplyTo(m)}
-                    title="Antwoorden"
-                    className="absolute right-[-30px] top-1/2 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-400 shadow-md hover:text-zinc-100 group-hover:flex"
-                  >
-                    <CornerUpLeft size={12} />
-                  </button>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
         <div ref={bottomRef} />
-        </div>
       </div>
 
-      {/* Reply Preview Banner */}
       {replyTo && (
-        <div className="flex shrink-0 items-center justify-between border-l-2 border-sky-400 bg-zinc-900/80 px-5 py-2 text-xs text-zinc-300">
+        <div className="flex shrink-0 items-center justify-between border-l-2 border-sky-400 bg-zinc-900/80 px-4 py-2 text-xs text-zinc-300">
           <div className="truncate pr-4">
-            <span className="block font-semibold text-sky-400">Antwoorden op {replyTo.sender_company_id === companyId ? "Jezelf" : counterpartNaam}</span>
-            <span className="truncate block opacity-80">{parseRichMessage(replyTo.content)?.text || replyTo.content || "Bijlage"}</span>
+            <span className="block font-semibold text-sky-400">
+              Antwoorden op{" "}
+              {replyTo.sender_company_id === companyId ? "Jezelf" : counterpartNaam}
+            </span>
+            <span className="block truncate opacity-80">
+              {parseRichMessage(replyTo.content)?.text ||
+                replyTo.content ||
+                "Bijlage"}
+            </span>
           </div>
-          <button onClick={() => setReplyTo(null)} className="text-zinc-400 hover:text-zinc-200 shrink-0">
+          <button
+            type="button"
+            onClick={() => setReplyTo(null)}
+            className="shrink-0 text-zinc-400 hover:text-zinc-200"
+          >
             <X size={15} />
           </button>
         </div>
       )}
 
-      {/* Errors */}
       {(uploadError || sendError) && (
-        <p className="bg-rose-500/10 border-t border-rose-500/20 px-5 py-2 text-xs text-rose-400">
+        <p className="border-t border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs text-rose-400">
           {uploadError ?? sendError}
         </p>
       )}
 
-      {/* Chat Footer Input */}
-      <div className="relative flex shrink-0 items-center gap-3 border-t border-zinc-800/80 bg-zinc-900/70 px-4 py-3 backdrop-blur">
-        
-        {/* Attachment menu */}
-        <div className="relative">
-          {showAttachMenu && (
-            <div className="absolute bottom-[52px] left-0 z-50 flex min-w-[170px] animate-in fade-in slide-in-from-bottom-2 flex-col gap-2 rounded-2xl border border-zinc-700/80 bg-zinc-900 p-2.5 shadow-2xl duration-150">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachMenu(false);
-                  fileRef.current?.click();
-                }}
-                className="flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-zinc-200 hover:bg-white/5 transition-colors"
-              >
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-violet-600/30 text-violet-400">
-                  <FileText size={14} />
-                </span>
-                Document
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachMenu(false);
-                  fileRef.current?.click();
-                }}
-                className="flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-zinc-200 hover:bg-white/5 transition-colors"
-              >
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-teal-600/30 text-teal-400">
-                  <ImageIcon size={14} />
-                </span>
-                Foto of Video
-              </button>
-              
-              <div className="h-[1px] bg-white/10 my-1" />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachMenu(false);
-                  onSendMockAudio();
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-semibold text-sky-300 hover:bg-white/5 transition-colors"
-              >
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-sky-600/20 text-sky-400">
-                  <Mic size={14} />
-                </span>
-                Stuur Spraakbericht
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachMenu(false);
-                  onSendMockCall("spraakoproep");
-                }}
-                className="flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-zinc-200 hover:bg-white/5 transition-colors"
-              >
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-blue-600/30 text-blue-400">
-                  <Phone size={14} />
-                </span>
-                Spraakoproep log
-              </button>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setShowAttachMenu(!showAttachMenu)}
-            disabled={uploading}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-zinc-300 hover:bg-white/5 hover:text-white transition-all disabled:opacity-50"
-          >
-            {uploading ? (
-              <Loader2 size={18} className="animate-spin text-sky-400" />
-            ) : (
-              <Plus size={20} className={`transition-transform duration-200 ${showAttachMenu ? "rotate-[45deg] text-sky-400" : ""}`} />
-            )}
-          </button>
+      <div className="shrink-0 border-t border-zinc-800/80 bg-zinc-900/50">
+        <div className="flex gap-4 border-b border-zinc-800/80 px-4">
+          {(
+            [
+              ["reply", "Antwoorden"],
+              ["note", "Interne notitie"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setComposerMode(mode)}
+              className={`border-b-2 py-2.5 text-xs font-semibold transition-colors ${
+                composerMode === mode
+                  ? "border-sky-400 text-zinc-100"
+                  : "border-transparent text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        {/* Real hidden file inputs */}
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          accept="image/*,application/pdf"
-          className="hidden"
-          onChange={(e) => {
-            onFiles(e.target.files);
-            setShowAttachMenu(false);
-          }}
-        />
-
-        {/* Emoji Button */}
-        <div className="relative" ref={emojiPickerRef}>
-          <button
-            type="button"
-            onClick={() => setShowEmojiPicker((open) => !open)}
-            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
-              showEmojiPicker
-                ? "bg-sky-500/15 text-sky-400"
-                : "text-zinc-300 hover:bg-white/5 hover:text-white"
-            }`}
-            aria-label="Emoji toevoegen"
-          >
-            <Smile size={20} />
-          </button>
-          {showEmojiPicker && (
-            <div className="absolute bottom-[52px] left-0 z-50 grid grid-cols-4 gap-1 rounded-xl border border-zinc-700/80 bg-zinc-900 p-2 shadow-2xl">
-              {quickEmojis.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => {
-                    setText(text + emoji);
-                    setShowEmojiPicker(false);
-                  }}
-                  className="grid h-9 w-9 place-items-center rounded-lg text-lg transition-colors hover:bg-white/10"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Message Input Form */}
-        <form onSubmit={onSend} className="flex-1 flex items-center gap-3">
-          <input
+        <form onSubmit={onSend} className="space-y-2 p-3 sm:p-4">
+          <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Typ een bericht"
-            className="flex-1 rounded-full border border-zinc-700/80 bg-zinc-950/70 px-4 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-sky-500/40 focus:ring-1 focus:ring-sky-500/20"
+            placeholder={
+              composerMode === "note"
+                ? "Interne notitie (alleen voor jou zichtbaar in toekomstige versie)…"
+                : "Typ je antwoord…"
+            }
+            rows={3}
+            className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-sky-500/40"
           />
-
-          {/* Send or Mic button */}
-          {text.trim() ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => onFiles(e.target.files)}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                aria-label="Bijlage"
+              >
+                {uploading ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <Paperclip size={15} />
+                )}
+              </button>
+              <div className="relative" ref={emojiPickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker((open) => !open)}
+                  className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                  aria-label="Emoji"
+                >
+                  <Smile size={15} />
+                </button>
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full left-0 z-50 mb-2 grid grid-cols-4 gap-1 rounded-lg border border-zinc-700 bg-zinc-900 p-2 shadow-xl">
+                    {quickEmojis.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          setText(text + emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                        className="grid h-8 w-8 place-items-center rounded-md text-lg hover:bg-white/10"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onSendMockAudio}
+                className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                title="Spraakbericht"
+              >
+                <Mic size={15} />
+              </button>
+            </div>
             <button
               type="submit"
-              disabled={sending}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sky-500 text-zinc-950 shadow-[0_0_16px_rgba(14,165,233,0.25)] transition-colors hover:bg-sky-400"
+              disabled={sending || !text.trim()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-sky-500 px-4 py-2 text-xs font-bold text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-50"
             >
-              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              {sending ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Send size={14} />
+              )}
+              Versturen
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onSendMockAudio}
-              title="Stuur spraakbericht (Mock)"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sky-500 text-zinc-950 shadow-[0_0_16px_rgba(14,165,233,0.25)] transition-colors hover:bg-sky-400"
-            >
-              <Mic size={18} />
-            </button>
-          )}
+          </div>
         </form>
       </div>
     </>
   );
+}
+
+// ---------------------------------------------------------
+// PARTNER PROFILE PANEL (rechterkolom)
+// ---------------------------------------------------------
+
+function PartnerProfilePanel({
+  selected,
+  profileTab,
+  setProfileTab,
+  documents,
+  channelAfspraken,
+  counterpartRatings,
+  hasReviewed,
+  onOpenReview,
+  loading,
+  uploading,
+  uploadError,
+  docRef,
+  onFiles,
+  onPlanAfspraak,
+  companyId,
+  contract,
+  contractPartyAName,
+  contractPartyBName,
+  onContractChange,
+}: {
+  selected: Samenwerking;
+  profileTab: ProfileTab;
+  setProfileTab: (tab: ProfileTab) => void;
+  documents: { att: Attachment; at: string | null; mine: boolean }[];
+  channelAfspraken: AfspraakRow[];
+  counterpartRatings: Record<number, { avg: number; count: number }>;
+  hasReviewed: (cid: number) => boolean;
+  onOpenReview: (cid: number) => void;
+  loading: boolean;
+  uploading: boolean;
+  uploadError: string | null;
+  docRef: React.RefObject<HTMLInputElement | null>;
+  onFiles: (list: FileList | null) => void;
+  onPlanAfspraak: () => void;
+  companyId: number;
+  contract: SamenwerkingContractRow | null;
+  contractPartyAName: string;
+  contractPartyBName: string;
+  onContractChange: (contract: SamenwerkingContractRow | null) => void;
+}) {
+  const rating =
+    selected.counterpartId != null
+      ? counterpartRatings[selected.counterpartId]
+      : undefined;
+  const needsSignature = contractNeedsMySignature(contract, companyId);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="border-b border-zinc-800/80 px-4 py-5 text-center">
+        <div
+          className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr text-sm font-bold text-white ${getAvatarGradient(selected.counterpartNaam)}`}
+        >
+          {getInitials(selected.counterpartNaam)}
+        </div>
+        <h3 className="mt-3 text-sm font-semibold text-zinc-100">
+          {selected.counterpartNaam}
+        </h3>
+        <p className="text-xs text-zinc-500">Bouwnetwerk-partner</p>
+        {rating && (
+          <p className="mt-2 text-xs text-zinc-400">
+            <span className="text-amber-400">★</span> {rating.avg.toFixed(1)} ·{" "}
+            {rating.count} beoordeling{rating.count === 1 ? "" : "en"}
+          </p>
+        )}
+      </div>
+
+      <div className="border-b border-zinc-800/80 px-3 py-2">
+        <div className="flex gap-1 rounded-lg bg-zinc-950/50 p-1">
+          {(
+            [
+              ["details", "Details"],
+              ["contract", "Contract"],
+              ["bestanden", "Bestanden"],
+              ["activiteit", "Activiteit"],
+            ] as const
+          ).map(([tab, label]) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setProfileTab(tab)}
+              className={`flex-1 rounded-md px-2 py-1.5 text-[10px] font-semibold transition-colors ${
+                profileTab === tab
+                  ? "bg-zinc-800 text-zinc-100"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {tab === "contract" && needsSignature ? (
+                <span className="inline-flex items-center justify-center gap-1">
+                  Contract
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                </span>
+              ) : (
+                label
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        {profileTab === "details" && (
+          <div className="space-y-4 text-sm">
+            <ProfileField
+              icon={Building2}
+              label="Bedrijf"
+              value={selected.counterpartNaam}
+            />
+            {selected.werkpostTitel && (
+              <ProfileField
+                icon={HardHat}
+                label="Werkpost"
+                value={selected.werkpostTitel}
+                href={
+                  selected.werkpostId
+                    ? `/dashboard/werkposts/${selected.werkpostId}`
+                    : undefined
+                }
+              />
+            )}
+            <ProfileField
+              icon={Clock}
+              label="Laatste activiteit"
+              value={
+                selected.lastMessageAt
+                  ? formatDateTime(selected.lastMessageAt)
+                  : "Nog geen berichten"
+              }
+            />
+            {selected.counterpartId && (
+              <button
+                type="button"
+                onClick={() => onOpenReview(selected.counterpartId!)}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/5"
+              >
+                <Star size={13} className="text-amber-400" />
+                {hasReviewed(selected.counterpartId)
+                  ? "Beoordeling bewerken"
+                  : "Partner beoordelen"}
+              </button>
+            )}
+            <div>
+              <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                <Tag size={11} /> Tags
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {["Bouwnetwerk", "Partner", selected.werkpostTitel ? "Project" : "Direct"].map(
+                  (tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-zinc-800 bg-zinc-950/60 px-2 py-0.5 text-[10px] font-medium text-zinc-400"
+                    >
+                      {tag}
+                    </span>
+                  ),
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {profileTab === "contract" && (
+          <SamenwerkingContractPanel
+            channelId={selected.channelId}
+            companyId={companyId}
+            partyAName={contractPartyAName}
+            partyBName={contractPartyBName}
+            initialContract={contract}
+            onContractChange={onContractChange}
+            compact
+          />
+        )}
+
+        {profileTab === "bestanden" && (
+          <div className="space-y-3">
+            <input
+              ref={docRef}
+              type="file"
+              multiple
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={(e) => onFiles(e.target.files)}
+            />
+            <button
+              type="button"
+              onClick={() => docRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-sky-500 px-3 py-2 text-xs font-bold text-zinc-950 hover:bg-sky-400 disabled:opacity-50"
+            >
+              {uploading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Paperclip size={13} />
+              )}
+              Upload bestand
+            </button>
+            {uploadError && (
+              <p className="text-xs text-rose-400">{uploadError}</p>
+            )}
+            {loading ? (
+              <div className="grid place-items-center py-8 text-zinc-500">
+                <Loader2 size={20} className="animate-spin text-sky-400" />
+              </div>
+            ) : documents.length === 0 ? (
+              <p className="py-6 text-center text-xs text-zinc-500">
+                Nog geen bestanden gedeeld.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {documents.slice(0, 12).map(({ att, at, mine }, i) => (
+                  <li key={`${att.url}-${i}`}>
+                    <a
+                      href={att.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-2.5 py-2 text-xs hover:border-sky-500/20"
+                    >
+                      {att.isImage ? (
+                        <ImageIcon size={14} className="text-sky-400" />
+                      ) : (
+                        <FileText size={14} className="text-sky-400" />
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-zinc-200">
+                        {att.name}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-zinc-500">
+                        {mine ? "Jij" : "Partner"}
+                        {at ? ` · ${formatRelativeTime(at)}` : ""}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {profileTab === "activiteit" && (
+          <div className="space-y-3">
+            {channelAfspraken.length === 0 ? (
+              <p className="py-6 text-center text-xs text-zinc-500">
+                Nog geen afspraken gepland.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {channelAfspraken.map((a) => {
+                  const meta =
+                    statusMeta[a.status ?? "gepland"] ?? statusMeta.gepland;
+                  return (
+                    <li
+                      key={a.id}
+                      className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3"
+                    >
+                      <p className="text-xs font-semibold text-zinc-100">
+                        {a.titel}
+                      </p>
+                      <p className="mt-1 text-[10px] text-zinc-500">
+                        {formatDateTime(a.startTijd)}
+                      </p>
+                      {a.locatie && (
+                        <p className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500">
+                          <MapPin size={10} /> {a.locatie}
+                        </p>
+                      )}
+                      <span
+                        className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${meta.className}`}
+                      >
+                        {meta.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <p className="pt-2 text-[10px] leading-relaxed text-zinc-600">
+              Plan nieuwe afspraken rechtstreeks vanuit dit gesprek.
+            </p>
+            <button
+              type="button"
+              onClick={onPlanAfspraak}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/15"
+            >
+              <CalendarPlus size={13} />
+              Nieuwe afspraak
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProfileField({
+  icon: Icon,
+  label,
+  value,
+  href,
+}: {
+  icon: typeof Building2;
+  label: string;
+  value: string;
+  href?: string;
+}) {
+  const content = (
+    <div className="flex items-start gap-2.5">
+      <Icon size={14} className="mt-0.5 shrink-0 text-zinc-500" />
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          {label}
+        </p>
+        <p className="mt-0.5 truncate text-sm text-zinc-200">{value}</p>
+      </div>
+    </div>
+  );
+  if (href) {
+    return (
+      <Link href={href} className="block transition-colors hover:text-sky-300">
+        {content}
+      </Link>
+    );
+  }
+  return content;
 }
 
 // ---------------------------------------------------------

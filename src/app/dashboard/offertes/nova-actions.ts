@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
 import { parseExtras } from "@/app/dashboard/instellingen/settings";
 import {
-  fetchRelevantMemories,
+  fetchRetrievalContext,
   memoriesFromOffertePayload,
   rememberFromExecution,
   saveAgentMemories,
@@ -54,13 +54,13 @@ export async function requestNovaOfferte(input: {
     }
   }
 
-  const memoryContext = await fetchRelevantMemories(
+  const retrievalContext = await fetchRetrievalContext(
     supabase,
     companyId,
     `${klant} ${input.description}`,
   );
-  const enrichedDescription = memoryContext
-    ? `Bedrijfsgeheugen (gebruik waar relevant):\n${memoryContext}\n\n${input.description}`
+  const enrichedDescription = retrievalContext
+    ? `Relevante context (geheugen + kennisbank, gebruik waar van toepassing):\n${retrievalContext}\n\n${input.description}`
     : input.description;
 
   const { draft, error: aiError } = await generateNovaOfferteDraft({

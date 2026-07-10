@@ -4,7 +4,8 @@ import { Bot } from "lucide-react";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 
 export default function AgentChatTopbarButton() {
-  const { view, toggle, hasUnread } = useAgentChat();
+  const { view, toggle, hasUnread, activeAgent } = useAgentChat();
+  const agentLabel = activeAgent.name;
 
   const isOpen = view === "open";
   const isMinimized = view === "minimized";
@@ -16,10 +17,10 @@ export default function AgentChatTopbarButton() {
       onClick={toggle}
       aria-label={
         isOpen
-          ? "Minimaliseer Nova chat"
+          ? `Minimaliseer ${agentLabel} chat`
           : isMinimized
-            ? "Open Nova chat"
-            : "Start Nova chat"
+            ? `Open ${agentLabel} chat`
+            : `Start ${agentLabel} chat`
       }
       aria-pressed={isOpen}
       className={`relative inline-flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
@@ -37,7 +38,7 @@ export default function AgentChatTopbarButton() {
         )}
       </span>
       <span className="hidden font-medium sm:inline">
-        {isMinimized || isOpen ? "Nova" : "Nova AI"}
+        {isMinimized || isOpen ? agentLabel : `${agentLabel} AI`}
       </span>
       {(isMinimized || isOpen) && (
         <span className="hidden rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400 md:inline">

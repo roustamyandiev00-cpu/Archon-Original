@@ -188,7 +188,7 @@ export default function PeppolActions({
         <p className="mt-3 text-xs text-amber-300/90">
           Peppol is nog niet verbonden. De UBL-download werkt altijd; voor
           rechtstreeks versturen koppel je eerst een access point via{" "}
-          <a href="/dashboard/integraties" className="underline hover:text-amber-200">
+          <a href="/dashboard/instellingen?tab=integraties" className="underline hover:text-amber-200">
             Integraties
           </a>
           .
@@ -199,7 +199,7 @@ export default function PeppolActions({
         <p className="mt-3 text-xs text-amber-300/90">
           Peppol is gekoppeld maar automatisch versturen is niet actief. Kies
           Storecove of Billit als access point en vul je API-sleutel in via{" "}
-          <a href="/dashboard/integraties" className="underline hover:text-amber-200">
+          <a href="/dashboard/instellingen?tab=integraties" className="underline hover:text-amber-200">
             Integraties
           </a>
           , of download de UBL-XML hierboven.

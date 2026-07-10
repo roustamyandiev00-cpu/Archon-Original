@@ -1,18 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   HardHat,
   HandHelping,
   Handshake,
-  MessageCircle,
   Plus,
   Search,
 } from "lucide-react";
-import ChatClient, {
-  type ChannelSummary,
-} from "@/components/dashboard/comms/ChatClient";
 import type { BouwnetwerkData } from "@/components/dashboard/bouwnetwerk/load-bouwnetwerk-data";
 import BouwnetwerkWerkpostsView from "@/components/dashboard/bouwnetwerk/BouwnetwerkWerkpostsView";
 import BouwnetwerkHulpverzoekenView from "@/components/dashboard/bouwnetwerk/BouwnetwerkHulpverzoekenView";
@@ -20,23 +17,23 @@ import type { WerkpostRow } from "@/lib/werkposts";
 
 const STORAGE_KEY = "archon-bouwnetwerk-view";
 
-export type BouwnetwerkViewId = "chat" | "werkposts" | "hulpverzoeken";
+export type BouwnetwerkViewId = "werkposts" | "hulpverzoeken";
 
 type ChannelFilter = "alles" | "direct" | "groepen" | "projecten";
 
 const VIEWS: { id: BouwnetwerkViewId; label: string }[] = [
-  { id: "chat", label: "Chat" },
   { id: "werkposts", label: "Werkposts" },
   { id: "hulpverzoeken", label: "Hulpverzoeken" },
 ];
 
 function readStoredView(): BouwnetwerkViewId {
-  if (typeof window === "undefined") return "chat";
+  if (typeof window === "undefined") return "werkposts";
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "chat" || stored === "werkposts" || stored === "hulpverzoeken") {
+  if (stored === "werkposts" || stored === "hulpverzoeken") {
     return stored;
   }
-  return "chat";
+  if (stored === "chat") return "werkposts";
+  return "werkposts";
 }
 
 export default function BouwnetwerkHub({
@@ -51,22 +48,14 @@ export default function BouwnetwerkHub({
   companyId: number | null;
   preview: boolean;
 }) {
-  const [activeView, setActiveView] = useState<BouwnetwerkViewId>("chat");
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(
-    channels[0]?.id ?? null,
-  );
+  const router = useRouter();
+  const [activeView, setActiveView] = useState<BouwnetwerkViewId>("werkposts");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ChannelFilter>("alles");
 
   useEffect(() => {
     setActiveView(readStoredView());
   }, []);
-
-  useEffect(() => {
-    if (!selectedChannelId && channels[0]?.id) {
-      setSelectedChannelId(channels[0].id);
-    }
-  }, [channels, selectedChannelId]);
 
   const selectView = useCallback((id: BouwnetwerkViewId) => {
     setActiveView(id);
@@ -95,14 +84,28 @@ export default function BouwnetwerkHub({
   }, [channels, query, filter]);
 
   const badges: Record<BouwnetwerkViewId, number> = {
-    chat: channels.length,
     werkposts: posts.filter((p) => p.status === "open").length,
     hulpverzoeken: hulpverzoeken.length + openHulpverzoeken.length,
   };
 
+  function openSamenwerking(channelId: string) {
+    router.push(
+      `/dashboard/werkposts/samenwerkingen?channel=${encodeURIComponent(channelId)}`,
+    );
+  }
+
+  function scrollToPlaatsen() {
+    selectView("werkposts");
+    requestAnimationFrame(() => {
+      document
+        .getElementById("plaatsen-werkpost")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   return (
     <div className="flex min-h-[calc(100vh-12rem)] flex-col gap-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/30 lg:flex-row">
-      {/* Linker sidebar — kanalen */}
+      {/* Linker sidebar — gesprekken → samenwerkingen */}
       <aside className="flex w-full shrink-0 flex-col border-b border-white/10 lg:w-[280px] lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
           <div className="flex items-center gap-2">
@@ -110,13 +113,14 @@ export default function BouwnetwerkHub({
             <h2 className="text-sm font-semibold text-zinc-100">BouwNetwerk</h2>
           </div>
           {!preview && (
-            <Link
-              href="/dashboard/werkposts/nieuw"
+            <button
+              type="button"
+              onClick={scrollToPlaatsen}
               className="grid h-7 w-7 place-items-center rounded-full bg-sky-500/15 text-sky-400 transition-colors hover:bg-sky-500/25"
-              aria-label="Nieuw kanaal of werkpost"
+              aria-label="Nieuwe werkpost plaatsen"
             >
               <Plus size={14} />
-            </Link>
+            </button>
           )}
         </div>
 
@@ -129,7 +133,7 @@ export default function BouwnetwerkHub({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Zoek kanalen, berichten…"
+              placeholder="Zoek gesprekken…"
               className="w-full rounded-xl border border-white/10 bg-zinc-950/50 py-2 pl-9 pr-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-500/40"
             />
           </div>
@@ -165,15 +169,8 @@ export default function BouwnetwerkHub({
               <button
                 key={c.id}
                 type="button"
-                onClick={() => {
-                  setSelectedChannelId(c.id);
-                  selectView("chat");
-                }}
-                className={`flex w-full flex-col gap-0.5 border-b border-white/5 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] ${
-                  selectedChannelId === c.id && activeView === "chat"
-                    ? "bg-sky-500/10"
-                    : ""
-                }`}
+                onClick={() => openSamenwerking(c.id)}
+                className="flex w-full flex-col gap-0.5 border-b border-white/5 px-4 py-3 text-left transition-colors hover:bg-white/[0.04]"
               >
                 <span className="truncate text-sm font-medium text-zinc-100">
                   {c.counterpartNaam}
@@ -187,19 +184,31 @@ export default function BouwnetwerkHub({
             ))
           ) : (
             <div className="px-4 py-8 text-center">
-              <p className="text-sm text-zinc-500">Geen kanalen gevonden</p>
+              <p className="text-sm text-zinc-500">Geen gesprekken gevonden</p>
               {!preview && (
                 <Link
-                  href="/dashboard/werkposts/nieuw"
+                  href="/dashboard/werkposts/samenwerkingen"
                   className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-3 py-1.5 text-xs font-semibold text-zinc-950 hover:bg-sky-400"
                 >
-                  <Plus size={12} />
-                  Nieuw kanaal
+                  <Handshake size={12} />
+                  Naar samenwerkingen
                 </Link>
               )}
             </div>
           )}
         </div>
+
+        {channels.length > 0 && (
+          <div className="border-t border-white/10 p-3">
+            <Link
+              href="/dashboard/werkposts/samenwerkingen"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+            >
+              <Handshake size={13} />
+              Alle samenwerkingen
+            </Link>
+          </div>
+        )}
       </aside>
 
       {/* Rechter paneel */}
@@ -258,23 +267,11 @@ export default function BouwnetwerkHub({
               </Link>
               .
             </div>
-          ) : activeView === "chat" && companyId ? (
-            <ChatClient
-              channels={channels}
-              companyId={companyId}
-              selectedId={selectedChannelId}
-              onSelectChannel={setSelectedChannelId}
-              showChannelList={false}
-            />
-          ) : activeView === "chat" ? (
-            <div className="grid min-h-[480px] place-items-center rounded-2xl border border-white/10 bg-zinc-900/50 px-6 text-center">
-              <MessageCircle size={32} className="text-sky-400" />
-              <p className="mt-3 text-sm text-zinc-500">
-                Log in met een bedrijfsprofiel om te chatten
-              </p>
-            </div>
           ) : activeView === "werkposts" ? (
-            <BouwnetwerkWerkpostsView posts={posts as WerkpostRow[]} preview={preview} />
+            <BouwnetwerkWerkpostsView
+              posts={posts as WerkpostRow[]}
+              preview={preview}
+            />
           ) : (
             <BouwnetwerkHulpverzoekenView
               own={hulpverzoeken}

@@ -2,7 +2,6 @@ import {
   BarChart3,
   Bot,
   BrainCircuit,
-  Clock,
   Contact,
   Crosshair,
   FileText,
@@ -14,12 +13,11 @@ import {
   List,
   LogOut,
   MessageCircle,
-  Plug,
   Receipt,
-  Rocket,
   ScrollText,
   Search,
   Settings,
+  Shield,
   Users,
   Wallet,
   Zap,
@@ -72,6 +70,13 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         icon: Receipt,
         badge: 3,
         badgeTone: "warning",
+        children: [
+          {
+            label: "Factuur",
+            href: "/dashboard/facturen/nieuw",
+            icon: FileText,
+          },
+        ],
       },
       {
         label: "Leads / CRM",
@@ -123,25 +128,20 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
       { label: "Geheugen", href: "/dashboard/geheugen", icon: BrainCircuit },
     ],
   },
-  {
-    title: "Observeer",
-    collapsible: true,
-    items: [
-      { label: "Onderzoek", href: "/dashboard/onderzoek", icon: Search, available: false },
-      { label: "KPI's", href: "/dashboard/kpi", icon: BarChart3, available: false },
-      { label: "Analytics", href: "/dashboard/analytics", icon: LineChart, available: false },
-    ],
-  },
-  {
-    title: "Systeem",
-    collapsible: true,
-    items: [
-      { label: "Integraties", href: "/dashboard/integraties", icon: Plug },
-      { label: "Cron", href: "/dashboard/cron", icon: Clock, available: false },
-      { label: "Deploy", href: "/dashboard/deploy", icon: Rocket, available: false },
-    ],
-  },
 ];
+
+/** Observeer-links in de topbar (niet in sidebar). */
+export const TOPBAR_OBSERVEER_ITEMS: SidebarItem[] = [
+  { label: "Onderzoek", href: "/dashboard/onderzoek", icon: Search, available: false },
+  { label: "KPI's", href: "/dashboard/kpi", icon: BarChart3, available: false },
+  { label: "Analytics", href: "/dashboard/analytics", icon: LineChart, available: false },
+];
+
+export const SIDEBAR_CEO_CONSOLE = {
+  label: "CEO Console",
+  href: "/dashboard/admin",
+  icon: Shield,
+} as const;
 
 export const SIDEBAR_SETTINGS = {
   label: "Instellingen",
@@ -159,22 +159,26 @@ export function sidebarItemIsActive(pathname: string, href: string): boolean {
   const current = pathname.replace(/\/$/, "");
   const target = href.replace(/\/$/, "");
 
-  if (target === "/dashboard") {
-    return current === "/dashboard" || current === "/dashboard/command-center";
-  }
-
   if (target === "/dashboard/overzicht") {
-    return current === "/dashboard/overzicht";
+    return current === "/dashboard/overzicht" || current === "/dashboard";
   }
 
   if (target === "/dashboard/command-center") {
-    return current === "/dashboard/command-center" || current === "/dashboard";
+    return current === "/dashboard/command-center";
   }
 
   if (target === "/dashboard/offertes") {
     return (
       current.startsWith("/dashboard/offertes") &&
       !current.startsWith("/dashboard/offertes/projecten")
+    );
+  }
+
+  if (target === "/dashboard/facturen") {
+    return (
+      current === "/dashboard/facturen" ||
+      (current.startsWith("/dashboard/facturen/") &&
+        !current.startsWith("/dashboard/facturen/nieuw"))
     );
   }
 

@@ -198,7 +198,7 @@ export default async function EFacturenPage() {
             </p>
           </div>
           <Link
-            href="/dashboard/integraties"
+            href="/dashboard/instellingen?tab=integraties"
             className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400"
           >
             <Plug size={15} />
@@ -305,7 +305,7 @@ export default async function EFacturenPage() {
             <FinanceActionCard
               title="Peppol instellen"
               description="Koppel Billit, Codabox of een ander Belgisch access point."
-              href="/dashboard/integraties"
+              href="/dashboard/instellingen?tab=integraties"
               cta="Naar integraties"
             />
             <FinanceActionCard

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 import { getCompanyContext } from "@/lib/company";
-import { untyped } from "@/lib/integraties";
+import { untyped, integratiesSettingsUrl } from "@/lib/integraties";
 import { oauthConfig, oauthRedirectUri } from "@/lib/oauth";
 
 export const runtime = "nodejs";
@@ -14,7 +14,7 @@ export async function GET(
 ) {
   const { provider } = await ctx.params;
   const cfg = oauthConfig(provider);
-  const dashboard = new URL("/dashboard/integraties", req.nextUrl.origin);
+  const dashboard = integratiesSettingsUrl(req.nextUrl.origin);
   if (!cfg) {
     dashboard.searchParams.set("error", "Onbekende OAuth-provider.");
     return NextResponse.redirect(dashboard);

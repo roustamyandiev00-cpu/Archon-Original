@@ -20,6 +20,7 @@ export function LogoMark({
           : "shadow-[0_8px_24px_-12px_rgba(0,0,0,0.55)]"
       } ${className}`.trim()}
       style={{ width: size, height: size }}
+      suppressHydrationWarning
     >
       <Image
         src="/logo-tile.png"
@@ -29,6 +30,7 @@ export function LogoMark({
         className="h-full w-full object-cover"
         priority
         unoptimized
+        suppressHydrationWarning
       />
     </span>
   );

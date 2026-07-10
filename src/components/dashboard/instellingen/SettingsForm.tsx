@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   Building2,
@@ -26,7 +26,9 @@ import GlowCard from "@/components/dashboard/GlowCard";
 import ApiKeysManager from "@/components/dashboard/instellingen/ApiKeysManager";
 import ImportManager from "@/components/dashboard/instellingen/ImportManager";
 import AppIntegrationsPanel from "@/components/dashboard/instellingen/AppIntegrationsPanel";
+import SmtpSettingsPanel from "@/components/dashboard/instellingen/SmtpSettingsPanel";
 import ReferralInvitePanel from "@/components/dashboard/instellingen/ReferralInvitePanel";
+import type { SmtpSettingsView } from "@/app/dashboard/instellingen/smtp-actions";
 import type { ApiKeyInfo } from "@/lib/apiResources";
 import {
   updateSettings,
@@ -49,6 +51,7 @@ import {
   archonTemplatePreviewHtml,
 } from "@/components/dashboard/instellingen/templatePreview";
 import { resolveTemplateId } from "@/components/dashboard/documenten/documentTemplate";
+import { INTEGRATIES_SETTINGS_TAB } from "@/lib/integraties";
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
@@ -69,6 +72,10 @@ const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "ai", label: "AI-agent", icon: <Bot size={15} /> },
   { id: "api", label: "API", icon: <KeyRound size={15} /> },
 ];
+
+function isSection(value: string | null): value is Section {
+  return sections.some((section) => section.id === value);
+}
 
 function Field({
   label,
@@ -405,12 +412,15 @@ function LogoField({
 
 export default function SettingsForm({
   initial,
+  smtpInitial,
   apiKeys,
   referralCode,
   integrationConnections = {},
   slackPlatformReady = true,
+  slackSetupIncomplete = false,
 }: {
   initial: SettingsInput;
+  smtpInitial: SmtpSettingsView;
   apiKeys: ApiKeyInfo[];
   referralCode?: string | null;
   integrationConnections?: Record<
@@ -418,8 +428,10 @@ export default function SettingsForm({
     { status: string; config: Record<string, unknown> }
   >;
   slackPlatformReady?: boolean;
+  slackSetupIncomplete?: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<Section>("bedrijf");
   const [form, setForm] = useState<SettingsInput>(initial);
   const [pending, startTransition] = useTransition();
@@ -441,6 +453,18 @@ export default function SettingsForm({
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCVC, setCardCVC] = useState("");
 
+  const connectedParam = searchParams.get("connected");
+  const integrationError = searchParams.get("error");
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+    if (isSection(requestedTab)) {
+      setTab(requestedTab);
+    } else if (connectedParam || integrationError) {
+      setTab(INTEGRATIES_SETTINGS_TAB);
+    }
+  }, [searchParams, connectedParam, integrationError]);
+
   function set<K extends keyof SettingsInput>(key: K, value: SettingsInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     setSaved(false);
@@ -450,6 +474,13 @@ export default function SettingsForm({
     value: SettingsInput["ai"][K],
   ) {
     setForm((f) => ({ ...f, ai: { ...f.ai, [key]: value } }));
+    setSaved(false);
+  }
+  function setIncasso<K extends keyof SettingsInput["incasso"]>(
+    key: K,
+    value: SettingsInput["incasso"][K],
+  ) {
+    setForm((f) => ({ ...f, incasso: { ...f.incasso, [key]: value } }));
     setSaved(false);
   }
 
@@ -464,6 +495,7 @@ export default function SettingsForm({
         return;
       }
       setSaved(true);
+      router.refresh();
     });
   }
 
@@ -789,7 +821,7 @@ export default function SettingsForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label="Jouw agentnaam"
-                hint="Persoonlijk — alleen jij ziet deze naam in het dashboard en in AI-voorstellen."
+                hint="Persoonlijk per gebruiker — standaard Nova. Bedrijfsinstructies en AI-regels blijven gedeeld voor het hele team."
               >
                 <input
                   value={form.ai.agentNaam}
@@ -907,6 +939,19 @@ export default function SettingsForm({
             </label>
 
             <Field
+              label="E-mailadres deurwaarder"
+              hint="Voor de laatste incassostap: het volledige dossier wordt per e-mail doorgestuurd naar dit adres."
+            >
+              <input
+                type="email"
+                value={form.incasso.deurwaarderEmail}
+                onChange={(e) => setIncasso("deurwaarderEmail", e.target.value)}
+                placeholder="deurwaarder@kantoor.be"
+                className={inputClass}
+              />
+            </Field>
+
+            <Field
               label="Instructies voor de agent"
               hint="Vertel de agent hoe die moet werken, wat wel/niet mag, en wat belangrijk is voor jouw bedrijf."
             >
@@ -931,10 +976,34 @@ export default function SettingsForm({
         )}
 
         {tab === "integraties" && (
-          <AppIntegrationsPanel
-            connections={integrationConnections}
-            slackPlatformReady={slackPlatformReady}
-          />
+          <div className="space-y-6">
+            {connectedParam && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                Koppeling met <b>{connectedParam}</b> is geautoriseerd en actief.
+              </div>
+            )}
+            {integrationError && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                {integrationError}
+              </div>
+            )}
+            {slackSetupIncomplete && (
+              <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-200">
+                <b>Slack-setup onvolledig.</b> Elke klant koppelt een eigen
+                workspace en kanaal — rond de stappen bij Slack af om meldingen te
+                ontvangen.
+              </div>
+            )}
+            <SmtpSettingsPanel
+              initial={smtpInitial}
+              companyEmail={form.email}
+              companyName={form.naam}
+            />
+            <AppIntegrationsPanel
+              connections={integrationConnections}
+              slackPlatformReady={slackPlatformReady}
+            />
+          </div>
         )}
 
         {tab === "api" && <ApiKeysManager initialKeys={apiKeys} />}

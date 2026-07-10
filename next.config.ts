@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
     "10.0.0.*",
     "172.16.*",
   ],
+  experimental: {
+    // Schakel de extra Next.js MCP-server uit om de ontwikkelomgeving rustiger te houden.
+    mcpServer: false,
+  },
   // Turbopack is default in Next 16; lege config voorkomt conflict met eventuele webpack-plugins.
   turbopack: {},
 };

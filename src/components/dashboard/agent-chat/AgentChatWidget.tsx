@@ -34,6 +34,7 @@ export default function AgentChatWidget() {
   const { isListening, supported: voiceSupported, toggle: toggleVoice } =
     useSpeechInput({
       continuous: true,
+      spaceKey: true,
       onResult: (text) => setInput(text),
       onFinal: (text) => setInput(text),
     });
@@ -269,7 +270,11 @@ export default function AgentChatWidget() {
           </button>
         </div>
         <p className="mt-2.5 text-[10px] text-zinc-500">
-          Acties worden klaargezet ter goedkeuring
+          Acties worden klaargezet ter goedkeuring · Houd{" "}
+          <kbd className="rounded border border-white/10 bg-white/5 px-1 font-mono text-[9px]">
+            spatie
+          </kbd>{" "}
+          ingedrukt om te spreken
         </p>
       </form>
     </div>

@@ -43,6 +43,18 @@ next-env.d.ts
 
 # local tooling
 .playwright-cli/
+.claude/
+.relay.json
+.firecrawl/
+supabase/.temp/
+
+# duplicate lockfile (project uses pnpm)
+package-lock.json
+
+# agent / scrape / test artifacts
+/screenshots/
+thomas-dashboard-test.png
+*.PNG
 
 # generated captures
 /screenshots/dashboard-tour/

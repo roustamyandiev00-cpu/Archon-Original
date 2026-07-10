@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Settings } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { loadUserAgentName } from "@/lib/agents/userAi";
@@ -7,7 +8,12 @@ import PlaceholderPage from "@/components/dashboard/PlaceholderPage";
 import { parseExtras, DEFAULT_TEMPLATE, type SettingsInput } from "./settings";
 import type { ApiKeyInfo } from "@/lib/apiResources";
 import { untyped, type Integratie } from "@/lib/integraties";
-import { isSlackPlatformReady } from "@/components/dashboard/integraties/slackSetup";
+import {
+  isSlackPlatformReady,
+  loadSlackSetupStatus,
+} from "@/components/dashboard/integraties/slackSetup";
+import { GMAIL_SMTP } from "@/components/dashboard/email/smtp-constants";
+import type { SmtpSettingsView } from "@/app/dashboard/instellingen/smtp-actions";
 
 export const metadata = { title: "Instellingen — ArchonPro" };
 
@@ -54,6 +60,25 @@ export default async function InstellingenPage() {
     ? await loadUserAgentName(supabase, user.id)
     : extras.ai.agentNaam;
 
+  const { data: smtpStatus } = await supabase
+    .from("bedrijf_smtp_status")
+    .select("*")
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  const smtpInitial: SmtpSettingsView = {
+    preset:
+      !smtpStatus?.smtp_host || smtpStatus.smtp_host === GMAIL_SMTP.smtp_host
+        ? "gmail"
+        : "custom",
+    smtp_host: smtpStatus?.smtp_host ?? GMAIL_SMTP.smtp_host,
+    smtp_port: smtpStatus?.smtp_port ?? GMAIL_SMTP.smtp_port,
+    smtp_user: smtpStatus?.smtp_user ?? data?.email ?? "",
+    from_email: smtpStatus?.from_email ?? data?.email ?? "",
+    from_name: smtpStatus?.from_name ?? data?.naam ?? "",
+    hasPassword: Boolean(smtpStatus?.has_password),
+  };
+
   const referralCode = user
     ? await ensureUserReferral(supabase, {
         fullName: user.user_metadata?.full_name as string | undefined,
@@ -71,6 +96,10 @@ export default async function InstellingenPage() {
       (c) => [c.provider, { status: c.status, config: c.config ?? {} }],
     ),
   );
+
+  const slackSetup = await loadSlackSetupStatus(supabase, companyId);
+  const slackSetupIncomplete =
+    Boolean(slackSetup?.platformReady) && !slackSetup?.ready;
 
   const initial: SettingsInput = {
     naam: data?.naam ?? "",
@@ -91,6 +120,7 @@ export default async function InstellingenPage() {
     quoteTemplate: data?.default_quote_template || DEFAULT_TEMPLATE,
     invoiceTemplate: data?.default_invoice_template || DEFAULT_TEMPLATE,
     ai: { ...extras.ai, agentNaam: userAgentName },
+    incasso: extras.incasso ?? { deurwaarderEmail: "" },
   };
 
   return (
@@ -102,18 +132,22 @@ export default async function InstellingenPage() {
         <div>
           <h1 className="text-xl font-semibold text-zinc-50">Instellingen</h1>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Beheer je bedrijfsgegevens, documenten, data-import en de AI-agent.
+            Beheer je bedrijfsgegevens, documenten, integraties en de AI-agent.
           </p>
         </div>
       </header>
 
-      <SettingsForm
-        initial={initial}
-        apiKeys={apiKeys}
-        referralCode={referralCode}
-        integrationConnections={integrationConnections}
-        slackPlatformReady={isSlackPlatformReady()}
-      />
+      <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl bg-white/5" />}>
+        <SettingsForm
+          initial={initial}
+          smtpInitial={smtpInitial}
+          apiKeys={apiKeys}
+          referralCode={referralCode}
+          integrationConnections={integrationConnections}
+          slackPlatformReady={isSlackPlatformReady()}
+          slackSetupIncomplete={slackSetupIncomplete}
+        />
+      </Suspense>
     </div>
   );
 }

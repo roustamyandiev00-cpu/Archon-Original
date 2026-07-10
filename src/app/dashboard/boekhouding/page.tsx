@@ -195,7 +195,7 @@ export default async function BoekhoudingPage() {
           title="Boekhoudkoppelingen"
           action={
             <Link
-              href="/dashboard/integraties"
+              href="/dashboard/instellingen?tab=integraties"
               className="text-xs font-medium text-orange-400 hover:text-orange-300"
             >
               Beheren
@@ -236,7 +236,7 @@ export default async function BoekhoudingPage() {
                       tone={connected ? "ok" : "neutral"}
                     />
                     <Link
-                      href={`/dashboard/integraties?provider=${provider.id}`}
+                      href={`/dashboard/instellingen?tab=integraties&provider=${provider.id}`}
                       className="text-xs font-medium text-orange-400 hover:text-orange-300"
                     >
                       {connected ? "Beheren" : "Koppelen"}
@@ -275,7 +275,7 @@ export default async function BoekhoudingPage() {
             <FinanceActionCard
               title="Integraties openen"
               description="Exact, Yuki, Octopus, WinBooks, Silverfin en meer."
-              href="/dashboard/integraties"
+              href="/dashboard/instellingen?tab=integraties"
               cta="Koppelingen beheren"
             />
             <FinanceActionCard
@@ -305,7 +305,7 @@ export default async function BoekhoudingPage() {
             </div>
           </div>
           <Link
-            href="/dashboard/integraties"
+            href="/dashboard/instellingen?tab=integraties"
             className="inline-flex items-center gap-2 rounded-full border border-white/[0.1] px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-orange-500/25 hover:text-orange-200"
           >
             <Plug size={14} />

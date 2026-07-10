@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { startAuthorization } from "@vercel/connect";
 import { getCompanyContext } from "@/lib/company";
-import { untyped } from "@/lib/integraties";
+import { untyped, integratiesSettingsUrl } from "@/lib/integraties";
 import { slackTokenParams } from "@/components/dashboard/integraties/slackConnect";
 import { resolveSlackConnectorForCompany } from "@/components/dashboard/integraties/slackSetup";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const COOKIE = "pp_slack_connect_company";
 
 export async function GET(req: NextRequest) {
-  const dashboard = new URL("/dashboard/integraties", req.nextUrl.origin);
+  const dashboard = integratiesSettingsUrl(req.nextUrl.origin);
 
   const { supabase, companyId } = await getCompanyContext();
   if (!companyId) {

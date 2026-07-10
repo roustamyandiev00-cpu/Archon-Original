@@ -8,9 +8,9 @@ import { ChevronDown, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   groupHasActivePath,
+  SIDEBAR_CEO_CONSOLE,
   SIDEBAR_GROUPS,
   SIDEBAR_LOGOUT,
-  SIDEBAR_SETTINGS,
   sidebarItemIsActive,
   type SidebarGroup,
   type SidebarItem,
@@ -20,7 +20,13 @@ function itemIsAvailable(item: SidebarItem) {
   return item.available !== false;
 }
 
-export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boolean }) {
+export default function Sidebar({
+  isPreviewMode = false,
+  showCeoConsole = false,
+}: {
+  isPreviewMode?: boolean;
+  showCeoConsole?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
@@ -128,7 +134,7 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
     );
   }
 
-  const settingsActive = sidebarItemIsActive(pathname, SIDEBAR_SETTINGS.href);
+  const ceoActive = sidebarItemIsActive(pathname, SIDEBAR_CEO_CONSOLE.href);
 
   return (
     <aside
@@ -210,25 +216,25 @@ export default function Sidebar({ isPreviewMode = false }: { isPreviewMode?: boo
       </nav>
 
       <div className="relative space-y-0.5 border-t border-white/[0.06] p-3">
-        {!isPreviewMode && (
+        {!isPreviewMode && showCeoConsole && (
           <Link
-            href={SIDEBAR_SETTINGS.href}
-            className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-200 ${
-              settingsActive
-                ? "bg-sky-500/10 text-sky-200"
+            href={SIDEBAR_CEO_CONSOLE.href}
+            className={`group mb-1 flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-200 ${
+              ceoActive
+                ? "bg-violet-500/15 text-violet-200"
                 : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
             }`}
           >
-            <SIDEBAR_SETTINGS.icon
+            <SIDEBAR_CEO_CONSOLE.icon
               size={16}
-              strokeWidth={settingsActive ? 2 : 1.75}
+              strokeWidth={ceoActive ? 2 : 1.75}
               className={
-                settingsActive
-                  ? "text-sky-400"
+                ceoActive
+                  ? "text-violet-400"
                   : "text-zinc-500 transition-colors group-hover:text-zinc-300"
               }
             />
-            {SIDEBAR_SETTINGS.label}
+            {SIDEBAR_CEO_CONSOLE.label}
           </Link>
         )}
         {isPreviewMode ? (

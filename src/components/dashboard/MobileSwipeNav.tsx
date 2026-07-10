@@ -20,6 +20,15 @@ const MAX_VERTICAL_DRIFT = 88;
 
 type SlideDirection = "from-left" | "from-right" | null;
 
+function isInteractiveTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    target.closest(
+      "a, button, input, textarea, select, label, [role='button'], [role='link'], [data-no-swipe]",
+    ) !== null
+  );
+}
+
 export default function MobileSwipeNav({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -124,6 +133,7 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
   }
 
   function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    if (isInteractiveTarget(event.target)) return;
     const touch = event.touches[0];
     beginGesture(touch.clientX, touch.clientY);
   }
@@ -140,6 +150,7 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.pointerType === "touch") return;
+    if (isInteractiveTarget(event.target)) return;
     beginGesture(event.clientX, event.clientY, event.pointerId);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
