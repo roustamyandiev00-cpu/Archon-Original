@@ -383,3 +383,6 @@ where b.id = c.company_id
   and coalesce(b.plan, 'free') = 'free'
   and c.credits_remaining < 10000
   and c.total_purchased <= 100;
+
+-- Trigger-functie niet via RPC aanroepbaar
+revoke all on function public.provision_company_defaults() from public, anon, authenticated;

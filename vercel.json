@@ -4,5 +4,8 @@
       "path": "/api/cron/peppol-inbox",
       "schedule": "0 6 * * *"
     }
-  ]
+  ],
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": "nextjs"
 }

@@ -65,7 +65,7 @@ begin
   insert into public.company_memberships (
     user_id, company_id, role, is_active, joined_at, activated_at
   )
-  values (v_user_id, v_company_id, 'owner', true, now(), now());
+  values (v_user_id, v_company_id, 'admin', true, now(), now());
 
   update public.profiles
   set
