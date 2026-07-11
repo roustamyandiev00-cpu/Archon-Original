@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const pageSize = 10;
+const pageSize = 5;
 
 type PeppolFilter = "all" | "ready" | "incomplete";
 type TypeFilter = "all" | "business" | "individual";
@@ -153,9 +153,9 @@ export default function ContactenDataTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="dashboard-table-scroll flex min-h-0 flex-1 flex-col gap-2 lg:gap-1.5">
       {showFilters && (
-        <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_12rem_12rem_auto]">
+        <div className="grid shrink-0 gap-2 lg:grid-cols-[minmax(12rem,1fr)_9rem_9rem_auto]">
           <label className="relative block">
             <span className="sr-only">Zoek contacten</span>
             <Search
@@ -215,7 +215,7 @@ export default function ContactenDataTable({
         </div>
       )}
 
-      <div className="flex items-center gap-2 text-xs text-zinc-500">
+      <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-500">
         <SlidersHorizontal size={14} />
         <span>
           {filtered.length.toLocaleString("nl-BE")} van{" "}
@@ -228,8 +228,8 @@ export default function ContactenDataTable({
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10">
-          <Table className="min-w-[980px]">
+      <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-10">
@@ -242,12 +242,12 @@ export default function ContactenDataTable({
                   />
                 </TableHead>
                 <TableHead className="min-w-[240px]">Contact</TableHead>
-                <TableHead>Bedrijf</TableHead>
-                <TableHead>Telefoon</TableHead>
-                <TableHead>Locatie</TableHead>
-                <TableHead>Fiscaal</TableHead>
+                <TableHead className="min-w-0">Bedrijf</TableHead>
+                <TableHead className="hidden min-w-0 lg:table-cell">Telefoon</TableHead>
+                <TableHead className="hidden min-w-0 xl:table-cell">Locatie</TableHead>
+                <TableHead className="hidden min-w-0 2xl:table-cell">Fiscaal</TableHead>
                 <TableHead>Peppol</TableHead>
-                <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                <TableHead className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
                   <span className="sr-only">Acties</span>
                 </TableHead>
               </TableRow>
@@ -296,7 +296,7 @@ export default function ContactenDataTable({
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-0">
                         {klant.company_name ? (
                           <div className="flex items-center gap-1.5 text-zinc-300">
                             <Building2 size={13} className="shrink-0 text-zinc-500" />
@@ -306,9 +306,9 @@ export default function ContactenDataTable({
                           <span className="text-xs text-zinc-600">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden min-w-0 lg:table-cell">
                         {klant.phone ? (
-                          <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-400">
+                          <span className="inline-flex items-center gap-1 truncate font-mono text-xs text-zinc-400">
                             <Phone size={11} />
                             {klant.phone}
                           </span>
@@ -316,7 +316,7 @@ export default function ContactenDataTable({
                           <span className="text-xs text-zinc-600">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden min-w-0 xl:table-cell">
                         {adres ? (
                           <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
                             <MapPin size={11} className="shrink-0" />
@@ -326,7 +326,7 @@ export default function ContactenDataTable({
                           <span className="text-xs text-zinc-600">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden min-w-0 2xl:table-cell">
                         <div className="space-y-0.5 font-mono text-[11px] text-zinc-500">
                           {klant.btw && <p>BTW: {klant.btw}</p>}
                           {klant.ondernemingsnummer && (
@@ -343,7 +343,7 @@ export default function ContactenDataTable({
                           {peppolReady ? "Klaar" : "Onvolledig"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right md:sticky md:right-0 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                      <TableCell className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
                         <ContactActionMenu
                           klant={klant}
                           open={openMenuId === klant.id}
@@ -382,7 +382,7 @@ export default function ContactenDataTable({
           </Table>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
             Rijen per pagina{" "}
             <span className="font-mono text-zinc-300">{pageSize}</span>

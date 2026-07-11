@@ -176,9 +176,9 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
         : "";
 
   return (
-    <div className="lg:contents">
+    <div className="dashboard-swipe-root flex min-h-0 flex-1 flex-col lg:overflow-hidden">
       <div
-        className="mobile-swipe-shell lg:contents"
+        className="mobile-swipe-shell flex min-h-0 flex-1 flex-col lg:overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -204,7 +204,7 @@ export default function MobileSwipeNav({ children }: { children: ReactNode }) {
         )}
 
         <div
-          className={`mobile-swipe-content ${slideClass}`}
+          className={`mobile-swipe-content flex min-h-0 flex-1 flex-col lg:overflow-hidden ${slideClass}`}
           style={{
             transform:
               !reduceMotion && dragX

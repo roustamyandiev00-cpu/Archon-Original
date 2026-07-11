@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/table";
 import { formatDate, formatEuro, statusMeta } from "@/lib/offertes";
 
-const pageSize = 10;
+const pageSize = 5;
 
 type StatusFilter =
   | "all"
@@ -129,9 +129,9 @@ export default function OffertesDataTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="dashboard-table-scroll flex min-h-0 flex-1 flex-col gap-2 lg:gap-1.5">
       {showFilters && (
-        <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_12rem_auto]">
+        <div className="grid shrink-0 gap-2 lg:grid-cols-[minmax(12rem,1fr)_9rem_auto]">
           <label className="relative block">
             <span className="sr-only">Zoek offertes</span>
             <Search
@@ -179,7 +179,7 @@ export default function OffertesDataTable({
         </div>
       )}
 
-      <div className="flex items-center gap-2 text-xs text-zinc-500">
+      <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-500">
         <SlidersHorizontal size={14} />
         <span>
           {filtered.length.toLocaleString("nl-BE")} van{" "}
@@ -192,8 +192,8 @@ export default function OffertesDataTable({
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10">
-        <Table className="min-w-[980px]">
+      <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
+        <Table className="w-full table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10">
@@ -205,14 +205,14 @@ export default function OffertesDataTable({
                   className="h-4 w-4 rounded border-white/20 bg-zinc-950 accent-sky-500"
                 />
               </TableHead>
-              <TableHead className="min-w-[220px]">Offerte</TableHead>
-              <TableHead>Klant</TableHead>
-              <TableHead>Datum</TableHead>
-              <TableHead>Geldig tot</TableHead>
+              <TableHead className="min-w-0">Offerte</TableHead>
+              <TableHead className="min-w-0">Klant</TableHead>
+              <TableHead className="hidden min-w-0 lg:table-cell">Datum</TableHead>
+              <TableHead className="hidden min-w-0 xl:table-cell">Geldig tot</TableHead>
               <TableHead className="text-right">Bedrag</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Versturen</TableHead>
-              <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+              <TableHead className="hidden text-right 2xl:table-cell">Versturen</TableHead>
+              <TableHead className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
                 <span className="sr-only">Acties</span>
               </TableHead>
             </TableRow>
@@ -267,7 +267,7 @@ export default function OffertesDataTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-0">
                       {o.klant ? (
                         <div className="flex items-center gap-1.5 text-zinc-300">
                           <Building2 size={13} className="shrink-0 text-zinc-500" />
@@ -277,13 +277,13 @@ export default function OffertesDataTable({
                         <span className="text-xs text-zinc-600">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden min-w-0 lg:table-cell">
                       <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-400">
                         <Calendar size={11} />
                         {formatDate(o.datum)}
                       </span>
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-zinc-400">
+                    <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-400 xl:table-cell">
                       {formatDate(o.geldig_tot)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold text-zinc-100">
@@ -295,7 +295,7 @@ export default function OffertesDataTable({
                         {meta.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="hidden text-right 2xl:table-cell">
                       <DocumentContactActions
                         soort="offerte"
                         nummer={o.nummer ?? `#${o.id}`}
@@ -308,7 +308,7 @@ export default function OffertesDataTable({
                         }
                       />
                     </TableCell>
-                    <TableCell className="text-right md:sticky md:right-0 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                    <TableCell className="text-right lg:sticky lg:right-0 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
                       <OfferteActionMenu
                         offerte={o}
                         isDemo={isDemo}
@@ -346,7 +346,7 @@ export default function OffertesDataTable({
         </Table>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-zinc-500">
           Rijen per pagina{" "}
           <span className="font-mono text-zinc-300">{pageSize}</span>

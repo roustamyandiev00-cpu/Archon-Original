@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiConfig } from "@/app/dashboard/instellingen/settings";
 import type { CustomAgent } from "@/components/dashboard/agents/config";
 import { CAPABILITY_OPTIONS } from "@/components/dashboard/agents/config";
-import { fetchRetrievalContext } from "@/components/dashboard/agents/memory";
+import { fetchAgentMandateContext, fetchRetrievalContext } from "@/components/dashboard/agents/memory";
 import { runChatCompletion } from "@/lib/ai/client";
 import { llmIsConfigured } from "@/lib/ai/config";
 import {
@@ -33,7 +33,7 @@ const ALLOWED_ROUTES = [
   "/dashboard/leads",
   "/dashboard/automatisaties",
   "/dashboard/geheugen",
-  "/dashboard/nova-agents",
+  "/dashboard/command-center?view=crew",
   "/dashboard/projecten",
   "/dashboard/instellingen",
 ];
@@ -162,9 +162,10 @@ export async function generateAgentChatReply(input: {
   const trimmed = input.message.trim();
   if (!trimmed) return { error: "Leeg bericht." };
 
-  const [retrievalContext, crmSnapshot] = await Promise.all([
+  const [retrievalContext, crmSnapshot, mandateContext] = await Promise.all([
     fetchRetrievalContext(input.supabase, input.companyId, trimmed),
     loadCrmSnapshot(input.supabase, input.companyId),
+    fetchAgentMandateContext(input.supabase, input.companyId, input.agent.id),
   ]);
 
   const agentDisplayName =
@@ -180,6 +181,9 @@ export async function generateAgentChatReply(input: {
   const system = [
     `Je bent ${agentDisplayName}, ${input.agent.role} in ArchonPro (Belgisch bouw/CRM dashboard).`,
     `Specialiteit: ${input.agent.instructies}`,
+    mandateContext
+      ? `Officiële mandaat-documenten voor ${agentDisplayName} (mag/moet/grenzen — altijd volgen):\n${mandateContext}`
+      : "",
     `Taken: ${capabilityRoutes(input.agent)}`,
     input.ai.vakgebied ? `Vakgebied: ${input.ai.vakgebied}` : "",
     input.ai.instructies ? `Bedrijfsinstructies: ${input.ai.instructies}` : "",

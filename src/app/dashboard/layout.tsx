@@ -107,9 +107,9 @@ export default async function DashboardLayout({
         id="dashboard-main"
         tabIndex={-1}
         showSidePanel={showSidePreview}
-        className={`lg:pl-[220px] pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0 ${mainTop}`}
+        className={`dashboard-main lg:pl-[220px] pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0 ${mainTop}`}
       >
-        <div className="mx-auto w-full max-w-[1800px] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="dashboard-main-body mx-auto flex h-full w-full max-w-[1800px] flex-col px-4 py-3 sm:px-5 lg:px-6 lg:py-3">
           <MobileSwipeNav>{children}</MobileSwipeNav>
         </div>
       </DashboardMain>

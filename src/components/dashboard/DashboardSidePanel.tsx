@@ -126,7 +126,7 @@ export function DashboardMain({
       : "";
 
   return (
-    <main id={id} tabIndex={tabIndex} className={`${className} ${padWhenOpen}`}>
+    <main id={id} tabIndex={tabIndex} className={`dashboard-main ${className} ${padWhenOpen}`}>
       {children}
     </main>
   );

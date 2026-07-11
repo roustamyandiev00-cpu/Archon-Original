@@ -28,16 +28,16 @@ export default function ContactenView({ klanten }: { klanten: KlantRecord[] }) {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-3xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+    <div className="dashboard-page space-y-3 lg:space-y-0">
+      <header className="dashboard-page-header flex flex-col gap-2 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between lg:gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
             Operatie / Contacten
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
+          <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-zinc-50">
             Contacten
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+          <p className="mt-1 hidden text-sm text-zinc-400 sm:block lg:hidden xl:block">
             Beheer klanten met adres- en Peppol-gegevens voor e-facturatie.
           </p>
         </div>
@@ -47,7 +47,9 @@ export default function ContactenView({ klanten }: { klanten: KlantRecord[] }) {
         </Button>
       </header>
 
-      <KlantenPanel klanten={klanten} embedded />
+      <div className="dashboard-page-content">
+        <KlantenPanel klanten={klanten} embedded />
+      </div>
     </div>
   );
 }

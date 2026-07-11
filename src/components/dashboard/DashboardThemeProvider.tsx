@@ -85,7 +85,7 @@ export default function DashboardThemeProvider({ children }: { children: ReactNo
   return (
     <ThemeContext.Provider value={value}>
       <div
-        className="dashboard-root min-h-screen bg-zinc-950 text-zinc-100"
+        className="dashboard-root flex h-dvh flex-col overflow-hidden bg-zinc-950 text-zinc-100"
         data-theme={theme}
         data-theme-ready={ready ? "true" : "false"}
         suppressHydrationWarning

@@ -27,17 +27,23 @@ export default async function CommandCenterPage() {
   const mission = assembleMissionOverview(core, agentName, agentConfig);
 
   return (
-    <div className="space-y-6">
-      {!companyId && <CompanySetupCard />}
-      <Suspense fallback={null}>
-        <CommandCenterHub
-          companyId={companyId}
-          agentName={agentName}
-          mission={mission}
-          charts={charts}
-          companyAgents={agentConfig}
-        />
-      </Suspense>
+    <div className="dashboard-page space-y-2 lg:space-y-0">
+      {!companyId && (
+        <div className="shrink-0">
+          <CompanySetupCard />
+        </div>
+      )}
+      <div className="dashboard-page-content min-h-0 flex-1">
+        <Suspense fallback={null}>
+          <CommandCenterHub
+            companyId={companyId}
+            agentName={agentName}
+            mission={mission}
+            charts={charts}
+            companyAgents={agentConfig}
+          />
+        </Suspense>
+      </div>
     </div>
   );
 }

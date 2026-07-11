@@ -134,7 +134,7 @@ export default function CommandCenterView({
   mission,
 }: Pick<DashboardHomeProps, "mission" | "agentName">) {
   const status = statusMessage(mission);
-  const openTasks = [...mission.important, ...mission.tasks].slice(0, 5);
+  const openTasks = [...mission.important, ...mission.tasks].slice(0, 3);
   const hasCashflowData = mission.gefactureerd > 0 || mission.openstaand > 0;
   const projectCount = mission.tasks.filter((t) =>
     t.href.includes("project"),
@@ -142,25 +142,25 @@ export default function CommandCenterView({
   const attentionCount = mission.important.length + mission.actionItems.length;
 
   return (
-    <div className="space-y-5">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden lg:gap-2">
       <section
         data-tour="dash-status"
-        className="rounded-2xl border border-white/[0.08] bg-zinc-900/80 p-4 sm:p-5"
+        className="shrink-0 rounded-xl border border-white/[0.08] bg-zinc-900/80 p-3 sm:p-3.5"
       >
-        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div className="flex items-start gap-3.5">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="flex items-center gap-3">
             <span
-              className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
                 status.tone === "ok"
                   ? "bg-emerald-500/15 text-emerald-400"
                   : "bg-amber-500/15 text-amber-400"
               }`}
             >
-              <CheckCircle2 size={22} />
+              <CheckCircle2 size={18} />
             </span>
-            <div>
-              <p className="text-base font-semibold text-zinc-100">{status.text}</p>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-zinc-100">{status.text}</p>
+              <p className="mt-0.5 hidden truncate text-xs text-zinc-500 xl:block">
                 {status.detail}
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function CommandCenterView({
 
           <div
             data-tour="dash-metrics"
-            className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[420px]"
+            className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:min-w-[360px]"
           >
             <MetricStat
               label="Vandaag"
@@ -208,7 +208,7 @@ export default function CommandCenterView({
 
       <div
         data-tour="dash-actions"
-        className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid shrink-0 grid-cols-2 gap-1.5 sm:grid-cols-4"
       >
         <QuickActionCard
           title="Nieuwe Klant"
@@ -236,12 +236,12 @@ export default function CommandCenterView({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden">
         <DashboardPanel title="AI Command Center" icon={Bot} data-tour="dash-agents">
-          <p className="mb-4 text-xs text-zinc-500">
+          <p className="mb-2 text-xs text-zinc-500">
             {DOMAIN_AGENT_COUNT} agents – klik om te activeren
           </p>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {domainCards.map((card) => {
               const Icon = card.icon;
 
@@ -258,7 +258,7 @@ export default function CommandCenterView({
                           ? "dash-agent-project"
                           : undefined
                   }
-                  className={`flex items-start gap-3 rounded-xl border border-white/[0.06] border-l-[3px] bg-zinc-950/50 px-4 py-3.5 transition-colors hover:border-white/12 hover:bg-zinc-950/80 ${card.stripe}`}
+                  className={`flex items-start gap-2.5 rounded-lg border border-white/[0.06] border-l-[3px] bg-zinc-950/50 px-3 py-2.5 transition-colors hover:border-white/12 hover:bg-zinc-950/80 ${card.stripe}`}
                 >
                   <span
                     className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${card.iconTone}`}
@@ -279,7 +279,7 @@ export default function CommandCenterView({
           </div>
         </DashboardPanel>
 
-        <aside className="space-y-4">
+        <div className="grid min-h-0 grid-cols-1 gap-2 md:grid-cols-3">
           <DashboardPanel
             title="AI Inbox"
             icon={Bot}
@@ -295,7 +295,7 @@ export default function CommandCenterView({
             }
           >
             {mission.actionItems.length > 0 ? (
-              <ActionItems items={mission.actionItems} demoMode={mission.isDemo} />
+              <ActionItems items={mission.actionItems.slice(0, 2)} demoMode={mission.isDemo} />
             ) : (
               <EmptyState
                 icon={Inbox}
@@ -315,12 +315,12 @@ export default function CommandCenterView({
             }
           >
             {openTasks.length > 0 ? (
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {openTasks.map((task) => (
                   <li key={task.id}>
                     <Link
                       href={task.href}
-                      className="block rounded-lg border border-white/[0.05] px-3 py-2.5 transition-colors hover:border-white/12 hover:bg-white/[0.03]"
+                      className="block rounded-lg border border-white/[0.05] px-2.5 py-2 transition-colors hover:border-white/12 hover:bg-white/[0.03]"
                     >
                       <p className="truncate text-sm font-medium text-zinc-200">
                         {task.title}
@@ -339,14 +339,14 @@ export default function CommandCenterView({
                 detail="Alles afgehandeld of nog niets aangemaakt."
               />
             )}
-            <PrimaryButton href="/dashboard/leads" className="mt-4">
+            <PrimaryButton href="/dashboard/leads" className="mt-3">
               Taak toevoegen
             </PrimaryButton>
           </DashboardPanel>
 
           <DashboardPanel title="Cashflow" icon={Wallet}>
             {hasCashflowData ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-zinc-500">Gefactureerd</span>
                   <span className="font-semibold text-zinc-100">
@@ -372,13 +372,13 @@ export default function CommandCenterView({
                   Maak eerst facturen zodat de cashflow op echte gegevens
                   gebaseerd is.
                 </p>
-                <PrimaryButton href="/dashboard/facturen" className="mt-4">
+                <PrimaryButton href="/dashboard/facturen" className="mt-3">
                   Opnieuw controleren
                 </PrimaryButton>
               </>
             )}
           </DashboardPanel>
-        </aside>
+        </div>
       </div>
     </div>
   );

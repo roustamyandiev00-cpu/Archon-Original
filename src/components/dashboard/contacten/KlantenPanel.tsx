@@ -45,7 +45,7 @@ export default function KlantenPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className={embedded ? "dashboard-page-content h-full" : "space-y-6"}>
       {!embedded && (
         <header className="flex flex-col gap-4 border-b border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
@@ -62,13 +62,13 @@ export default function KlantenPanel({
         </header>
       )}
 
-      <Card className="overflow-hidden border-white/10 bg-zinc-950/50">
-        <CardHeader className="gap-4 border-white/10 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-xl font-semibold text-zinc-50">
+      <Card className="dashboard-data-panel overflow-hidden border-white/10 bg-zinc-950/50">
+        <CardHeader className="dashboard-data-panel-header gap-3 border-white/10 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-0.5">
+            <CardTitle className="text-base font-semibold text-zinc-50">
               Klanten
             </CardTitle>
-            <CardDescription className="max-w-xl text-sm leading-relaxed text-zinc-400">
+            <CardDescription className="dashboard-data-panel-desc max-w-xl text-sm leading-relaxed text-zinc-400">
               Beheer je klantenbestand, Peppol-gegevens en toegang voor
               offertes en e-facturatie.
             </CardDescription>
@@ -105,8 +105,8 @@ export default function KlantenPanel({
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <CardContent className="dashboard-data-panel-body">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Badge variant="info">
               {klanten.length.toLocaleString("nl-BE")} contacten
             </Badge>
@@ -115,12 +115,14 @@ export default function KlantenPanel({
             </Badge>
           </div>
 
-          <ContactenDataTable
-            klanten={klanten}
-            onEdit={setEditing}
-            onDelete={remove}
-            showFilters={showFilters}
-          />
+          <div className="dashboard-table-area">
+            <ContactenDataTable
+              klanten={klanten}
+              onEdit={setEditing}
+              onDelete={remove}
+              showFilters={showFilters}
+            />
+          </div>
         </CardContent>
       </Card>
 

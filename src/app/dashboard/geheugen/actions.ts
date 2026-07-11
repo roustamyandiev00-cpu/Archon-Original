@@ -7,40 +7,91 @@ import {
   saveAgentMemory,
   type MemoryType,
 } from "@/components/dashboard/agents/memory";
+import {
+  docModeFromMetadata,
+  formatMandateDocument,
+  KIND_LABELS,
+  type AgentDocumentRow,
+  type AgentKnowledgeKind,
+  type AgentMandateSections,
+} from "@/lib/agents/agent-knowledge";
 
-export type AgentKnowledgeKind =
-  | "instruction"
-  | "fact"
-  | "preference"
-  | "context";
+export async function fetchAgentDocuments(agentId: string) {
+  const access = await requireWriteAccess();
+  if ("error" in access) {
+    return { error: access.error, documents: [] as AgentDocumentRow[] };
+  }
+  const { supabase, companyId } = access;
 
-const KIND_LABELS: Record<AgentKnowledgeKind, string> = {
-  instruction: "Wat moet kunnen",
-  fact: "Wat moet leren",
-  preference: "Wat onthouden",
-  context: "Context & notities",
-};
+  const { data, error } = await supabase
+    .from("ai_agent_memory")
+    .select("id, content, memory_type, metadata, created_at")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false })
+    .limit(80);
+
+  if (error) return { error: error.message, documents: [] as AgentDocumentRow[] };
+
+  const documents: AgentDocumentRow[] = (data ?? [])
+    .filter((row) => {
+      const meta = (row.metadata ?? {}) as Record<string, unknown>;
+      return meta.source === "crew_knowledge_doc" && meta.agentId === agentId;
+    })
+    .map((row) => {
+      const meta = (row.metadata ?? {}) as Record<string, unknown>;
+      const kind = (row.memory_type as AgentKnowledgeKind) ?? "instruction";
+      return {
+        id: row.id,
+        title: String(meta.title ?? row.content.slice(0, 60)),
+        kind,
+        kindLabel: String(meta.kindLabel ?? KIND_LABELS[kind]),
+        docMode: docModeFromMetadata(meta),
+        contentPreview: row.content.slice(0, 160),
+        createdAt: row.created_at,
+      };
+    });
+
+  return { documents };
+}
 
 export async function saveAgentKnowledgeDoc(input: {
   agentId: string;
   agentName: string;
   kind: AgentKnowledgeKind;
-  content: string;
+  content?: string;
   title?: string;
+  docMode?: "mandate" | "free";
+  mandate?: AgentMandateSections;
 }) {
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId, user } = access;
 
-  const content = input.content.trim();
-  if (!content) return { error: "Vul een beschrijving in." };
+  const docMode = input.docMode ?? "free";
+  let content = input.content?.trim() ?? "";
+
+  if (docMode === "mandate" && input.mandate) {
+    content = formatMandateDocument(input.agentName, input.mandate);
+  }
+
+  if (!content) return { error: "Vul minstens één sectie in." };
   if (content.length < 8) {
     return { error: "Geef iets meer detail (minimaal 8 tekens)." };
   }
 
   const memoryType = input.kind as MemoryType;
   const importance =
-    input.kind === "instruction" ? 9 : input.kind === "preference" ? 8 : 7;
+    docMode === "mandate" || input.kind === "instruction"
+      ? 10
+      : input.kind === "preference"
+        ? 8
+        : 7;
+
+  const docTitle =
+    input.title?.trim() ||
+    (docMode === "mandate"
+      ? `Mandaat — ${input.agentName}`
+      : content.slice(0, 80));
 
   await saveAgentMemory(supabase, {
     companyId,
@@ -53,8 +104,9 @@ export async function saveAgentKnowledgeDoc(input: {
       agentId: input.agentId,
       kind: input.kind,
       kindLabel: KIND_LABELS[input.kind],
+      docMode,
       source: "crew_knowledge_doc",
-      title: input.title?.trim() || content.slice(0, 80),
+      title: docTitle,
     },
   });
 
@@ -94,5 +146,3 @@ export async function rememberChatInsight(input: {
 
   return { ok: true as const };
 }
-
-export { KIND_LABELS };

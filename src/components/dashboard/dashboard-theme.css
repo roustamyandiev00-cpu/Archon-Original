@@ -745,3 +745,144 @@
   --chat-list-width: 320px;
   --chat-profile-width: 280px;
 }
+
+/* Desktop: viewport-fit — geen page scroll */
+@media (min-width: 1024px) {
+  html:has(.dashboard-root),
+  body:has(.dashboard-root) {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .dashboard-main {
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dashboard-main-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dashboard-swipe-root {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .mobile-swipe-shell {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .mobile-swipe-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-page {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-page-header {
+    flex-shrink: 0;
+  }
+
+  .dashboard-page-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-data-panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-data-panel-header {
+    flex-shrink: 0;
+    gap: 0.5rem !important;
+    padding: 0.625rem 1rem !important;
+  }
+
+  .dashboard-data-panel-header .dashboard-data-panel-desc {
+    display: none;
+  }
+
+  .dashboard-data-panel-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 1rem 0.625rem !important;
+  }
+
+  .dashboard-table-area {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-table-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-hub {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-hub-header {
+    flex-shrink: 0;
+  }
+
+  .dashboard-hub-view {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .mobile-swipe-dots,
+  .dashboard-swipe-root > p {
+    display: none !important;
+  }
+
+  .facturen-create-shell {
+    height: 100%;
+    max-height: 100%;
+  }
+}

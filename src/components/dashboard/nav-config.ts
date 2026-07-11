@@ -87,7 +87,7 @@ export const MOBILE_MORE_LINKS: MoreLink[] = [
   { label: "Boekhouding", href: "/dashboard/boekhouding", icon: Wallet },
   { label: "Agenda", href: "/dashboard/agenda", icon: CalendarDays },
   { label: "Prijslijst", href: "/dashboard/prijslijst", icon: Tags },
-  { label: "AI Assistent", href: "/dashboard/nova-agents", icon: Bot },
+  { label: "AI Assistent", href: "/dashboard/command-center?view=crew", icon: Bot },
   { label: "Activiteiten", href: "/dashboard/activiteit", icon: List },
   { label: "Instellingen", href: "/dashboard/instellingen", icon: Settings },
 ];

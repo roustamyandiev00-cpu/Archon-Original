@@ -42,7 +42,7 @@ export type FactuurListItem = {
   phone: string | null;
 };
 
-const pageSize = 10;
+const pageSize = 5;
 
 type StatusFilter = "all" | "concept" | "verzonden" | "betaald" | "vervallen";
 type TypeFilter = "all" | "factuur" | "proforma";
@@ -108,9 +108,9 @@ export default function FacturenDataTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="dashboard-table-scroll flex min-h-0 flex-1 flex-col gap-2 lg:gap-1.5">
       {showFilters && (
-        <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_12rem_12rem_auto]">
+        <div className="grid shrink-0 gap-2 lg:grid-cols-[minmax(12rem,1fr)_9rem_9rem_auto]">
           <label className="relative block">
             <span className="sr-only">Zoek facturen</span>
             <Search
@@ -172,7 +172,7 @@ export default function FacturenDataTable({
         </div>
       )}
 
-      <div className="flex items-center gap-2 text-xs text-zinc-500">
+      <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-500">
         <SlidersHorizontal size={14} />
         <span>
           {filtered.length.toLocaleString("nl-BE")} van{" "}
@@ -180,19 +180,19 @@ export default function FacturenDataTable({
         </span>
       </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10">
-          <Table className="min-w-[920px]">
+        <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>Nummer</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Klant</TableHead>
-                <TableHead>Datum</TableHead>
-                <TableHead>Vervaldatum</TableHead>
+                <TableHead className="min-w-0">Nummer</TableHead>
+                <TableHead className="hidden min-w-0 lg:table-cell">Type</TableHead>
+                <TableHead className="min-w-0">Klant</TableHead>
+                <TableHead className="hidden min-w-0 xl:table-cell">Datum</TableHead>
+                <TableHead className="hidden min-w-0 2xl:table-cell">Vervaldatum</TableHead>
                 <TableHead className="text-right">Bedrag</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Versturen</TableHead>
-                <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-white md:shadow-[-16px_0_24px_rgba(250,250,250,0.92)] dark:md:bg-zinc-900 dark:md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                <TableHead className="hidden text-right 2xl:table-cell">Versturen</TableHead>
+                <TableHead className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-900 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
                   <span className="sr-only">Acties</span>
                 </TableHead>
               </TableRow>
@@ -205,30 +205,30 @@ export default function FacturenDataTable({
 
                   return (
                     <TableRow key={f.id}>
-                      <TableCell>
+                      <TableCell className="min-w-0">
                         {isDemo ? (
-                          <span className="font-mono text-zinc-300">
+                          <span className="truncate font-mono text-zinc-300">
                             {f.nummer ?? `#${f.id}`}
                           </span>
                         ) : (
                           <Link
                             href={`/dashboard/facturen/${f.id}`}
-                            className="font-mono text-sky-400 hover:text-sky-300"
+                            className="truncate font-mono text-sky-400 hover:text-sky-300"
                           >
                             {f.nummer ?? `#${f.id}`}
                           </Link>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden min-w-0 lg:table-cell">
                         <Badge variant="default">{typeMeta.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-zinc-200">
+                      <TableCell className="min-w-0 truncate text-zinc-200">
                         {f.klant}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-zinc-500">
+                      <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-500 xl:table-cell">
                         {formatDate(f.datum)}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-zinc-500">
+                      <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-500 2xl:table-cell">
                         {formatDate(f.vervaldatum)}
                       </TableCell>
                       <TableCell className="text-right font-mono font-semibold text-zinc-100">
@@ -239,7 +239,7 @@ export default function FacturenDataTable({
                           {meta.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="hidden text-right 2xl:table-cell">
                         <DocumentContactActions
                           soort={
                             f.document_type === "proforma"
@@ -256,7 +256,7 @@ export default function FacturenDataTable({
                           }
                         />
                       </TableCell>
-                      <TableCell className="text-right md:sticky md:right-0 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                      <TableCell className="text-right lg:sticky lg:right-0 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
                         <FactuurRowMenu
                           id={f.id}
                           nummer={f.nummer ?? `#${f.id}`}
@@ -296,7 +296,7 @@ export default function FacturenDataTable({
           </Table>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
             Rijen per pagina{" "}
             <span className="font-mono text-zinc-300">{pageSize}</span>

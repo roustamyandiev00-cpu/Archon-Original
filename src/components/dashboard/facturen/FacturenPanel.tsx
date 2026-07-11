@@ -36,13 +36,13 @@ export default function FacturenPanel({
   ).length;
 
   return (
-    <Card className="overflow-hidden border-white/10 bg-zinc-950/50">
-      <CardHeader className="gap-4 border-white/10 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-xl font-semibold text-zinc-50">
+    <Card className="dashboard-data-panel overflow-hidden border-white/10 bg-zinc-950/50">
+      <CardHeader className="dashboard-data-panel-header gap-3 border-white/10 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-0.5">
+          <CardTitle className="text-base font-semibold text-zinc-50">
             Facturen
           </CardTitle>
-          <CardDescription className="max-w-xl text-sm leading-relaxed text-zinc-400">
+          <CardDescription className="dashboard-data-panel-desc max-w-xl text-sm leading-relaxed text-zinc-400">
             Beheer facturen en proforma&apos;s, volg betalingen en verstuur
             via Peppol of e-mail.
           </CardDescription>
@@ -78,8 +78,8 @@ export default function FacturenPanel({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <CardContent className="dashboard-data-panel-body">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Badge variant="info">
             {facturen.length.toLocaleString("nl-BE")} documenten
           </Badge>
@@ -92,11 +92,13 @@ export default function FacturenPanel({
           {isDemo && <Badge variant="warning">Demo</Badge>}
         </div>
 
-        <FacturenDataTable
-          facturen={facturen}
-          isDemo={isDemo}
-          showFilters={showFilters}
-        />
+        <div className="dashboard-table-area">
+          <FacturenDataTable
+            facturen={facturen}
+            isDemo={isDemo}
+            showFilters={showFilters}
+          />
+        </div>
       </CardContent>
     </Card>
   );

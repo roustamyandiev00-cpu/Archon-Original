@@ -65,6 +65,7 @@ export async function saveAgentMemory(
       content,
       memoryType: input.memoryType,
       importance: input.importance,
+      metadata: input.metadata,
     });
   }
 }
@@ -177,6 +178,36 @@ export async function fetchRetrievalContext(
   return parts.join("\n\n");
 }
 
+/** Mandaat- en instructiedocumenten gekoppeld aan één agent. */
+export async function fetchAgentMandateContext(
+  supabase: SupabaseClient,
+  companyId: number,
+  agentId: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from("ai_agent_memory")
+    .select("content, memory_type, metadata, importance")
+    .eq("company_id", companyId)
+    .in("memory_type", ["instruction", "preference", "fact"])
+    .order("importance", { ascending: false })
+    .limit(30);
+
+  const docs = (data ?? []).filter((row) => {
+    const meta = (row.metadata ?? {}) as Record<string, unknown>;
+    return meta.source === "crew_knowledge_doc" && meta.agentId === agentId;
+  });
+
+  if (!docs.length) return "";
+
+  return docs
+    .map((row) => {
+      const meta = (row.metadata ?? {}) as Record<string, unknown>;
+      const title = String(meta.title ?? "Document");
+      return `### ${title}\n${row.content}`;
+    })
+    .join("\n\n");
+}
+
 const KNOWLEDGE_SYNC_TYPES = new Set<MemoryType>([
   "fact",
   "preference",
@@ -192,16 +223,22 @@ async function syncMemoryToKnowledgeBase(
     content: string;
     memoryType: MemoryType;
     importance?: number;
+    metadata?: Record<string, unknown>;
   },
 ) {
   if ((input.importance ?? 5) < 6) return;
   if (!KNOWLEDGE_SYNC_TYPES.has(input.memoryType)) return;
 
   const embedding = await generateEmbedding(input.content);
+  const metaTitle =
+    typeof input.metadata?.title === "string"
+      ? input.metadata.title
+      : input.content.slice(0, 80);
+
   await supabase.from("ai_knowledge_base").insert({
     company_id: input.companyId,
     user_id: input.userId,
-    title: input.content.slice(0, 80),
+    title: metaTitle,
     content: input.content,
     type: input.memoryType,
     source: "agent_memory",

@@ -23,6 +23,7 @@ export async function saveAgents(agents: CustomAgent[]) {
   const error = await saveCompanyAgents(supabase, companyId, merged);
   if (error) return { error: error.message };
 
+  revalidatePath("/dashboard/command-center");
   revalidatePath("/dashboard/nova-agents");
   revalidatePath("/dashboard");
   return { ok: true, agents: merged };

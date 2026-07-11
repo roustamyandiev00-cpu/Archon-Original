@@ -4,7 +4,7 @@ import type { AgentCapability } from "@/components/dashboard/agents/config";
 import { CAPABILITY_OPTIONS } from "@/components/dashboard/agents/config";
 
 const AGENT_ROUTES: Record<string, string> = {
-  nova: "/dashboard/command-center",
+  nova: "/dashboard/command-center?view=crew",
   schatter: "/dashboard/offertes",
   facturatie: "/dashboard/facturen",
   opvolger: "/dashboard/leads",
@@ -49,7 +49,7 @@ const PAGE_PATTERNS: { patterns: RegExp[]; route: string; label: string; openCon
   },
   {
     patterns: [/agent/, /nova/],
-    route: "/dashboard/nova-agents",
+    route: "/dashboard/command-center?view=crew",
     label: "AI-agents",
   },
   {

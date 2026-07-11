@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { BrandLockup } from "@/components/BrandLogo";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronDown, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -29,6 +29,7 @@ export default function Sidebar({
   showCeoConsole?: boolean;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
@@ -42,7 +43,7 @@ export default function Sidebar({
         ? SIDEBAR_GROUPS.find((g) => g.title === titleOrGroup)
         : titleOrGroup;
     if (!group || !group.collapsible) return true;
-    if (groupHasActivePath(group, pathname)) return true;
+    if (groupHasActivePath(group, pathname, searchParams)) return true;
     return openGroups[group.title] ?? false;
   }
 
@@ -61,8 +62,8 @@ export default function Sidebar({
   ) {
     const available = itemIsAvailable(item);
     const className = cn(
-      "group relative flex items-center gap-2.5 rounded-xl py-2.5 text-sm font-medium transition-all duration-200",
-      isChild ? "px-2.5 text-[13px]" : "px-3",
+      "group relative flex items-center gap-2 rounded-lg py-1.5 text-[13px] font-medium transition-all duration-200",
+      isChild ? "px-2.5" : "px-2.5",
       !available
         ? "cursor-default text-zinc-600 hover:bg-transparent"
         : active
@@ -135,30 +136,30 @@ export default function Sidebar({
     );
   }
 
-  const ceoActive = sidebarItemIsActive(pathname, SIDEBAR_CEO_CONSOLE.href);
+  const ceoActive = sidebarItemIsActive(pathname, SIDEBAR_CEO_CONSOLE.href, searchParams);
 
   return (
     <aside
       data-tour="dash-sidebar"
-      className="dashboard-sidebar fixed inset-y-0 left-0 z-40 hidden w-[220px] flex-col border-r border-white/[0.06] bg-zinc-950 lg:flex"
+      className="dashboard-sidebar fixed inset-y-0 left-0 z-40 hidden h-dvh w-[220px] flex-col overflow-hidden border-r border-white/[0.06] bg-zinc-950 lg:flex"
     >
-      <div className="relative flex h-14 items-center border-b border-white/[0.06] px-4">
+      <div className="relative flex h-12 shrink-0 items-center border-b border-white/[0.06] px-3">
         <BrandLockup
           href="/dashboard"
-          markSize={36}
+          markSize={32}
           wordmarkSize="sm"
           tagline="Mission view"
         />
       </div>
 
-      <nav className="relative flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:rgba(255,255,255,0.08)_transparent] [scrollbar-width:thin]">
+      <nav className="relative min-h-0 flex-1 overflow-hidden px-2.5 py-2">
         {SIDEBAR_GROUPS.map((group, groupIndex) => {
           const open = isGroupOpen(group);
 
           return (
             <div
               key={group.title}
-              className={groupIndex > 0 ? "mt-6 border-t border-white/[0.04] pt-5" : ""}
+              className={groupIndex > 0 ? "mt-2.5 border-t border-white/[0.04] pt-2.5" : ""}
             >
               {group.collapsible ? (
                 <button
@@ -178,7 +179,7 @@ export default function Sidebar({
                   />
                 </button>
               ) : (
-                <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                <p className="mb-1 px-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
                   {group.title}
                 </p>
               )}
@@ -188,9 +189,9 @@ export default function Sidebar({
                   {group.items.map((item) => {
                     const hasChildren = item.children && item.children.length > 0;
                     const childActive = item.children?.some((child) =>
-                      sidebarItemIsActive(pathname, child.href),
+                      sidebarItemIsActive(pathname, child.href, searchParams),
                     );
-                    const itemActive = sidebarItemIsActive(pathname, item.href);
+                    const itemActive = sidebarItemIsActive(pathname, item.href, searchParams);
 
                     return (
                       <div key={item.label}>
@@ -200,7 +201,7 @@ export default function Sidebar({
                             {item.children!.map((child) =>
                               renderLink(
                                 child,
-                                sidebarItemIsActive(pathname, child.href),
+                                sidebarItemIsActive(pathname, child.href, searchParams),
                                 true,
                               ),
                             )}
@@ -216,7 +217,7 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className="relative space-y-0.5 border-t border-white/[0.06] p-3">
+      <div className="relative shrink-0 space-y-0.5 border-t border-white/[0.06] p-2">
         {!isPreviewMode && showCeoConsole && (
           <Link
             href={SIDEBAR_CEO_CONSOLE.href}

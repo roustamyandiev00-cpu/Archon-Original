@@ -1,5 +1,7 @@
+import { isActivePreviewMode } from "@/components/dashboard/context";
 import { getCompanyContext } from "@/lib/company";
 import { DEMO_OFFERTES } from "@/lib/demo";
+import { showDemoData } from "@/lib/demo-mode";
 import { loadUserAgentName } from "@/lib/agents/userAi";
 import { DEFAULT_TEMPLATE } from "@/app/dashboard/instellingen/settings";
 import OffertesView, {
@@ -10,6 +12,7 @@ import type { OfferteDocumentContext } from "@/components/dashboard/offertes/Off
 export const metadata = { title: "Offertes — ArchonPro" };
 
 export default async function OffertesPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId, user } = await getCompanyContext();
 
   let offertes: OfferteListRow[] = [];
@@ -59,7 +62,7 @@ export default async function OffertesPage() {
     });
   }
 
-  const isDemo = offertes.length === 0;
+  const isDemo = showDemoData(preview, offertes.length === 0);
   if (isDemo) offertes = DEMO_OFFERTES;
 
   let customers: {

@@ -6,7 +6,6 @@ import {
   Crosshair,
   FileText,
   FolderKanban,
-  Gauge,
   Handshake,
   HardHat,
   LineChart,
@@ -44,7 +43,6 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
   {
     title: "Overzicht",
     items: [
-      { label: "Overzicht", href: "/dashboard/overzicht", icon: Gauge },
       { label: "Command Center", href: "/dashboard/command-center", icon: Crosshair },
     ],
   },
@@ -52,17 +50,11 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     title: "Operatie",
     items: [
       { label: "Contacten", href: "/dashboard/contacten", icon: Users },
+      { label: "Offertes", href: "/dashboard/offertes", icon: FileText },
       {
-        label: "Offertes",
-        href: "/dashboard/offertes",
-        icon: FileText,
-        children: [
-          {
-            label: "Projecten",
-            href: "/dashboard/offertes/projecten",
-            icon: FolderKanban,
-          },
-        ],
+        label: "Projecten",
+        href: "/dashboard/offertes/projecten",
+        icon: FolderKanban,
       },
       {
         label: "Facturen",
@@ -79,17 +71,11 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         badgeTone: "info",
       },
       { label: "Automatisaties", href: "/dashboard/automatisaties", icon: Zap },
+      { label: "Bouwnetwerk", href: "/dashboard/werkposts", icon: HardHat },
       {
-        label: "Bouwnetwerk",
-        href: "/dashboard/werkposts",
-        icon: HardHat,
-        children: [
-          {
-            label: "Samenwerkingen",
-            href: "/dashboard/werkposts/samenwerkingen",
-            icon: Handshake,
-          },
-        ],
+        label: "Samenwerkingen",
+        href: "/dashboard/werkposts/samenwerkingen",
+        icon: Handshake,
       },
     ],
   },
@@ -116,7 +102,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
   {
     title: "AI",
     items: [
-      { label: "AI-agents", href: "/dashboard/nova-agents", icon: Bot },
+      { label: "AI-agents", href: "/dashboard/command-center?view=crew", icon: Bot },
       { label: "Comms", href: "/dashboard/comms", icon: MessageCircle },
       { label: "Geheugen", href: "/dashboard/geheugen", icon: BrainCircuit },
     ],
@@ -148,16 +134,29 @@ export const SIDEBAR_LOGOUT = {
 } as const;
 
 /** Pad matcht actief item (inclusief subroutes). */
-export function sidebarItemIsActive(pathname: string, href: string): boolean {
+export function sidebarItemIsActive(
+  pathname: string,
+  href: string,
+  searchParams?: Pick<URLSearchParams, "get"> | null,
+): boolean {
   const current = pathname.replace(/\/$/, "");
-  const target = href.replace(/\/$/, "").split("?")[0] ?? href;
+  const [pathPart, queryPart] = href.split("?");
+  const target = pathPart.replace(/\/$/, "");
+  const hrefView = queryPart
+    ? new URLSearchParams(queryPart).get("view")
+    : null;
+  const currentView = searchParams?.get("view") ?? null;
+
+  if (hrefView === "crew") {
+    return current === "/dashboard/command-center" && currentView === "crew";
+  }
 
   if (target === "/dashboard/overzicht") {
     return current === "/dashboard/overzicht" || current === "/dashboard";
   }
 
   if (target === "/dashboard/command-center") {
-    return current === "/dashboard/command-center";
+    return current === "/dashboard/command-center" && currentView !== "crew";
   }
 
   if (target === "/dashboard/offertes") {
@@ -171,13 +170,26 @@ export function sidebarItemIsActive(pathname: string, href: string): boolean {
     return current.startsWith("/dashboard/facturen");
   }
 
+  if (target === "/dashboard/werkposts") {
+    return (
+      current.startsWith("/dashboard/werkposts") &&
+      !current.startsWith("/dashboard/werkposts/samenwerkingen")
+    );
+  }
+
   return current === target || current.startsWith(`${target}/`);
 }
 
-export function groupHasActivePath(group: SidebarGroup, pathname: string): boolean {
+export function groupHasActivePath(
+  group: SidebarGroup,
+  pathname: string,
+  searchParams?: Pick<URLSearchParams, "get"> | null,
+): boolean {
   return group.items.some(
     (item) =>
-      sidebarItemIsActive(pathname, item.href) ||
-      item.children?.some((child) => sidebarItemIsActive(pathname, child.href)),
+      sidebarItemIsActive(pathname, item.href, searchParams) ||
+      item.children?.some((child) =>
+        sidebarItemIsActive(pathname, child.href, searchParams),
+      ),
   );
 }

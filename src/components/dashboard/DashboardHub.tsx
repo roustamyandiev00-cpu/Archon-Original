@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
   Briefcase,
@@ -114,6 +115,8 @@ export default function DashboardHub({
   crewPanel = null,
   companyAgents = [],
 }: DashboardHubProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [activeView, setActiveView] = useState<DashboardViewId>(defaultView);
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
   const [updatedLabel, setUpdatedLabel] = useState("zojuist bijgewerkt");
@@ -131,10 +134,19 @@ export default function DashboardHub({
     return () => window.clearInterval(id);
   }, [lastUpdated]);
 
-  const selectView = useCallback((id: DashboardViewId) => {
-    setActiveView(id);
-    localStorage.setItem(STORAGE_KEY, id);
-  }, []);
+  const selectView = useCallback(
+    (id: DashboardViewId) => {
+      setActiveView(id);
+      localStorage.setItem(STORAGE_KEY, id);
+      if (pathname === "/dashboard/command-center") {
+        const params = new URLSearchParams();
+        if (id !== "command") params.set("view", id);
+        const qs = params.toString();
+        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      }
+    },
+    [pathname, router],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -157,10 +169,10 @@ export default function DashboardHub({
   const refresh = () => setLastUpdated(new Date());
 
   return (
-    <div className="space-y-5">
+    <div className="dashboard-hub dashboard-page flex h-full min-h-0 flex-1 flex-col space-y-3 lg:space-y-0">
       <header
         data-tour="dash-views"
-        className="rounded-2xl border border-white/[0.08] bg-zinc-900/80 px-4 py-3.5 sm:px-5"
+        className="dashboard-hub-header shrink-0 rounded-xl border border-white/[0.08] bg-zinc-900/80 px-3 py-2.5 sm:px-4"
       >
         <div className="flex flex-wrap items-center gap-3">
           <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
@@ -241,21 +253,33 @@ export default function DashboardHub({
       </header>
 
       {activeView === "command" && (
-        <CommandCenterView mission={mission} agentName={agentName} />
+        <div className="dashboard-hub-view">
+          <CommandCenterView mission={mission} agentName={agentName} />
+        </div>
       )}
       {activeView === "opvolging" && (
-        <OpvolgingView mission={mission} agentName={agentName} />
+        <div className="dashboard-hub-view overflow-y-auto lg:overflow-hidden">
+          <OpvolgingView mission={mission} agentName={agentName} />
+        </div>
       )}
       {activeView === "financien" && (
-        <FinancienView mission={mission} charts={charts} />
+        <div className="dashboard-hub-view overflow-y-auto lg:overflow-hidden">
+          <FinancienView mission={mission} charts={charts} />
+        </div>
       )}
-      {activeView === "projecten" && <ProjectenView mission={mission} />}
+      {activeView === "projecten" && (
+        <div className="dashboard-hub-view overflow-y-auto lg:overflow-hidden">
+          <ProjectenView mission={mission} />
+        </div>
+      )}
       {activeView === "crew" && (
-        <AiCrewView
-          mission={mission}
-          companyAgents={companyAgents}
-          initialPanel={crewPanel}
-        />
+        <div className="dashboard-hub-view overflow-hidden">
+          <AiCrewView
+            mission={mission}
+            companyAgents={companyAgents}
+            initialPanel={crewPanel}
+          />
+        </div>
       )}
     </div>
   );

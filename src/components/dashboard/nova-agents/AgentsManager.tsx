@@ -1,7 +1,7 @@
 "use client";
 
+import { forwardRef, useImperativeHandle, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
 import {
   Bot,
   Check,
@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  ScrollText,
   Trash2,
   X,
 } from "lucide-react";
@@ -36,6 +37,11 @@ type Props = {
   readOnly?: boolean;
   embedded?: boolean;
   onClose?: () => void;
+  onAddDocument?: (agentId: string) => void;
+};
+
+export type AgentsManagerHandle = {
+  openNew: () => void;
 };
 
 const emptyDraft = (): CustomAgent => ({
@@ -49,12 +55,10 @@ const emptyDraft = (): CustomAgent => ({
   toestemming: "voorstellen",
 });
 
-export default function AgentsManager({
-  initialAgents,
-  readOnly,
-  embedded,
-  onClose,
-}: Props) {
+const AgentsManager = forwardRef<AgentsManagerHandle, Props>(function AgentsManager(
+  { initialAgents, readOnly, embedded, onClose, onAddDocument },
+  ref,
+) {
   const router = useRouter();
   const { openWith, syncCompanyAgents } = useAgentChat();
   const [agents, setAgents] = useState(initialAgents);
@@ -69,6 +73,8 @@ export default function AgentsManager({
     setIsNew(true);
     setError(null);
   };
+
+  useImperativeHandle(ref, () => ({ openNew }), []);
 
   const openEdit = (agent: CustomAgent) => {
     setEditing({ ...agent, capabilities: [...agent.capabilities] });
@@ -245,7 +251,7 @@ export default function AgentsManager({
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {agents.map((agent) => (
           <GlowCard key={agent.id} subtle innerClassName="p-4">
             <div className="flex items-start justify-between gap-2">
@@ -317,11 +323,22 @@ export default function AgentsManager({
                   gradient: agent.gradient,
                 })
               }
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-sky-500/15 px-3 py-1.5 text-xs font-semibold text-sky-300 transition-colors hover:bg-sky-500/25"
+              className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 transition-colors hover:bg-sky-500/20"
             >
               <MessageCircle size={13} />
               Chat & taak geven
             </button>
+
+            {onAddDocument && !readOnly && (
+              <button
+                type="button"
+                onClick={() => onAddDocument(agent.id)}
+                className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-300 transition-colors hover:bg-violet-500/15"
+              >
+                <ScrollText size={13} />
+                Mandaat / document
+              </button>
+            )}
 
             {!readOnly && (
               <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/8 pt-3">
@@ -588,4 +605,6 @@ export default function AgentsManager({
       })()}
     </div>
   );
-}
+});
+
+export default AgentsManager;
