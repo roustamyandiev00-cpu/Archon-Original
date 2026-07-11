@@ -1,7 +1,7 @@
 "use client";
 
-import { Bot } from "lucide-react";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
+import AgentPortrait from "@/components/dashboard/agents/AgentPortrait";
 
 type Props = {
   mounted: boolean;
@@ -33,19 +33,16 @@ export default function MobileAgentChatNavButton({ mounted }: Props) {
       }`}
     >
       <span className="relative">
-        <span
-          className={`grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br ${activeAgent.gradient} text-zinc-950 shadow-sm transition-transform ${
+        <AgentPortrait
+          name={activeAgent.name}
+          gradient={activeAgent.gradient}
+          avatarUrl={activeAgent.avatarUrl}
+          size="sm"
+          showNovaIcon={activeAgent.id === "nova" && !activeAgent.avatarUrl}
+          className={`h-8 w-8 rounded-xl shadow-sm transition-transform ${
             mounted && isOpen ? "ring-2 ring-sky-400/40" : ""
           }`}
-        >
-          {activeAgent.id === "nova" ? (
-            <Bot size={16} strokeWidth={2} />
-          ) : (
-            <span className="text-xs font-bold">
-              {activeAgent.name.charAt(0).toUpperCase()}
-            </span>
-          )}
-        </span>
+        />
         {hasUnread && !isOpen ? (
           <span
             aria-hidden

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, ChevronDown } from "lucide-react";
@@ -31,11 +31,23 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [funcOpen, setFuncOpen] = useState(false);
 
+  const closeMenu = () => {
+    setOpen(false);
+    setFuncOpen(false);
+  };
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <nav className="mt-4 flex items-center justify-between rounded-full border border-white/[0.08] bg-zinc-950/55 px-4 py-2.5 backdrop-blur-xl">
-          <Link href="/" className="flex items-center gap-2 pl-1">
+    <header className="fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto max-w-7xl px-3 sm:px-6">
+        <nav className="mt-2 flex items-center justify-between rounded-2xl border border-white/[0.08] bg-zinc-950/70 px-3 py-2 backdrop-blur-xl sm:mt-4 sm:rounded-full sm:px-4 sm:py-2.5">
+          <Link href="/" className="flex min-h-10 items-center gap-2 pl-0.5 sm:pl-1">
             <Image
               src="/logo-tile.png"
               alt="ArchonPro logo"
@@ -43,9 +55,9 @@ export default function Navbar() {
               height={36}
               priority
               unoptimized
-              className="h-9 w-9 rounded-lg"
+              className="h-8 w-8 rounded-lg sm:h-9 sm:w-9"
             />
-            <span className="text-base font-semibold tracking-tight text-zinc-50">
+            <span className="text-[15px] font-semibold tracking-tight text-zinc-50 sm:text-base">
               ArchonPro
             </span>
           </Link>
@@ -103,73 +115,88 @@ export default function Navbar() {
           </div>
 
           <button
-            aria-label="Menu"
-            onClick={() => setOpen((v) => !v)}
-            className="grid h-9 w-9 place-items-center rounded-full text-zinc-300 md:hidden"
+            type="button"
+            aria-label={open ? "Menu sluiten" : "Menu openen"}
+            aria-expanded={open}
+            onClick={() => (open ? closeMenu() : setOpen(true))}
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-200 active:bg-white/[0.08] md:hidden"
           >
-            {open ? <X size={18} /> : <Menu size={18} />}
+            {open ? <X size={20} /> : <Menu size={20} />}
           </button>
         </nav>
 
         {open && (
-          <div className="mt-2 rounded-2xl border border-white/10 bg-zinc-900/90 p-4 backdrop-blur-xl md:hidden">
-            <div className="flex flex-col gap-1">
-              {links.map((l) =>
-                l.children ? (
-                  <div key={l.label}>
-                    <button
-                      onClick={() => setFuncOpen((v) => !v)}
-                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
-                    >
-                      {l.label}
-                      <ChevronDown
-                        size={14}
-                        className={`transition-transform ${funcOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    {funcOpen && (
-                      <div className="ml-3 border-l border-white/10 pl-2">
-                        {l.children.map((c) => (
-                          <FastLink
-                            key={c.label}
-                            href={c.href}
-                            onClick={() => setOpen(false)}
-                            className="block rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
-                          >
-                            {c.label}
-                          </FastLink>
-                        ))}
+          <>
+            <button
+              type="button"
+              aria-label="Menu sluiten"
+              className="fixed inset-0 top-[calc(3.25rem+env(safe-area-inset-top))] bg-black/55 backdrop-blur-[2px] md:hidden"
+              onClick={closeMenu}
+            />
+            <div className="relative z-10 mt-2 flex max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl backdrop-blur-xl md:hidden">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-3 [-webkit-overflow-scrolling:touch]">
+                <div className="flex flex-col gap-0.5">
+                  {links.map((l) =>
+                    l.children ? (
+                      <div key={l.label}>
+                        <button
+                          type="button"
+                          onClick={() => setFuncOpen((v) => !v)}
+                          className="flex min-h-11 w-full items-center justify-between rounded-xl px-3 py-2.5 text-[15px] font-medium text-zinc-200 active:bg-white/5"
+                        >
+                          {l.label}
+                          <ChevronDown
+                            size={16}
+                            className={`text-zinc-500 transition-transform ${funcOpen ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                        {funcOpen && (
+                          <div className="mb-1 ml-2 space-y-0.5 border-l border-white/10 pl-2">
+                            {l.children.map((c) => (
+                              <FastLink
+                                key={c.label}
+                                href={c.href}
+                                onClick={closeMenu}
+                                className="flex min-h-10 items-center rounded-lg px-3 py-2 text-sm text-zinc-400 active:bg-white/5 active:text-zinc-100"
+                              >
+                                {c.label}
+                              </FastLink>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <FastLink
-                    key={l.label}
-                    href={l.href}
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
-                  >
-                    {l.label}
-                  </FastLink>
-                )
-              )}
+                    ) : (
+                      <FastLink
+                        key={l.label}
+                        href={l.href}
+                        onClick={closeMenu}
+                        className="flex min-h-11 items-center rounded-xl px-3 py-2.5 text-[15px] font-medium text-zinc-200 active:bg-white/5"
+                      >
+                        {l.label}
+                      </FastLink>
+                    )
+                  )}
+                </div>
+              </div>
 
-              <FastLink
-                href="/login"
-                onClick={() => setOpen(false)}
-                className="mt-1 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5"
-              >
-                Inloggen
-              </FastLink>
-              <FastLink
-                href="/register"
-                onClick={() => setOpen(false)}
-                className="mt-1 rounded-full bg-sky-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-sky-400"
-              >
-                Start gratis
-              </FastLink>
+              <div className="shrink-0 space-y-2 border-t border-white/10 bg-zinc-950/60 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+                <FastLink
+                  href="/login"
+                  onClick={closeMenu}
+                  className="flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 active:bg-white/5"
+                >
+                  Inloggen
+                </FastLink>
+                <FastLink
+                  href="/register"
+                  onClick={closeMenu}
+                  className="flex min-h-12 items-center justify-center rounded-xl bg-sky-500 px-4 text-sm font-semibold text-white shadow-[0_0_24px_-6px_rgba(14,165,233,0.45)] active:bg-sky-400"
+                >
+                  Start gratis — 14 dagen
+                </FastLink>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </header>

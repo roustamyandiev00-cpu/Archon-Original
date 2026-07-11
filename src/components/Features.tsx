@@ -54,35 +54,44 @@ const features = [
 
 export default function Features() {
   return (
-    <section id="features-section" className="section-tint relative py-24">
+    <section id="features-section" className="section-tint relative py-14 sm:py-20 lg:py-24">
       <div id="features" className="absolute -top-24" aria-hidden />
       <div aria-hidden className="section-edge" />
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-medium text-sky-400">Functies</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl lg:text-4xl">
             Alles om tijd te winnen
           </h2>
-          <p className="mt-4 text-lg text-zinc-400">
+          <p className="mt-3 text-base leading-relaxed text-zinc-400 sm:mt-4 sm:text-lg">
             Slimme functies die je elke dag tijd besparen — van eerste offerte
             tot betaalde factuur.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
-          {features.map((f) => (
-            <div key={f.title} className="card-subtle group p-6">
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-white/[0.04] text-sky-400 ring-1 ring-inset ring-white/10">
-                <f.icon size={20} />
+        {/* Mobiel: horizontaal scrollen · tablet+: grid */}
+        <div className="mt-8 sm:mt-14">
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 lg:gap-5 [&::-webkit-scrollbar]:hidden">
+            {features.map((f) => (
+              <div
+                key={f.title}
+                className="card-subtle group w-[min(82vw,280px)] shrink-0 p-5 sm:w-auto sm:shrink sm:p-6"
+              >
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.04] text-sky-400 ring-1 ring-inset ring-white/10 sm:h-11 sm:w-11">
+                  <f.icon size={20} />
+                </div>
+                <h3 className="mt-4 text-[15px] font-semibold leading-snug text-zinc-50 sm:mt-5 sm:text-base">
+                  {f.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                  {f.desc}
+                </p>
               </div>
-              <h3 className="mt-5 text-base font-semibold leading-snug text-zinc-50">
-                {f.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                {f.desc}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
+          <p className="mt-3 text-center text-xs text-zinc-600 sm:hidden">
+            Swipe voor meer functies →
+          </p>
         </div>
       </div>
     </section>

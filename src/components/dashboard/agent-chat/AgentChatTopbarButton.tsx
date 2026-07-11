@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
+import AgentPortrait from "@/components/dashboard/agents/AgentPortrait";
 
 export default function AgentChatTopbarButton() {
   const {
@@ -68,16 +69,15 @@ export default function AgentChatTopbarButton() {
           aria-pressed={isOpen}
           className="relative inline-flex items-center gap-2 px-2.5 py-1.5 text-xs"
         >
-          <span
-            className={`relative grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br ${activeAgent.gradient} text-zinc-950`}
-          >
-            {activeAgent.id === "nova" ? (
-              <Bot size={13} />
-            ) : (
-              <span className="text-[11px] font-bold">
-                {activeAgent.name.charAt(0).toUpperCase()}
-              </span>
-            )}
+          <span className="relative">
+            <AgentPortrait
+              name={activeAgent.name}
+              gradient={activeAgent.gradient}
+              avatarUrl={activeAgent.avatarUrl}
+              size="sm"
+              showNovaIcon={activeAgent.id === "nova" && !activeAgent.avatarUrl}
+              className="h-6 w-6 rounded-md"
+            />
             {hasUnread && !isOpen && (
               <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-sky-400 ring-2 ring-zinc-900" />
             )}
@@ -129,15 +129,14 @@ export default function AgentChatTopbarButton() {
                   selected ? "text-sky-300" : "text-zinc-200"
                 }`}
               >
-                <span
-                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br ${agent.gradient} text-[11px] font-bold text-zinc-950`}
-                >
-                  {agent.id === "nova" ? (
-                    <Bot size={13} />
-                  ) : (
-                    agent.name.charAt(0).toUpperCase()
-                  )}
-                </span>
+                <AgentPortrait
+                  name={agent.name}
+                  gradient={agent.gradient}
+                  avatarUrl={agent.avatarUrl}
+                  size="sm"
+                  showNovaIcon={agent.id === "nova" && !agent.avatarUrl}
+                  className="h-7 w-7 rounded-lg"
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{agent.name}</span>
                   <span className="block truncate text-[11px] text-zinc-500">

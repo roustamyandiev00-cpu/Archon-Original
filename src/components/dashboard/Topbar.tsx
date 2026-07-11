@@ -13,7 +13,7 @@ import {
   BarChart3,
   LineChart,
 } from "lucide-react";
-import { BrandLockup } from "@/components/BrandLogo";
+import { LogoMark } from "@/components/BrandLogo";
 import {
   Command,
   CommandEmpty,
@@ -140,9 +140,13 @@ export default function Topbar({
     <>
       <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center border-b border-white/10 bg-zinc-900/85 backdrop-blur-xl lg:left-[220px]">
         <div className="flex w-full items-center gap-4 px-4 sm:px-6">
-          <div className="lg:hidden">
-            <BrandLockup href="/dashboard" markSize={32} wordmarkSize="sm" />
-          </div>
+          <Link
+            href="/dashboard/command-center"
+            className="inline-flex shrink-0 lg:hidden"
+            aria-label="ArchonPro home"
+          >
+            <LogoMark size={34} glow={false} />
+          </Link>
 
           <div className="hidden items-center gap-5 md:flex">
             <Stat label="Offertes vandaag" value={String(initial.offertesVandaag)} />

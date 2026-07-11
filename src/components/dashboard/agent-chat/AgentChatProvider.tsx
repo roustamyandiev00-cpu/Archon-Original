@@ -23,6 +23,7 @@ import {
   customAgentToChatAgent,
   chatAgentFromId,
 } from "@/components/dashboard/agent-chat/agents";
+import { DEFAULT_BUILTIN_AVATARS, defaultAvatarUrl } from "@/lib/agents/avatar-options";
 import { DEFAULT_AGENT_NAME, normalizeAgentName } from "@/lib/agents/userAi";
 import { sendAgentChatMessage } from "@/app/dashboard/agent-chat/actions";
 import { rememberChatInsight } from "@/app/dashboard/geheugen/actions";
@@ -48,6 +49,7 @@ export type ChatAgent = {
   name: string;
   role: string;
   gradient: string;
+  avatarUrl?: string | null;
   instructies?: string;
 };
 
@@ -56,6 +58,7 @@ export const NOVA_AGENT: ChatAgent = {
   name: DEFAULT_AGENT_NAME,
   role: "AI-metgezel",
   gradient: "from-sky-400 to-indigo-500",
+  avatarUrl: DEFAULT_BUILTIN_AVATARS.nova,
 };
 
 type AgentChatContextValue = {
@@ -395,6 +398,7 @@ export function AgentChatProvider({
         name: "Schatter",
         role: "Offertes",
         gradient: "from-violet-400 to-purple-500",
+        avatarUrl: DEFAULT_BUILTIN_AVATARS.schatter,
       };
     }
     if (n.includes("factuur") || n.includes("peppol") || n.includes("facturatie")) {
@@ -403,6 +407,7 @@ export function AgentChatProvider({
         name: "Facturatie",
         role: "Peppol",
         gradient: "from-amber-400 to-orange-500",
+        avatarUrl: DEFAULT_BUILTIN_AVATARS.facturatie,
       };
     }
     if (n.includes("opvolg") || n.includes("lead")) {
@@ -411,6 +416,7 @@ export function AgentChatProvider({
         name: "Opvolger",
         role: "Leads",
         gradient: "from-emerald-400 to-teal-500",
+        avatarUrl: DEFAULT_BUILTIN_AVATARS.opvolger,
       };
     }
     return {
@@ -662,6 +668,7 @@ export function AgentChatProvider({
                     instructies: trigger,
                     capabilities: ["automatisaties"],
                     gradient: "from-rose-400 to-pink-500",
+                    avatarUrl: defaultAvatarUrl(),
                     enabled: true,
                     toestemming: "voorstellen",
                   };

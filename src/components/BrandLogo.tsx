@@ -14,23 +14,21 @@ export function LogoMark({
 }: LogoMarkProps) {
   return (
     <span
-      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-950/90 ring-1 ring-white/10 ${
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl ${
         glow
           ? "shadow-[0_0_24px_-6px_rgba(56,189,248,0.42)]"
           : "shadow-[0_8px_24px_-12px_rgba(0,0,0,0.55)]"
       } ${className}`.trim()}
       style={{ width: size, height: size }}
-      suppressHydrationWarning
     >
       <Image
-        src="/logo-tile.png"
+        src="/archonpro-icon.png"
         alt="ArchonPro logo"
         width={size}
         height={size}
-        className="h-full w-full object-cover"
+        className="h-full w-full object-contain"
         priority
         unoptimized
-        suppressHydrationWarning
       />
     </span>
   );
@@ -118,12 +116,12 @@ export function BrandFull({
 }: BrandFullProps) {
   return (
     <Image
-      src="/logo-full.png"
+      src="/archonpro-icon.png"
       alt="ArchonPro CRM"
-      width={655}
-      height={628}
+      width={512}
+      height={512}
       className={`object-contain drop-shadow-[0_12px_32px_rgba(0,0,0,0.35)] ${className}`.trim()}
-      style={{ width, height: "auto", maxHeight: Math.round(width * 0.95) }}
+      style={{ width, height: width, maxHeight: width }}
       priority={priority}
       unoptimized
     />

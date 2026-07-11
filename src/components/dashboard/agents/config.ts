@@ -1,4 +1,5 @@
 import type { AiToestemming } from "@/app/dashboard/instellingen/settings";
+import { DEFAULT_BUILTIN_AVATARS } from "@/lib/agents/avatar-options";
 
 export type AgentCapability =
   | "offertes"
@@ -15,6 +16,7 @@ export type CustomAgent = {
   instructies: string;
   capabilities: AgentCapability[];
   gradient: string;
+  avatarUrl?: string | null;
   enabled: boolean;
   toestemming: AiToestemming;
   /** Ingebouwde agent — naam/rol aanpasbaar, niet verwijderbaar. */
@@ -83,6 +85,7 @@ export const DEFAULT_AGENTS: CustomAgent[] = [
       "Monitor offertes, facturen en leads. Stel proactief acties voor en wacht op goedkeuring.",
     capabilities: ["automatisaties", "herinneringen", "planning"],
     gradient: "from-sky-400 to-indigo-500",
+    avatarUrl: DEFAULT_BUILTIN_AVATARS.nova,
     enabled: true,
     toestemming: "voorstellen",
     builtin: true,
@@ -95,6 +98,7 @@ export const DEFAULT_AGENTS: CustomAgent[] = [
       "Bereid offertes voor, structureer regels en volg verzonden offertes op.",
     capabilities: ["offertes"],
     gradient: "from-violet-400 to-purple-500",
+    avatarUrl: DEFAULT_BUILTIN_AVATARS.schatter,
     enabled: true,
     toestemming: "voorstellen",
     builtin: true,
@@ -107,6 +111,7 @@ export const DEFAULT_AGENTS: CustomAgent[] = [
       "Maak facturen aan, verstuur via Peppol en stuur betalingsherinneringen.",
     capabilities: ["facturen", "herinneringen"],
     gradient: "from-amber-400 to-orange-500",
+    avatarUrl: DEFAULT_BUILTIN_AVATARS.facturatie,
     enabled: true,
     toestemming: "voorstellen",
     builtin: true,
@@ -119,6 +124,7 @@ export const DEFAULT_AGENTS: CustomAgent[] = [
       "Verrijk nieuwe leads, plan opvolging en houd de pipeline actueel.",
     capabilities: ["leads", "planning"],
     gradient: "from-emerald-400 to-teal-500",
+    avatarUrl: DEFAULT_BUILTIN_AVATARS.opvolger,
     enabled: true,
     toestemming: "voorstellen",
     builtin: true,
@@ -147,6 +153,7 @@ export function mergeAgents(stored: CustomAgent[] | undefined): CustomAgent[] {
       builtin: true,
       capabilities:
         saved.capabilities?.length ? saved.capabilities : def.capabilities,
+      avatarUrl: saved.avatarUrl ?? def.avatarUrl ?? null,
     };
   });
 

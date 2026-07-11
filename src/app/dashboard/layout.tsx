@@ -31,6 +31,7 @@ import {
   DashboardTourProvider,
   DashboardTourUi,
 } from "@/components/onboarding/DashboardTourShell";
+import AddToHomeScreenPrompt from "@/components/AddToHomeScreenPrompt";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -124,6 +125,7 @@ export default async function DashboardLayout({
         </DashboardSidePanel>
       )}
       <MobileBottomNav isPreviewMode={isPreviewMode} />
+      <AddToHomeScreenPrompt />
       <AgentChatWidget />
       <DashboardTourUi />
       </DashboardSidePanelProvider>

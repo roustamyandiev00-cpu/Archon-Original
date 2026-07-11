@@ -45,9 +45,9 @@ const columns = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/10 py-14">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="grid gap-10 md:grid-cols-[1.5fr_repeat(4,1fr)]">
+    <footer className="border-t border-white/10 py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:py-14">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-[1.5fr_repeat(4,1fr)] md:gap-10">
           <div>
             <Link href="/" className="inline-flex transition-opacity hover:opacity-95">
               <BrandFull width={168} priority />

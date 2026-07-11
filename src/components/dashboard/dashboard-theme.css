@@ -453,12 +453,13 @@
 
 .mobile-swipe-shell {
   position: relative;
-  touch-action: pan-y;
+  touch-action: manipulation;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .mobile-swipe-content {
-  will-change: transform;
+  will-change: auto;
 }
 
 .mobile-page-from-right {
@@ -746,51 +747,70 @@
   --chat-profile-width: 280px;
 }
 
-/* Desktop: viewport-fit — geen page scroll */
-@media (min-width: 1024px) {
-  html:has(.dashboard-root),
-  body:has(.dashboard-root) {
-    height: 100dvh;
-    overflow: hidden;
-  }
+/* Viewport-fit — geen page scroll / bounce (mobiel + desktop) */
+html:has(.dashboard-root),
+body:has(.dashboard-root) {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 
+.dashboard-main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-main-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-swipe-root {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mobile-swipe-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+.mobile-swipe-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+@media (max-width: 1023px) {
+  .dashboard-hub-view,
+  .dashboard-page-content {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Desktop: vaste hoogte + page layout */
+@media (min-width: 1024px) {
   .dashboard-main {
     height: 100dvh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .dashboard-main-body {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .dashboard-swipe-root {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .mobile-swipe-shell {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .mobile-swipe-content {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
   }
 
   .dashboard-page {

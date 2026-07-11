@@ -108,10 +108,14 @@ export const rootMetadata: Metadata = {
   category: "business",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/archonpro-icon.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: "/archonpro-icon.png",
   },
   openGraph: {
     title: "ArchonPro — CRM en facturatie voor bouwbedrijven",
@@ -150,7 +154,7 @@ export function organizationJsonLd() {
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: absoluteUrl("/favicon.ico"),
+    logo: absoluteUrl("/archonpro-icon.png"),
     description: DEFAULT_DESCRIPTION,
     areaServed: { "@type": "Country", name: "Belgium" },
     contactPoint: {
@@ -237,7 +241,7 @@ export function articleJsonLd(input: {
     publisher: {
       "@type": "Organization",
       name: SITE_NAME,
-      logo: { "@type": "ImageObject", url: absoluteUrl("/favicon.ico") },
+      logo: { "@type": "ImageObject", url: absoluteUrl("/archonpro-icon.png") },
     },
     image: input.image ? absoluteUrl(input.image) : absoluteUrl(DEFAULT_OG_IMAGE),
     inLanguage: "nl-BE",

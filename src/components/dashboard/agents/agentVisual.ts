@@ -4,6 +4,7 @@ export type AgentVisual = {
   id: string;
   name: string;
   gradient: string;
+  avatarUrl?: string | null;
 };
 
 export function resolveAgentVisual(agentName: string): AgentVisual {
@@ -25,6 +26,7 @@ export function resolveAgentVisual(agentName: string): AgentVisual {
       id: match.id,
       name: match.name,
       gradient: match.gradient,
+      avatarUrl: match.avatarUrl ?? null,
     };
   }
 

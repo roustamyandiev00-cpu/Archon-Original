@@ -1,72 +1,108 @@
 "use client";
 
+import { useState } from "react";
 import {
-  Bot,
+  Check,
   CheckCircle2,
-  Clock,
-  Mail,
+  Pencil,
   Sparkles,
-  TrendingUp,
+  X,
   Zap,
 } from "lucide-react";
+import AgentPortrait from "@/components/dashboard/agents/AgentPortrait";
+import {
+  AGENT_AVATAR_OPTIONS,
+  DEFAULT_BUILTIN_AVATARS,
+} from "@/lib/agents/avatar-options";
 
 const agents = [
   {
     name: "Lima",
     role: "Offerte-agent",
-    color: "from-sky-500 to-cyan-400",
-    status: "Analyseert 5 open offertes",
-    task: "Opvolgmail klaar voor Van Dijck Bouw",
-    icon: Mail,
-    automated: true,
+    gradient: "from-sky-400 to-indigo-500",
+    avatarUrl: DEFAULT_BUILTIN_AVATARS.schatter,
+    capabilities: ["Offertes", "Opvolging", "Pipeline"],
+    watches: "5 open offertes · 2 verlopen deze week",
+    prepares: "Opvolgmail voor Van Dijck Bouw — vriendelijk, met concrete vervolgstap",
   },
   {
     name: "Scout",
     role: "Lead-agent",
-    color: "from-emerald-500 to-teal-400",
-    status: "Nieuwe aanvraag gescoord: 94/100",
-    task: "WhatsApp-draft automatisch voorbereid",
-    icon: TrendingUp,
-    automated: true,
+    gradient: "from-emerald-400 to-teal-500",
+    avatarUrl: DEFAULT_BUILTIN_AVATARS.opvolger,
+    capabilities: ["Leads", "Scoring", "WhatsApp"],
+    watches: "Nieuwe aanvraag dakrenovatie · score 94/100",
+    prepares: "WhatsApp-draft met intro en voorstel voor werfbezoek morgen",
   },
   {
     name: "Pulse",
     role: "Factuur-agent",
-    color: "from-violet-500 to-fuchsia-400",
-    status: "€ 2.487,92 openstaand gedetecteerd",
-    task: "Herinnering gepland voor morgen 09:00",
-    icon: Clock,
-    automated: true,
+    gradient: "from-amber-400 to-orange-500",
+    avatarUrl: DEFAULT_BUILTIN_AVATARS.facturatie,
+    capabilities: ["Facturen", "Peppol", "Herinneringen"],
+    watches: "€ 2.487,92 openstaand · 1 factuur 14 dagen te laat",
+    prepares: "Betalingsherinnering gepland voor morgen 09:00",
   },
 ];
 
 const automations = [
-  { label: "Offerte-opvolging", progress: 78, active: true },
-  { label: "Factuur-herinneringen", progress: 62, active: true },
-  { label: "Lead-kwalificatie", progress: 91, active: true },
+  { label: "Offerte-opvolging", progress: 78 },
+  { label: "Factuur-herinneringen", progress: 62 },
+  { label: "Lead-kwalificatie", progress: 91 },
+];
+
+const workflow = [
+  { label: "Monitoren", detail: "Scant pipeline, facturen & leads" },
+  { label: "Voorbereiden", detail: "Schrijft mails & acties klaar" },
+  { label: "Goedkeuren", detail: "Jij beslist met één klik" },
 ];
 
 export default function AutomationShowcase() {
+  const [selectedAvatar, setSelectedAvatar] = useState(
+    AGENT_AVATAR_OPTIONS[0]!.url,
+  );
+
   return (
     <div className="relative">
       <div className="aurora-glow opacity-60" />
 
       <div className="relative z-10 overflow-hidden rounded-2xl bg-white/[0.02] shadow-2xl shadow-sky-500/5 backdrop-blur-xl ring-1 ring-inset ring-white/5">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+        <div className="flex flex-col gap-2 border-b border-white/5 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
             <span className="text-xs font-medium text-zinc-200">
-              3 AI-agents actief
+              3 AI-agents actief in je crew
             </span>
           </div>
-          <div className="flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-300">
+          <div className="flex w-fit items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-300">
             <Zap size={11} />
             Automatisering aan
           </div>
+        </div>
+
+        {/* How it works strip */}
+        <div className="flex flex-col border-b border-white/5 bg-white/[0.02] sm:grid sm:grid-cols-3">
+          {workflow.map((step, i) => (
+            <div
+              key={step.label}
+              className={`px-3 py-2.5 sm:px-3 ${
+                i < workflow.length - 1
+                  ? "border-b border-white/5 sm:border-b-0 sm:border-r"
+                  : ""
+              }`}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-400">
+                {i + 1}. {step.label}
+              </p>
+              <p className="mt-0.5 text-[10px] leading-snug text-zinc-500">
+                {step.detail}
+              </p>
+            </div>
+          ))}
         </div>
 
         {/* AI reasoning strip */}
@@ -74,29 +110,31 @@ export default function AutomationShowcase() {
           <div className="flex items-start gap-2">
             <Sparkles size={14} className="mt-0.5 shrink-0 text-sky-400" />
             <p className="text-xs leading-relaxed text-zinc-300">
-              <span className="font-medium text-sky-300">Echte AI:</span> Lima
-              analyseerde je pipeline, prioriteerde 3 acties en zette alles klaar
-              ter goedkeuring — zonder handmatig werk.
+              <span className="font-medium text-sky-300">Zo werkt het:</span>{" "}
+              agents lezen je data, bereiden concrete acties voor en wachten op
+              jouw OK. Niets wordt verstuurd zonder goedkeuring.
             </p>
           </div>
         </div>
 
         {/* Agent cards */}
-        <div className="space-y-2 p-3">
+        <div className="space-y-2 p-2.5 sm:p-3">
           {agents.map((agent) => (
             <div
               key={agent.name}
-              className="rounded-xl border border-white/5 bg-white/[0.02] p-3"
+              className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5 sm:p-3"
             >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br ${agent.color} text-zinc-950`}
-                >
-                  <Bot size={16} />
-                </div>
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <AgentPortrait
+                  name={agent.name}
+                  gradient={agent.gradient}
+                  avatarUrl={agent.avatarUrl}
+                  size="md"
+                  className="h-9 w-9 rounded-xl sm:h-10 sm:w-10"
+                />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                       <span className="text-sm font-semibold text-zinc-100">
                         {agent.name}
                       </span>
@@ -109,20 +147,96 @@ export default function AutomationShowcase() {
                       Live
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-zinc-400">{agent.status}</p>
-                  <p className="mt-0.5 text-xs font-medium text-zinc-200">
-                    {agent.task}
+
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {agent.capabilities.map((cap) => (
+                      <span
+                        key={cap}
+                        className="rounded-full border border-white/8 bg-zinc-800/50 px-1.5 py-0.5 text-[9px] text-zinc-400"
+                      >
+                        {cap}
+                      </span>
+                    ))}
+                  </div>
+
+                  <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                    <span className="font-medium text-zinc-400">Ziet:</span>{" "}
+                    {agent.watches}
                   </p>
-                  {agent.automated && (
-                    <div className="mt-2 flex items-center gap-1.5 text-[10px] text-sky-400/90">
-                      <CheckCircle2 size={11} />
-                      Automatisch voorbereid · wacht op jouw OK
-                    </div>
-                  )}
+                  <p className="mt-0.5 text-xs font-medium leading-relaxed text-zinc-200">
+                    <span className="font-normal text-zinc-500">Bereidt voor:</span>{" "}
+                    {agent.prepares}
+                  </p>
+
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                    <span className="flex min-h-8 items-center gap-1 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-[10px] font-medium text-emerald-300 sm:min-h-0 sm:py-1">
+                      <Check size={10} />
+                      Goedkeuren
+                    </span>
+                    <span className="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] text-zinc-400">
+                      <Pencil size={10} />
+                      Bewerken
+                    </span>
+                    <span className="flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] text-zinc-500">
+                      <X size={10} />
+                      Afwijzen
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Avatar picker demo */}
+        <div className="border-t border-white/5 bg-violet-500/5 px-3 py-3 sm:px-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <AgentPortrait
+              name="Jouw agent"
+              gradient="from-violet-400 to-purple-500"
+              avatarUrl={selectedAvatar}
+              size="md"
+              className="mx-auto h-11 w-11 rounded-xl ring-2 ring-violet-400/40 sm:mx-0"
+            />
+            <div className="min-w-0 flex-1 text-center sm:text-left">
+              <p className="text-xs font-semibold text-zinc-200">
+                Kies een gezicht voor je agent
+              </p>
+              <p className="mt-0.5 text-[10px] leading-relaxed text-zinc-500">
+                Geef elke agent een eigen naam, rol en avatar — zo herken je ze
+                meteen in je inbox en chat.
+              </p>
+              <div className="mt-2 flex flex-wrap justify-center gap-1.5 sm:justify-start">
+                {AGENT_AVATAR_OPTIONS.slice(0, 8).map((option) => {
+                  const selected = selectedAvatar === option.url;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      title={option.label}
+                      onClick={() => setSelectedAvatar(option.url)}
+                      className={`rounded-lg p-0.5 transition-all ${
+                        selected
+                          ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-zinc-950"
+                          : "ring-1 ring-white/10 hover:ring-white/25"
+                      }`}
+                    >
+                      <AgentPortrait
+                        name={option.label}
+                        gradient="from-violet-400 to-purple-500"
+                        avatarUrl={option.url}
+                        size="sm"
+                        className="h-9 w-9 rounded-md sm:h-8 sm:w-8"
+                      />
+                    </button>
+                  );
+                })}
+                <span className="flex h-8 items-center rounded-lg border border-dashed border-white/15 px-2 text-[9px] text-zinc-500">
+                  +2 meer
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Automation progress */}
@@ -131,7 +245,8 @@ export default function AutomationShowcase() {
             <span className="text-[11px] font-medium text-zinc-400">
               Automatiseringen vandaag
             </span>
-            <span className="text-[11px] font-semibold text-sky-400">
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-sky-400">
+              <CheckCircle2 size={11} />
               12 uitgevoerd
             </span>
           </div>

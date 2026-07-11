@@ -9,8 +9,9 @@ import {
   type PointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { Bot, GripHorizontal, Mic, MicOff, Minus, Send, X } from "lucide-react";
+import { GripHorizontal, Mic, MicOff, Minus, Send, X } from "lucide-react";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
+import AgentPortrait from "@/components/dashboard/agents/AgentPortrait";
 import { useSpeechInput } from "@/hooks/useSpeechInput";
 
 const subscribeToClient = () => () => {};
@@ -124,17 +125,14 @@ export default function AgentChatWidget() {
         }`}
       >
         <div className="flex min-w-0 items-center gap-2.5">
-          <span
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${activeAgent.gradient} text-zinc-950`}
-          >
-            {activeAgent.id === "nova" ? (
-              <Bot size={17} className="text-zinc-950" />
-            ) : (
-              <span className="text-sm font-bold">
-                {activeAgent.name.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </span>
+          <AgentPortrait
+            name={activeAgent.name}
+            gradient={activeAgent.gradient}
+            avatarUrl={activeAgent.avatarUrl}
+            size="md"
+            showNovaIcon={activeAgent.id === "nova" && !activeAgent.avatarUrl}
+            className="h-9 w-9 rounded-xl"
+          />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-zinc-50">
               {activeAgent.name}

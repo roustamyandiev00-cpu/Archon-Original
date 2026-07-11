@@ -26,6 +26,8 @@ import {
   type AgentCapability,
   type CustomAgent,
 } from "@/components/dashboard/agents/config";
+import AgentPortrait from "@/components/dashboard/agents/AgentPortrait";
+import { AGENT_AVATAR_OPTIONS, defaultAvatarUrl } from "@/lib/agents/avatar-options";
 import type { AiToestemming } from "@/app/dashboard/instellingen/settings";
 
 const inputClass =
@@ -51,6 +53,7 @@ const emptyDraft = (): CustomAgent => ({
   instructies: "",
   capabilities: ["automatisaties"],
   gradient: GRADIENT_OPTIONS[0].id,
+  avatarUrl: defaultAvatarUrl(),
   enabled: true,
   toestemming: "voorstellen",
 });
@@ -263,16 +266,19 @@ const AgentsManager = forwardRef<AgentsManagerHandle, Props>(function AgentsMana
                     name: agent.name,
                     role: agent.role,
                     gradient: agent.gradient,
+                    avatarUrl: agent.avatarUrl,
                   })
                 }
                 aria-label={`Chat met ${agent.name}`}
                 className="flex items-center gap-3 text-left"
               >
-                <span
-                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${agent.gradient} text-sm font-bold text-zinc-950`}
-                >
-                  {agent.name.charAt(0).toUpperCase() || "?"}
-                </span>
+                <AgentPortrait
+                  name={agent.name}
+                  gradient={agent.gradient}
+                  avatarUrl={agent.avatarUrl}
+                  size="md"
+                  showNovaIcon={agent.id === "nova"}
+                />
                 <div>
                   <p className="font-semibold text-zinc-100">{agent.name}</p>
                   <p className="text-xs text-zinc-500">{agent.role}</p>
@@ -321,6 +327,7 @@ const AgentsManager = forwardRef<AgentsManagerHandle, Props>(function AgentsMana
                   name: agent.name,
                   role: agent.role,
                   gradient: agent.gradient,
+                  avatarUrl: agent.avatarUrl,
                 })
               }
               className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-300 transition-colors hover:bg-sky-500/20"
@@ -393,35 +400,40 @@ const AgentsManager = forwardRef<AgentsManagerHandle, Props>(function AgentsMana
             role: "Calculaties & Offertes",
             instructies: "Analyseer projectaanvragen en tekeningen om materiaallijsten en kostenschattingen te maken. Bereid gedetailleerde offertes voor.",
             capabilities: ["offertes"],
-            gradient: "from-violet-400 to-purple-500"
+            gradient: "from-violet-400 to-purple-500",
+            avatarUrl: AGENT_AVATAR_OPTIONS[1]?.url,
           },
           {
             name: "Planner",
             role: "Agenda & Planning",
             instructies: "Beheer de agenda, plan afspraken met klanten in en plan werfbezoeken voor de vakmannen op basis van reistijd.",
             capabilities: ["planning"],
-            gradient: "from-sky-400 to-indigo-500"
+            gradient: "from-sky-400 to-indigo-500",
+            avatarUrl: AGENT_AVATAR_OPTIONS[6]?.url,
           },
           {
             name: "Facturatie",
             role: "Peppol & Inkoop",
             instructies: "Scan inkomende inkoopfacturen en leveranciersbonnen, controleer ze tegen de offertes en boek ze in.",
             capabilities: ["facturen", "herinneringen"],
-            gradient: "from-amber-400 to-orange-500"
+            gradient: "from-amber-400 to-orange-500",
+            avatarUrl: AGENT_AVATAR_OPTIONS[4]?.url,
           },
           {
             name: "Werkvoorbereider",
             role: "Projectvoorbereiding",
             instructies: "Zet benodigde materialen klaar voor bestelling zodra een offerte is goedgekeurd, en stel de planning op.",
             capabilities: ["offertes", "planning"],
-            gradient: "from-emerald-400 to-teal-500"
+            gradient: "from-emerald-400 to-teal-500",
+            avatarUrl: AGENT_AVATAR_OPTIONS[3]?.url,
           },
           {
             name: "Opvolger",
             role: "Klantopvolging & Sales",
             instructies: "Volg verzonden offertes proactief op via e-mail of WhatsApp als er na 5 dagen nog geen reactie is.",
             capabilities: ["leads", "herinneringen"],
-            gradient: "from-rose-400 to-pink-500"
+            gradient: "from-rose-400 to-pink-500",
+            avatarUrl: AGENT_AVATAR_OPTIONS[9]?.url,
           }
         ];
 
@@ -460,6 +472,9 @@ const AgentsManager = forwardRef<AgentsManagerHandle, Props>(function AgentsMana
                             updateDraft("instructies", tpl.instructies);
                             updateDraft("capabilities", tpl.capabilities as AgentCapability[]);
                             updateDraft("gradient", tpl.gradient);
+                            if ("avatarUrl" in tpl && tpl.avatarUrl) {
+                              updateDraft("avatarUrl", tpl.avatarUrl as string);
+                            }
                           }}
                           className="rounded-full border border-sky-500/20 bg-sky-500/5 px-2.5 py-0.5 text-[10px] font-semibold text-sky-400 hover:bg-sky-500/10 hover:border-sky-500/40 hover:text-sky-300 transition-all"
                         >
@@ -532,6 +547,39 @@ const AgentsManager = forwardRef<AgentsManagerHandle, Props>(function AgentsMana
                       );
                     })}
                   </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Avatar</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {AGENT_AVATAR_OPTIONS.map((option) => {
+                      const selected = editing.avatarUrl === option.url;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          title={option.label}
+                          onClick={() => updateDraft("avatarUrl", option.url)}
+                          className={`rounded-xl p-1 transition-all ${
+                            selected
+                              ? "ring-2 ring-sky-400 ring-offset-2 ring-offset-zinc-950"
+                              : "ring-1 ring-white/10 hover:ring-white/20"
+                          }`}
+                        >
+                          <AgentPortrait
+                            name={option.label}
+                            gradient={editing.gradient}
+                            avatarUrl={option.url}
+                            size="md"
+                            className="h-12 w-12 rounded-lg"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-[11px] text-zinc-500">
+                    Kies een transparante avatar voor deze agent.
+                  </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">

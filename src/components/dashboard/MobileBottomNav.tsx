@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LayoutGrid } from "lucide-react";
+import { LogoMark } from "@/components/BrandLogo";
 import MobileMoreSheet from "@/components/dashboard/MobileMoreSheet";
 import MobileAgentChatNavButton from "@/components/dashboard/agent-chat/MobileAgentChatNavButton";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
@@ -57,7 +58,6 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
     indicator.style.transform = `translateX(${left}px)`;
 
     activeEl.scrollIntoView({
-      behavior: "smooth",
       block: "nearest",
       inline: "center",
     });
@@ -102,7 +102,11 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
                       active ? "bg-sky-500/12" : "bg-transparent"
                     }`}
                   >
-                    <tab.icon size={18} strokeWidth={active ? 2.25 : 1.75} />
+                    {tab.id === "home" ? (
+                      <LogoMark size={22} glow={false} className="rounded-lg" />
+                    ) : (
+                      <tab.icon size={18} strokeWidth={active ? 2.25 : 1.75} />
+                    )}
                   </span>
                   <span className="max-w-[4.25rem] truncate">{tab.label}</span>
                 </Link>
