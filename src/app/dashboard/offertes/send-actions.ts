@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
 import { statusMeta, formatEuro } from "@/lib/offertes";
+import { emitDomainEvent } from "@/lib/agents/events/emit";
 
 function toWhatsappNumber(phone: string): string {
   const digits = phone.replace(/[^\d+]/g, "");
@@ -84,6 +85,22 @@ export async function markOfferteSent(
     p_new_status: "verzonden",
     p_performed_by: user.id,
     p_metadata: { channel: opts?.channel ?? "manual" },
+  });
+
+  await emitDomainEvent({
+    supabase,
+    eventType: "quote.sent",
+    tenantId: companyId,
+    entityType: "offerte",
+    entityId: offerteId,
+    actorType: "user",
+    actorId: user.id,
+    payload: {
+      nummer: offerte.nummer,
+      klant: offerte.klant,
+      channel: opts?.channel ?? "manual",
+    },
+    idempotencyKey: `quote.sent:${companyId}:${offerteId}:${now}`,
   });
 
   revalidatePath("/dashboard/offertes");

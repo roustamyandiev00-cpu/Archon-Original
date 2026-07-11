@@ -48,7 +48,7 @@ export default async function NieuweOffertePage({
       footer_tekst: null,
     },
   };
-  let agentName = "Nova";
+  let agentName = "Lima";
   if (companyId) {
     const [{ data: klanten }, { data: bedrijf }] = await Promise.all([
       supabase

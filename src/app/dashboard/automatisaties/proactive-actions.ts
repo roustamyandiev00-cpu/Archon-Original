@@ -4,15 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
 import { proposeAgentAction } from "@/lib/agents/propose";
+import { runAllSchedulersForTenant } from "@/lib/agents/scheduler";
+import { dispatchPendingEvents } from "@/lib/agents/dispatcher";
 import { parseExtras } from "@/app/dashboard/instellingen/settings";
-import { loadMergedAiConfig } from "@/lib/agents/companyAi";
-import {
-  actionTypeForStage,
-  DEFAULT_INCASSO_SETTINGS,
-  determineIncassoStage,
-  stageLabel,
-  type IncassoEmailSettings,
-} from "@/components/dashboard/facturen/incasso";
 
 export type ProactiveAlert = {
   id: string;
@@ -26,6 +20,63 @@ export type ProactiveAlert = {
 function daysSince(iso: string | null): number {
   if (!iso) return 0;
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
+
+const DEAL_TERMINAL_STAGES = new Set(["Gewonnen", "Verloren"]);
+const NIEUWE_LEAD_DAGEN = 2;
+const OPVOLGING_HERHAAL_DAGEN = 7;
+
+type StaleDealRow = {
+  id: number;
+  titel: string;
+  stadium: string;
+  contactpersoon: string | null;
+  laatste_contact_op: string | null;
+  deadline: string | null;
+  created_at: string;
+  customers: { name: string; company_name: string | null } | null;
+};
+
+function dealFollowUpReason(
+  deal: StaleDealRow,
+): { reason: string; urgent: boolean } | null {
+  if (deal.deadline) {
+    const overdueDays = daysSince(deal.deadline);
+    if (overdueDays > 0) {
+      return {
+        reason: `Geplande opvolging stond gepland op ${deal.deadline} — dat is ${overdueDays} dag${overdueDays === 1 ? "" : "en"} geleden.`,
+        urgent: true,
+      };
+    }
+  }
+
+  if (!deal.laatste_contact_op) {
+    const days = daysSince(deal.created_at);
+    if (days >= NIEUWE_LEAD_DAGEN) {
+      return {
+        reason: `Nog geen contact geweest sinds binnenkomst, ${days} dagen geleden.`,
+        urgent: days >= 5,
+      };
+    }
+    return null;
+  }
+
+  const daysSinceContact = daysSince(deal.laatste_contact_op);
+  if (daysSinceContact >= OPVOLGING_HERHAAL_DAGEN) {
+    return {
+      reason: `Laatste contact was ${daysSinceContact} dagen geleden.`,
+      urgent: daysSinceContact >= 14,
+    };
+  }
+
+  return null;
+}
+
+function dealDisplayName(deal: StaleDealRow): string {
+  if (deal.contactpersoon?.trim()) return deal.contactpersoon.trim();
+  if (deal.customers?.company_name) return deal.customers.company_name;
+  if (deal.customers?.name) return deal.customers.name;
+  return deal.titel;
 }
 
 async function hasRecentLog(
@@ -81,7 +132,7 @@ export async function runProactiveAgentScan(): Promise<{
   const companyExtras = parseExtras(bedrijfRow?.ai_assistant ?? null);
   const betalingsherinneringenEnabled = companyExtras.ai.betalingsherinneringen;
 
-  const [followUpOffertes, overdueFacturen, acceptedOffertes, facturenForOffertes, emailSettingsRes] =
+  const [followUpOffertes, overdueFacturen, acceptedOffertes, facturenForOffertes, staleDeals, schedulerResult] =
     await Promise.all([
       supabase
         .from("offertes")
@@ -111,16 +162,41 @@ export async function runProactiveAgentScan(): Promise<{
         .select("offerte_id")
         .eq("bedrijf_id", companyId)
         .not("offerte_id", "is", null),
-      betalingsherinneringenEnabled
-        ? supabase
-            .from("factuur_email_instellingen")
-            .select(
-              "herinnering_actief, herinnering_dagen_na, herinnering_herhaal_dagen, herinnering_max_aantal",
-            )
-            .eq("bedrijf_id", companyId)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
+      supabase
+        .from("deals")
+        .select(
+          "id, titel, stadium, contactpersoon, laatste_contact_op, deadline, created_at, customers(name, company_name)",
+        )
+        .eq("bedrijf_id", companyId)
+        .not("stadium", "in", '("Gewonnen","Verloren")')
+        .order("created_at", { ascending: true })
+        .limit(15),
+      runAllSchedulersForTenant(supabase, companyId, {
+        autoExecuteUserId: user.id,
+      }),
     ]);
+
+  await dispatchPendingEvents(supabase, companyId, {
+    autoExecuteUserId: user.id,
+  });
+
+  proposed +=
+    (schedulerResult.quoteFollowup.emitted ?? 0) +
+    (schedulerResult.invoiceOverdue.emitted ?? 0);
+
+  for (const offerte of followUpOffertes.data ?? []) {
+    const days = daysSince(offerte.sent_at);
+    if (days < 5) continue;
+
+    alerts.push({
+      id: `followup-${offerte.id}`,
+      agentName: "Nova",
+      title: `Offerte ${offerte.nummer} opvolgen`,
+      message: `${offerte.klant} heeft al ${days} dagen niet gereageerd. Nova heeft een voorstel klaarstaan in je inbox.`,
+      href: `/dashboard/offertes/${offerte.id}`,
+      options: ["Bekijk voorstel", "Later"],
+    });
+  }
 
   const invoicedOfferteIds = new Set(
     (facturenForOffertes.data ?? [])
@@ -128,13 +204,17 @@ export async function runProactiveAgentScan(): Promise<{
       .filter((id): id is number => typeof id === "number"),
   );
 
-  for (const offerte of followUpOffertes.data ?? []) {
-    const days = daysSince(offerte.sent_at);
-    if (days < 5) continue;
+  for (const rawDeal of staleDeals.data ?? []) {
+    const deal = rawDeal as unknown as StaleDealRow;
+    if (DEAL_TERMINAL_STAGES.has(deal.stadium)) continue;
 
-    const fingerprint = `offerte ${offerte.nummer}`;
+    const status = dealFollowUpReason(deal);
+    if (!status) continue;
+
+    const klant = dealDisplayName(deal);
+    const fingerprint = `deal ${deal.id}`;
     if (
-      (await hasRecentLog(supabase, companyId, fingerprint)) ||
+      (await hasRecentLog(supabase, companyId, fingerprint, 72)) ||
       (await hasPendingAction(supabase, companyId, fingerprint))
     ) {
       continue;
@@ -142,16 +222,16 @@ export async function runProactiveAgentScan(): Promise<{
 
     await supabase.from("agent_tasks").insert({
       company_id: companyId,
-      assigned_agent: "Schatter",
-      requested_by_agent: "Nova",
-      title: `Offerte ${offerte.nummer} opvolgen`,
-      description: `${offerte.klant} — ${days} dagen zonder reactie`,
-      type: "follow_up_offerte",
+      assigned_agent: "Opvolger",
+      requested_by_agent: "Lima",
+      title: `Lead opvolgen: ${klant} (deal ${deal.id})`,
+      description: status.reason,
+      type: "follow_up_lead",
       status: "pending",
-      priority: days >= 10 ? "high" : "medium",
-      target_entity_type: "offerte",
-      target_entity_id: offerte.id,
-      target_route: `/dashboard/offertes/${offerte.id}`,
+      priority: status.urgent ? "high" : "medium",
+      target_entity_type: "deal",
+      target_entity_id: deal.id,
+      target_route: "/dashboard/leads",
       requires_approval: true,
       created_by_user_id: user.id,
     });
@@ -159,130 +239,32 @@ export async function runProactiveAgentScan(): Promise<{
     await supabase.from("agent_activity_logs").insert({
       company_id: companyId,
       created_by_user_id: user.id,
-      agent_name: "Schatter",
-      action_type: "opvolging",
-      message: `Proactief: offerte ${offerte.nummer} voor ${offerte.klant} verdient opvolging (${days} dagen).`,
+      agent_name: "Opvolger",
+      action_type: "lead_opvolging",
+      message: `Proactief: ${klant} (deal ${deal.id}) verdient opvolging — ${status.reason}`,
     });
 
     alerts.push({
-      id: `followup-${offerte.id}`,
-      agentName: "Schatter",
-      title: `Offerte ${offerte.nummer} opvolgen`,
-      message: `${offerte.klant} heeft al ${days} dagen niet gereageerd. Zal ik een vriendelijke opvolging voorbereiden?`,
-      href: `/dashboard/offertes/${offerte.id}`,
-      options: ["Ja, bereid opvolging voor", "Later"],
+      id: `lead-followup-${deal.id}`,
+      agentName: "Opvolger",
+      title: `${klant} opvolgen`,
+      message: `${status.reason} Bekijk de pipeline om in te plannen.`,
+      href: "/dashboard/leads",
+      options: ["Bekijk pipeline", "Later"],
     });
   }
 
   for (const factuur of overdueFacturen.data ?? []) {
     if (!betalingsherinneringenEnabled) continue;
-    if (emailSettingsRes.data?.herinnering_actief === false) continue;
 
-    const fingerprint = `factuur ${factuur.nummer}`;
-    if (
-      (await hasRecentLog(supabase, companyId, fingerprint)) ||
-      (await hasPendingAction(supabase, companyId, fingerprint))
-    ) {
-      continue;
-    }
-
-    const incassoSettings: IncassoEmailSettings = {
-      herinneringDagenNa:
-        emailSettingsRes.data?.herinnering_dagen_na ??
-        DEFAULT_INCASSO_SETTINGS.herinneringDagenNa,
-      herinneringHerhaalDagen:
-        emailSettingsRes.data?.herinnering_herhaal_dagen ??
-        DEFAULT_INCASSO_SETTINGS.herinneringHerhaalDagen,
-      herinneringMaxAantal:
-        emailSettingsRes.data?.herinnering_max_aantal ??
-        DEFAULT_INCASSO_SETTINGS.herinneringMaxAantal,
-      deurwaarderEmail:
-        companyExtras.incasso?.deurwaarderEmail?.trim() ||
-        process.env.INCASSO_DEURWAARDER_EMAIL?.trim() ||
-        null,
-    };
-
-    const { data: fullFactuur } = await supabase
-      .from("facturen")
-      .select("reminder_count, vervaldatum")
-      .eq("id", factuur.id)
-      .maybeSingle();
-
-    const stage = determineIncassoStage({
-      vervaldatum: fullFactuur?.vervaldatum ?? factuur.vervaldatum,
-      reminderCount: fullFactuur?.reminder_count ?? 0,
-      settings: incassoSettings,
-    });
-
-    if (!stage) continue;
-
-    const ai = await loadMergedAiConfig(supabase, companyId, user.id);
-    const actionType = actionTypeForStage(stage);
-    const title = `${stageLabel(stage)} — factuur ${factuur.nummer}`;
-    const reason =
-      stage === "deurwaarder"
-        ? `${factuur.klant} — openstaand na herinneringen. Facturatie stelt het volledige dossier (factuur, bewijzen, ingebrekestellingen) samen voor de deurwaarder.`
-        : `${factuur.klant} — factuur vervallen. Facturatie verstuurt ${stageLabel(stage).toLowerCase()} per e-mail met factuur-PDF als bewijs.`;
-
-    const requiresApproval =
-      stage === "deurwaarder" || ai.toestemming !== "versturen";
-
-    const proposedAction = await proposeAgentAction({
-      supabase,
-      companyId,
-      agentName: "Facturatie",
-      actionType: actionType as "send_payment_reminder" | "send_formal_notice" | "forward_to_bailiff",
-      title,
-      reason,
-      payload: { factuurId: factuur.id, stage },
-      targetEntityType: "factuur",
-      targetEntityId: factuur.id,
-      targetRoute: `/dashboard/facturen/${factuur.id}`,
-      requiresApproval,
-      confidence: stage === "deurwaarder" ? 0.92 : 0.88,
-    });
-
-    if ("error" in proposedAction) continue;
-
-    if (!requiresApproval) {
-      const { executeAgentAction } = await import("@/lib/agents/executor");
-      await supabase
-        .from("agent_actions")
-        .update({
-          status: "approved",
-          approved_at: new Date().toISOString(),
-          approved_by: user.id,
-        })
-        .eq("id", proposedAction.id);
-      await executeAgentAction({
-        supabase,
-        companyId,
-        userId: user.id,
-        actionId: proposedAction.id,
-      });
-    } else {
-      proposed += 1;
-    }
-
-    await supabase.from("agent_activity_logs").insert({
-      company_id: companyId,
-      created_by_user_id: user.id,
-      agent_name: "Facturatie",
-      action_type: actionType,
-      message: `Proactief: ${stageLabel(stage)} klaargezet voor factuur ${factuur.nummer} (${factuur.klant}).`,
-    });
-
+    const days = daysSince(factuur.vervaldatum);
     alerts.push({
-      id: `incasso-${factuur.id}-${stage}`,
-      agentName: "Facturatie",
-      title,
-      message: reason,
-      href: requiresApproval
-        ? "/dashboard/automatisaties"
-        : `/dashboard/facturen/${factuur.id}`,
-      options: requiresApproval
-        ? ["Bekijk goedkeuringen", "Later"]
-        : ["Bekijk factuur", "Later"],
+      id: `incasso-alert-${factuur.id}`,
+      agentName: "Lima",
+      title: `Factuur ${factuur.nummer} vervallen`,
+      message: `${factuur.klant} — ${days > 0 ? `${days} dagen over vervaldatum` : "vandaag vervallen"}. Lima bewaakt incasso in je inbox.`,
+      href: "/dashboard/automatisaties",
+      options: ["Bekijk voorstel", "Later"],
     });
   }
 
@@ -335,6 +317,7 @@ export async function runProactiveAgentScan(): Promise<{
 
   if (alerts.length > 0 || proposed > 0) {
     revalidatePath("/dashboard/automatisaties");
+    revalidatePath("/dashboard/leads");
   }
 
   return { alerts, proposed };

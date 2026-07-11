@@ -60,7 +60,7 @@ function parseDraft(
     return {
       klant: String(parsed.klant || klant || "Klant").trim(),
       notes: String(parsed.notes || "").trim(),
-      summary: String(parsed.summary || "Nova-voorstel voor offerte").trim(),
+      summary: String(parsed.summary || "Lima-voorstel voor offerte").trim(),
       lines,
     };
   } catch {
@@ -110,7 +110,7 @@ export async function generateNovaOfferteDraft(input: {
     };
   }
 
-  const agentName = input.ai.agentNaam.trim() || "Nova";
+  const agentName = input.ai.agentNaam.trim() || "Lima";
   const system = [
     `Je bent ${agentName}, AI-assistent voor een Belgisch bouwbedrijf.`,
     input.ai.vakgebied

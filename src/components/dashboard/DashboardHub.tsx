@@ -19,6 +19,8 @@ import FinancienView from "@/components/dashboard/views/FinancienView";
 import ProjectenView from "@/components/dashboard/views/ProjectenView";
 import AiCrewView from "@/components/dashboard/views/AiCrewView";
 
+import type { CustomAgent } from "@/components/dashboard/agents/config";
+
 const STORAGE_KEY = "archon-dashboard-view";
 
 export type DashboardViewId =
@@ -100,6 +102,8 @@ function formatLastUpdated(date: Date) {
 
 type DashboardHubProps = DashboardHomeProps & {
   defaultView?: DashboardViewId;
+  crewPanel?: "agents" | "knowledge" | null;
+  companyAgents?: CustomAgent[];
 };
 
 export default function DashboardHub({
@@ -107,13 +111,17 @@ export default function DashboardHub({
   agentName,
   charts,
   defaultView = "command",
+  crewPanel = null,
+  companyAgents = [],
 }: DashboardHubProps) {
   const [activeView, setActiveView] = useState<DashboardViewId>(defaultView);
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
   const [updatedLabel, setUpdatedLabel] = useState("zojuist bijgewerkt");
 
   useEffect(() => {
-    setActiveView(readStoredView(defaultView));
+    setActiveView(
+      defaultView !== "command" ? defaultView : readStoredView(defaultView),
+    );
   }, [defaultView]);
 
   useEffect(() => {
@@ -154,11 +162,62 @@ export default function DashboardHub({
         data-tour="dash-views"
         className="rounded-2xl border border-white/[0.08] bg-zinc-900/80 px-4 py-3.5 sm:px-5"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
             Weergave
           </p>
-          <div className="flex items-center gap-2">
+
+          <div className="min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-zinc-950/50 p-1">
+            <div className="flex gap-1 overflow-x-auto [scrollbar-width:thin]">
+              {VIEWS.map((view) => {
+                const count = badges[view.id];
+                const active = activeView === view.id;
+                const Icon = view.icon;
+
+                return (
+                  <button
+                    key={view.id}
+                    type="button"
+                    onClick={() => selectView(view.id)}
+                    className={`relative flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 sm:px-3.5 ${
+                      active
+                        ? "border border-orange-500/55 bg-orange-500/[0.05] text-orange-300"
+                        : "border border-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                    }`}
+                  >
+                    {active && (
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
+                    )}
+                    <Icon
+                      size={15}
+                      className={active ? "text-orange-400" : "text-zinc-500"}
+                    />
+                    <span>{view.label}</span>
+                    <span
+                      className={`text-[10px] tabular-nums ${
+                        active ? "text-orange-400/45" : "text-zinc-600"
+                      }`}
+                    >
+                      {view.shortcut}
+                    </span>
+                    {count > 0 && (
+                      <span
+                        className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                          active
+                            ? "bg-orange-500/25 text-orange-100"
+                            : "bg-white/10 text-zinc-400"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <span className="hidden text-xs text-zinc-500 sm:inline">
               {updatedLabel}
             </span>
@@ -179,47 +238,6 @@ export default function DashboardHub({
             </Link>
           </div>
         </div>
-
-        <div className="mt-3 flex gap-1 overflow-x-auto border-b border-white/[0.06] pb-0 [scrollbar-width:thin]">
-          {VIEWS.map((view) => {
-            const count = badges[view.id];
-            const active = activeView === view.id;
-            const Icon = view.icon;
-
-            return (
-              <button
-                key={view.id}
-                type="button"
-                onClick={() => selectView(view.id)}
-                className={`relative flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
-                  active
-                    ? "-mb-px border-orange-500 text-orange-300"
-                    : "border-transparent text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                {active && (
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
-                )}
-                <Icon
-                  size={15}
-                  className={active ? "text-orange-400" : "text-zinc-600"}
-                />
-                <span>{view.label}</span>
-                {count > 0 && (
-                  <span
-                    className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
-                      active
-                        ? "bg-orange-500/25 text-orange-100"
-                        : "bg-white/10 text-zinc-400"
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
       </header>
 
       {activeView === "command" && (
@@ -232,7 +250,13 @@ export default function DashboardHub({
         <FinancienView mission={mission} charts={charts} />
       )}
       {activeView === "projecten" && <ProjectenView mission={mission} />}
-      {activeView === "crew" && <AiCrewView mission={mission} />}
+      {activeView === "crew" && (
+        <AiCrewView
+          mission={mission}
+          companyAgents={companyAgents}
+          initialPanel={crewPanel}
+        />
+      )}
     </div>
   );
 }

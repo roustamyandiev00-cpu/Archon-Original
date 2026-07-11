@@ -1,4 +1,4 @@
-/** Antwoorden voor Nova wanneer er geen ingelogde chat beschikbaar is. */
+/** Antwoorden voor Lima wanneer er geen ingelogde chat beschikbaar is. */
 export function answerNovaTourQuestion(
   question: string,
   context?: { stepTitle?: string; stepText?: string },
@@ -35,7 +35,7 @@ export function answerNovaTourQuestion(
     q.includes("nova") ||
     q.includes("assistent")
   ) {
-    return "Nova is je AI-metgezel. Ze helpt met offertes, facturen, opvolging en herinnert je aan volgende stappen — altijd ter goedkeuring.";
+    return "Lima is je AI-metgezel. Ze helpt met offertes, facturen, opvolging en herinnert je aan volgende stappen — altijd ter goedkeuring.";
   }
 
   if (

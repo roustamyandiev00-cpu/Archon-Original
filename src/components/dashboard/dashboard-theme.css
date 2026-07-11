@@ -14,19 +14,7 @@
   background-color: var(--dash-bg) !important;
 }
 
-/* Factuur / Studio Admin-achtige kaarten */
-.dashboard-root[data-theme="dark"] .invoice-create-form,
-.dashboard-root[data-theme="dark"] .invoice-create-preview-shell {
-  background-color: var(--dash-surface) !important;
-  border-color: var(--dash-border) !important;
-}
-
-.dashboard-root[data-theme="dark"] .invoice-create-section {
-  background-color: color-mix(in srgb, var(--dash-elevated) 55%, transparent) !important;
-  border-color: var(--dash-border) !important;
-}
-
-.dashboard-root[data-theme="light"] .invoice-create-form,
+/* Factuur / Studio Admin-achtige kaarten — licht */
 .dashboard-root[data-theme="light"] .invoice-create-preview-shell {
   background-color: #ffffff !important;
   border-color: rgba(24, 24, 27, 0.1) !important;
@@ -36,6 +24,186 @@
 .dashboard-root[data-theme="light"] .invoice-create-section {
   background-color: #fafafa !important;
   border-color: rgba(24, 24, 27, 0.08) !important;
+}
+
+/* ── Factuur pagina: Shadcn Studio Admin kleuren ── */
+
+.dashboard-root[data-theme="light"] .invoice-create-view .invoice-create-header h1 {
+  color: #18181b !important;
+}
+
+.dashboard-root[data-theme="light"] .invoice-section-nav {
+  background-color: #f4f4f5 !important;
+  border-color: rgba(24, 24, 27, 0.1) !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-section-nav {
+  background-color: rgba(24, 24, 27, 0.6) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Form controls binnen factuur-create */
+.invoice-create-view input:not([type="checkbox"]):not([type="radio"]),
+.invoice-create-view select,
+.invoice-create-view textarea {
+  border-radius: 0.5rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+
+.dashboard-root[data-theme="light"] .invoice-create-view input:not([type="checkbox"]):not([type="radio"]),
+.dashboard-root[data-theme="light"] .invoice-create-view select,
+.dashboard-root[data-theme="light"] .invoice-create-view textarea {
+  border: 1px solid rgba(24, 24, 27, 0.12) !important;
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  box-shadow: none !important;
+}
+
+.dashboard-root[data-theme="light"] .invoice-create-view input:not([type="checkbox"]):not([type="radio"]):focus,
+.dashboard-root[data-theme="light"] .invoice-create-view select:focus,
+.dashboard-root[data-theme="light"] .invoice-create-view textarea:focus {
+  border-color: rgba(24, 24, 27, 0.28) !important;
+  box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.06) !important;
+}
+
+.dashboard-root[data-theme="light"] .invoice-create-view input::placeholder,
+.dashboard-root[data-theme="light"] .invoice-create-view textarea::placeholder {
+  color: #a1a1aa !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-form,
+.dashboard-root[data-theme="dark"] .invoice-create-preview-shell {
+  background-color: #09090b !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-section {
+  background-color: rgba(24, 24, 27, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-view input:not([type="checkbox"]):not([type="radio"]),
+.dashboard-root[data-theme="dark"] .invoice-create-view select,
+.dashboard-root[data-theme="dark"] .invoice-create-view textarea {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background-color: rgba(24, 24, 27, 0.55) !important;
+  color: #fafafa !important;
+  box-shadow: none !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-view input:not([type="checkbox"]):not([type="radio"]):focus,
+.dashboard-root[data-theme="dark"] .invoice-create-view select:focus,
+.dashboard-root[data-theme="dark"] .invoice-create-view textarea:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04) !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-view input::placeholder,
+.dashboard-root[data-theme="dark"] .invoice-create-view textarea::placeholder {
+  color: #71717a !important;
+}
+
+/* Tabel in factuurlijnen */
+.dashboard-root[data-theme="light"] .invoice-create-view .invoice-lines-table th {
+  color: #71717a !important;
+  background-color: #fafafa !important;
+}
+
+.dashboard-root[data-theme="light"] .invoice-create-view .invoice-lines-table td {
+  color: #3f3f46 !important;
+}
+
+.dashboard-root[data-theme="light"] .invoice-create-view .invoice-lines-table tr {
+  border-color: rgba(24, 24, 27, 0.08) !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-view .invoice-lines-table th {
+  color: #a1a1aa !important;
+  background-color: rgba(24, 24, 27, 0.35) !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-view .invoice-lines-table td {
+  color: #e4e4e7 !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-create-view .invoice-lines-table tr {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dashboard-root[data-theme="light"] .invoice-preview-canvas {
+  background-color: #f4f4f5 !important;
+}
+
+.dashboard-root[data-theme="dark"] .invoice-preview-canvas {
+  background-color: #18181b !important;
+}
+
+/* ── Facturen lijst ── */
+
+.dashboard-root[data-theme="light"] .facturen-list-view .facturen-data-table,
+.dashboard-root[data-theme="light"] .facturen-list-view .facturen-data-table + *,
+.dashboard-root[data-theme="light"] .facturen-list-view > section .rounded-2xl {
+  border-color: rgba(24, 24, 27, 0.1);
+}
+
+.dashboard-root[data-theme="light"] .facturen-list-view input,
+.dashboard-root[data-theme="light"] .facturen-list-view select {
+  border: 1px solid rgba(24, 24, 27, 0.12) !important;
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  box-shadow: none !important;
+}
+
+.dashboard-root[data-theme="light"] .facturen-list-view input:focus,
+.dashboard-root[data-theme="light"] .facturen-list-view select:focus {
+  border-color: rgba(24, 24, 27, 0.28) !important;
+  box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.06) !important;
+}
+
+.dashboard-root[data-theme="dark"] .facturen-list-view input,
+.dashboard-root[data-theme="dark"] .facturen-list-view select {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background-color: rgba(24, 24, 27, 0.55) !important;
+  color: #fafafa !important;
+  box-shadow: none !important;
+}
+
+.dashboard-root[data-theme="dark"] .facturen-list-view input:focus,
+.dashboard-root[data-theme="dark"] .facturen-list-view select:focus {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04) !important;
+}
+
+.dashboard-root[data-theme="light"] .facturen-list-view .facturen-table-wrap th {
+  color: #71717a !important;
+  background-color: #fafafa !important;
+}
+
+.dashboard-root[data-theme="light"] .facturen-list-view .facturen-table-wrap td {
+  color: #3f3f46 !important;
+}
+
+.dashboard-root[data-theme="light"] .facturen-list-view .facturen-table-wrap tr {
+  border-color: rgba(24, 24, 27, 0.08) !important;
+}
+
+.dashboard-root[data-theme="dark"] .facturen-list-view .facturen-table-wrap th {
+  color: #a1a1aa !important;
+  background-color: rgba(24, 24, 27, 0.35) !important;
+}
+
+.dashboard-root[data-theme="dark"] .facturen-list-view .facturen-table-wrap td {
+  color: #e4e4e7 !important;
+}
+
+.dashboard-root[data-theme="dark"] .facturen-list-view .facturen-table-wrap tr {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dashboard-root[data-theme="dark"] .facturen-list-view .facturen-data-table {
+  background-color: #09090b !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 .dashboard-root[data-theme="light"] {
@@ -83,14 +251,6 @@
 .dashboard-root[data-theme="light"] .bg-zinc-900\/50,
 .dashboard-root[data-theme="light"] .bg-zinc-900\/40 {
   background-color: var(--dash-surface) !important;
-}
-
-.dashboard-root[data-theme="light"] .invoice-preview-canvas {
-  background-color: var(--dash-elevated) !important;
-}
-
-.dashboard-root[data-theme="dark"] .invoice-preview-canvas {
-  background-color: color-mix(in srgb, var(--dash-elevated) 70%, black 10%) !important;
 }
 
 .dashboard-root[data-theme="light"] .bg-white\/5,
@@ -387,13 +547,46 @@
   }
 
   .facturen-create-shell {
-    height: calc(100dvh - 6.5rem);
-    max-height: calc(100dvh - 6.5rem);
+    height: calc(100dvh - 3.5rem);
+    max-height: calc(100dvh - 3.5rem);
     overflow: hidden;
   }
 
   .facturen-create-shell .mobile-swipe-dots {
     display: none;
+  }
+}
+
+/* Studio Admin invoice clone — fixed viewport, no scroll */
+.studio-invoice-shell {
+  color: #18181b;
+  background: #ffffff;
+}
+
+.studio-invoice-shell .studio-invoice-create,
+.studio-invoice-shell .studio-invoice-form,
+.studio-invoice-shell .studio-invoice-preview {
+  color: #18181b;
+}
+
+.studio-invoice-shell .studio-invoice-form input:not([type="checkbox"]):not([type="radio"]),
+.studio-invoice-shell .studio-invoice-form select {
+  border: 1px solid rgba(24, 24, 27, 0.12);
+  background-color: #ffffff;
+  color: #18181b;
+  border-radius: 0.5rem;
+}
+
+.studio-invoice-shell .studio-invoice-form input:focus,
+.studio-invoice-shell .studio-invoice-form select:focus {
+  border-color: rgba(24, 24, 27, 0.28);
+  box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.06);
+  outline: none;
+}
+
+@media (min-width: 1280px) {
+  .studio-invoice-shell .studio-invoice-form > div:last-child {
+    overflow: hidden;
   }
 }
 

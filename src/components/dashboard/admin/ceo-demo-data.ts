@@ -318,7 +318,7 @@ export function getCeoDashboardData(): CeoDashboardData {
       {
         id: "e1",
         company: "Construct Plus",
-        agent: "Nova",
+        agent: "Lima",
         message: "OpenAI rate limit exceeded — offerte-generatie mislukt",
         time: "2026-07-10T08:55:00Z",
         severity: "critical",

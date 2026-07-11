@@ -125,10 +125,10 @@ export default function AgentChatWidget() {
       >
         <div className="flex min-w-0 items-center gap-2.5">
           <span
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-800 text-sky-400`}
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${activeAgent.gradient} text-zinc-950`}
           >
             {activeAgent.id === "nova" ? (
-              <Bot size={17} />
+              <Bot size={17} className="text-zinc-950" />
             ) : (
               <span className="text-sm font-bold">
                 {activeAgent.name.charAt(0).toUpperCase()}

@@ -53,7 +53,7 @@ export const CREW_AGENTS: CrewAgentDef[] = [
     examplePrompt: "Welke facturen zijn nog niet betaald deze maand?",
     gradient: "from-sky-400 to-indigo-500",
     actions: [
-      { label: "Nieuwe factuur", href: "/dashboard/facturen/nieuw" },
+      { label: "Nieuwe factuur", href: "/dashboard/facturen" },
       { label: "Onbetaalde facturen", href: "/dashboard/facturen" },
       { label: "Stuur aanmaning", href: "/dashboard/facturen" },
       { label: "Maak brief", href: "/dashboard/automatisaties" },

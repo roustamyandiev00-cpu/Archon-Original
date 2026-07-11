@@ -46,6 +46,13 @@ export type OverviewAction = {
   href: string;
   primaryLabel: string;
   actionId?: number;
+  actionType?: string;
+  riskLevel?: "low" | "medium" | "high";
+  confidence?: number;
+  requiresApproval?: boolean;
+  impact?: "internal" | "external";
+  deadline?: string;
+  draftPreview?: string;
 };
 
 export type NovaPriority = {
@@ -129,18 +136,41 @@ function taskToAction(task: MissionTask): OverviewAction {
   };
 }
 
-function aiToAction(item: ActionItem, agentName?: string | null): OverviewAction {
+function aiToAction(
+  item: ActionItem,
+  pending?: {
+    agent_name?: string | null;
+    action_type?: string;
+    confidence?: number | null;
+    payload_json?: unknown;
+    requires_approval?: boolean;
+    created_at?: string;
+  },
+): OverviewAction {
+  const payload = (pending?.payload_json ?? {}) as Record<string, unknown>;
+  const meta = (payload._meta ?? {}) as Record<string, unknown>;
+  const communication = meta.communicationIntent as
+    | { draftMessage?: string }
+    | undefined;
+
   return {
     id: `ai-${item.id}`,
     type: "ai",
     title: item.title,
     client: extractClient(item.detail) !== "—" ? extractClient(item.detail) : extractClient(item.title),
     detail: item.detail,
-    agent: agentName ?? "Nova",
-    urgency: "attention",
+    agent: pending?.agent_name ?? "Nova",
+    urgency: meta.riskLevel === "high" ? "urgent" : "attention",
     href: "/dashboard/automatisaties",
-    primaryLabel: "Bekijken",
+    primaryLabel: pending?.requires_approval === false ? "Bekijken" : "Goedkeuren",
     actionId: item.id,
+    actionType: pending?.action_type ?? undefined,
+    riskLevel: (meta.riskLevel as OverviewAction["riskLevel"]) ?? "medium",
+    confidence: pending?.confidence ?? undefined,
+    requiresApproval: pending?.requires_approval ?? true,
+    impact: (meta.impact as OverviewAction["impact"]) ?? "internal",
+    deadline: (meta.expiresAt as string | undefined) ?? pending?.created_at,
+    draftPreview: communication?.draftMessage ?? (payload.draftMessage as string | undefined),
   };
 }
 
@@ -156,7 +186,7 @@ function buildDemoOverview(
       client: "Janssens Renovatie",
       detail: "Concept voor badkamerrenovatie — 6 lijnen, BTW 21%",
       value: "€ 2.850",
-      agent: "Nova",
+      agent: "Lima",
       urgency: "attention",
       href: "/dashboard/automatisaties",
       primaryLabel: "Goedkeuren",
@@ -308,7 +338,7 @@ function buildDemoOverview(
       {
         id: "r4",
         title: "8 AI-acties wachten op goedkeuring",
-        detail: "Nova heeft voorstellen klaargezet",
+        detail: "Lima heeft voorstellen klaargezet",
         severity: "info",
         href: "/dashboard/automatisaties",
       },
@@ -537,7 +567,7 @@ export async function loadOverviewDashboard(input: {
 
   const actions: OverviewAction[] = [
     ...core.actionItems.map((item) =>
-      aiToAction(item, pendingById.get(item.id)?.agent_name),
+      aiToAction(item, pendingById.get(item.id)),
     ),
     ...core.important.map(taskToAction),
     ...core.tasks.map(taskToAction),

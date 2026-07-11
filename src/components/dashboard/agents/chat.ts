@@ -193,7 +193,7 @@ export async function generateAgentChatReply(input: {
     `Toegestane navigateTo routes: ${ALLOWED_ROUTES.join(", ")} of null.`,
     "Gebruik navigateTo wanneer de gebruiker expliciet een pagina wil openen of jij ze daar naartoe moet brengen.",
     "Zet openControlCenter op true wanneer de gebruiker agent-status, het logboek, recente AI-acties of het AI Control Center wil zien — of wanneer jij net een agent hebt aangemaakt, een actie hebt uitgevoerd of iets belangrijks in het logboek staat dat ze moeten zien.",
-    "Het AI Control Center is het zijpaneel rechts op het dashboard met live agent-status (Nova, Schatter, Facturatie, Opvolger) en het recente logboek van uitgevoerde acties.",
+    "Het AI Control Center is het zijpaneel rechts op het dashboard met live agent-status (Lima, Schatter, Facturatie, Opvolger) en het recente logboek van uitgevoerde acties.",
     "Zet remember alleen als de gebruiker een voorkeur, prijs of werkwijze deelt die je moet onthouden.",
     "Wees concreet, kort en actiegericht. Verwijs naar Automatisaties voor goedkeuringen.",
   ]

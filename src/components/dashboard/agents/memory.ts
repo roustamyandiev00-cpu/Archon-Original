@@ -335,7 +335,7 @@ export async function rememberFromExecution(
   const payload = (action.payload_json ?? {}) as Record<string, unknown>;
   const memories = memoriesFromExecutedAction({
     actionType: action.action_type,
-    agentName: action.agent_name || "Nova",
+    agentName: action.agent_name || "Lima",
     payload,
     targetRoute: action.target_route,
   });

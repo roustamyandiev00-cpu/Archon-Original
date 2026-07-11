@@ -23,7 +23,7 @@ type Customer = {
 type OfferteMode = "manueel" | "ai" | "beide";
 
 export default function NieuweOfferteClient({
-  agentName = "Nova",
+  agentName = "Lima",
   customers,
   documentContext,
   mode = "beide",

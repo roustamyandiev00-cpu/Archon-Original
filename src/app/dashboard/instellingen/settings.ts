@@ -88,7 +88,7 @@ export function templateFileName(value: string | null | undefined): string {
 }
 
 export const defaultAiConfig: AiConfig = {
-  agentNaam: "Nova",
+  agentNaam: "Lima",
   vakgebied: "",
   toon: "neutraal",
   toestemming: "voorstellen",

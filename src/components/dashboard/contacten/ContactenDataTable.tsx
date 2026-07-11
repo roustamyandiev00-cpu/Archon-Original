@@ -20,13 +20,6 @@ import {
 import type { KlantRecord } from "@/components/dashboard/contacten/KlantForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
@@ -71,10 +64,12 @@ export default function ContactenDataTable({
   klanten,
   onEdit,
   onDelete,
+  showFilters = true,
 }: {
   klanten: KlantRecord[];
   onEdit: (klant: KlantRecord) => void;
   onDelete: (id: number, naam: string) => void;
+  showFilters?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [peppolFilter, setPeppolFilter] = useState<PeppolFilter>("all");
@@ -158,29 +153,8 @@ export default function ContactenDataTable({
   }
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <CardTitle>Klantenlijst</CardTitle>
-          <CardDescription>
-            Zoek, filter en beheer al je contacten voor offertes en e-facturatie.
-          </CardDescription>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-zinc-500">
-          <SlidersHorizontal size={14} />
-          <span>
-            {filtered.length.toLocaleString("nl-BE")} van{" "}
-            {klanten.length.toLocaleString("nl-BE")} contacten
-          </span>
-          {selectedIds.size > 0 && (
-            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300">
-              {selectedIds.size} geselecteerd
-            </span>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      {showFilters && (
         <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_12rem_12rem_auto]">
           <label className="relative block">
             <span className="sr-only">Zoek contacten</span>
@@ -239,8 +213,22 @@ export default function ContactenDataTable({
             Reset
           </Button>
         </div>
+      )}
 
-        <div className="overflow-hidden rounded-2xl border border-white/10">
+      <div className="flex items-center gap-2 text-xs text-zinc-500">
+        <SlidersHorizontal size={14} />
+        <span>
+          {filtered.length.toLocaleString("nl-BE")} van{" "}
+          {klanten.length.toLocaleString("nl-BE")} contacten
+        </span>
+        {selectedIds.size > 0 && (
+          <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300">
+            {selectedIds.size} selected
+          </span>
+        )}
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-white/10">
           <Table className="min-w-[980px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -436,8 +424,7 @@ export default function ContactenDataTable({
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 

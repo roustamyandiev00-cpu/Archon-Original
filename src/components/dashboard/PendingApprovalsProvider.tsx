@@ -12,7 +12,8 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertTriangle, Bot, MessageCircle, X } from "lucide-react";
+import { AlertTriangle, MessageCircle, X } from "lucide-react";
+import AgentAvatar from "@/components/dashboard/agents/AgentAvatar";
 import { createClient } from "@/lib/supabase/client";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 
@@ -171,12 +172,37 @@ export function PendingApprovalsProvider({
   useEffect(() => {
     if (!enabled || !companyId) return;
 
-    const tick = () => void poll();
+    const supabase = createClient();
+    let cancelled = false;
+
+    const tick = () => {
+      if (!cancelled) void poll();
+    };
+
+    const channel = supabase
+      .channel(`agent-actions-${companyId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "agent_actions",
+          filter: `company_id=eq.${companyId}`,
+        },
+        () => {
+          tick();
+        },
+      )
+      .subscribe();
+
     const initialId = window.setTimeout(tick, 0);
-    const intervalId = window.setInterval(tick, POLL_MS);
+    const fallbackId = window.setInterval(tick, POLL_MS);
+
     return () => {
+      cancelled = true;
       window.clearTimeout(initialId);
-      window.clearInterval(intervalId);
+      window.clearInterval(fallbackId);
+      void supabase.removeChannel(channel);
     };
   }, [poll, enabled, companyId]);
 
@@ -221,9 +247,7 @@ export function PendingApprovalsProvider({
         >
           <div className="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-start gap-2.5">
-              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-amber-500/20 text-amber-300">
-                <Bot size={16} />
-              </span>
+              <AgentAvatar agentName={bannerItem.agent_name} size="lg" />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-amber-100">
                   {bannerItem.agent_name} wacht op je —{" "}

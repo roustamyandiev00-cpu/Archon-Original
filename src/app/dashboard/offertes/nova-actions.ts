@@ -11,6 +11,7 @@ import {
 } from "@/components/dashboard/agents/memory";
 import { loadMergedAiConfig } from "@/lib/agents/companyAi";
 import { generateNovaOfferteDraft } from "@/lib/agents/nova";
+import { DEFAULT_AGENT_NAME } from "@/lib/agents/userAi";
 import { proposeAgentAction } from "@/lib/agents/propose";
 import { executeAgentAction } from "@/lib/agents/executor";
 import { createOfferte } from "@/app/dashboard/offertes/actions";
@@ -75,7 +76,7 @@ export async function requestNovaOfferte(input: {
   });
 
   if (!draft) {
-    const name = ai.agentNaam.trim() || "Nova";
+    const name = ai.agentNaam.trim() || DEFAULT_AGENT_NAME;
     return { error: aiError ?? `${name} kon geen voorstel maken.` };
   }
 
@@ -89,7 +90,7 @@ export async function requestNovaOfferte(input: {
     description: input.description,
   };
 
-  const agentName = ai.agentNaam.trim() || "Nova";
+  const agentName = ai.agentNaam.trim() || DEFAULT_AGENT_NAME;
   const title = `${agentName}: offerte voor ${payload.klant}`;
 
   await saveAgentMemories(supabase, {

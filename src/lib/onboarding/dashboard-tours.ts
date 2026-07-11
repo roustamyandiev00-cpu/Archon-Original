@@ -60,8 +60,8 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
     {
       id: "nova",
       target: '[data-tour="dash-nova"]',
-      title: "Nova, je AI-metgezel",
-      text: "Klik op Nova rechtsboven om vragen te stellen, taken te geven of acties klaar te zetten. Ik help je de hele dag door.",
+      title: "Lima, je AI-metgezel",
+      text: "Klik op Lima rechtsboven om vragen te stellen, taken te geven of acties klaar te zetten. Ik help je de hele dag door.",
     },
   ],
   offertes: [
@@ -75,7 +75,7 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
       id: "actions",
       target: '[data-tour="dash-actions"]',
       title: "Nieuwe offerte starten",
-      text: "Klik op Nieuwe Offerte om direct een voorstel op te stellen — Nova kan de regels alvast invullen.",
+      text: "Klik op Nieuwe Offerte om direct een voorstel op te stellen — Lima kan de regels alvast invullen.",
     },
     {
       id: "agents-offerte",
@@ -92,8 +92,8 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
     {
       id: "nova",
       target: '[data-tour="dash-nova"]',
-      title: "Vraag Nova om hulp",
-      text: "Zeg bijvoorbeeld 'maak een offerte voor renovatie badkamer' — Nova zet alles klaar ter goedkeuring.",
+      title: "Vraag Lima om hulp",
+      text: "Zeg bijvoorbeeld 'maak een offerte voor renovatie badkamer' — Lima zet alles klaar ter goedkeuring.",
     },
   ],
   facturatie: [
@@ -124,8 +124,8 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
     {
       id: "nova",
       target: '[data-tour="dash-nova"]',
-      title: "Nova voor facturatie",
-      text: "Vraag Nova om een betalingsherinnering klaar te zetten of openstaande facturen te controleren.",
+      title: "Lima voor facturatie",
+      text: "Vraag Lima om een betalingsherinnering klaar te zetten of openstaande facturen te controleren.",
     },
   ],
   projecten: [
@@ -156,8 +156,8 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
     {
       id: "nova",
       target: '[data-tour="dash-nova"]',
-      title: "Nova op de werf",
-      text: "Vraag Nova om een werf op te volgen of een taak toe te voegen — ook vanaf je gsm.",
+      title: "Lima op de werf",
+      text: "Vraag Lima om een werf op te volgen of een taak toe te voegen — ook vanaf je gsm.",
     },
   ],
 };

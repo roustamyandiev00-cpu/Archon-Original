@@ -77,7 +77,7 @@ export const GRADIENT_OPTIONS = [
 export const DEFAULT_AGENTS: CustomAgent[] = [
   {
     id: "nova",
-    name: "Nova",
+    name: "Lima",
     role: "AI-metgezel",
     instructies:
       "Monitor offertes, facturen en leads. Stel proactief acties voor en wacht op goedkeuring.",
@@ -143,6 +143,7 @@ export function mergeAgents(stored: CustomAgent[] | undefined): CustomAgent[] {
     return {
       ...def,
       ...saved,
+      name: saved.name?.trim() === "Nova" ? def.name : saved.name || def.name,
       builtin: true,
       capabilities:
         saved.capabilities?.length ? saved.capabilities : def.capabilities,

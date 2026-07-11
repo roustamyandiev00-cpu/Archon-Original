@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import GlowCard from "@/components/dashboard/GlowCard";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
+import { customAgentToChatAgent } from "@/components/dashboard/agent-chat/agents";
 import { saveAgents } from "@/app/dashboard/nova-agents/actions";
 import {
   CAPABILITY_OPTIONS,
@@ -33,6 +34,8 @@ const labelClass = "mb-1.5 block text-xs font-bold uppercase tracking-wider text
 type Props = {
   initialAgents: CustomAgent[];
   readOnly?: boolean;
+  embedded?: boolean;
+  onClose?: () => void;
 };
 
 const emptyDraft = (): CustomAgent => ({
@@ -46,9 +49,14 @@ const emptyDraft = (): CustomAgent => ({
   toestemming: "voorstellen",
 });
 
-export default function AgentsManager({ initialAgents, readOnly }: Props) {
+export default function AgentsManager({
+  initialAgents,
+  readOnly,
+  embedded,
+  onClose,
+}: Props) {
   const router = useRouter();
-  const { openWith } = useAgentChat();
+  const { openWith, syncCompanyAgents } = useAgentChat();
   const [agents, setAgents] = useState(initialAgents);
   const [editing, setEditing] = useState<CustomAgent | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -105,6 +113,7 @@ export default function AgentsManager({ initialAgents, readOnly }: Props) {
       }
       setAgents(next);
       setMessage("Opgeslagen.");
+      syncCompanyAgents(next);
       closeEditor();
       router.refresh();
     });
@@ -124,7 +133,22 @@ export default function AgentsManager({ initialAgents, readOnly }: Props) {
     const next = isNew
       ? [...agents, editing]
       : agents.map((a) => (a.id === editing.id ? editing : a));
-    persist(next);
+    const savedAgent = editing;
+    startTransition(async () => {
+      setError(null);
+      setMessage(null);
+      const result = await saveAgents(next);
+      if ("error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+      setAgents(next);
+      setMessage("Opgeslagen.");
+      syncCompanyAgents(next);
+      openWith(customAgentToChatAgent(savedAgent));
+      closeEditor();
+      router.refresh();
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -148,7 +172,8 @@ export default function AgentsManager({ initialAgents, readOnly }: Props) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={embedded ? "space-y-4" : "space-y-6"}>
+      {!embedded && (
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
@@ -172,6 +197,34 @@ export default function AgentsManager({ initialAgents, readOnly }: Props) {
           </button>
         )}
       </header>
+      )}
+
+      {embedded && !readOnly && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-zinc-400">
+            Maak agents aan en stel in wat ze mogen doen.
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openNew}
+              className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-3.5 py-1.5 text-xs font-semibold text-zinc-950 transition-colors hover:bg-orange-400"
+            >
+              <Plus size={14} />
+              Nieuwe agent
+            </button>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200"
+              >
+                Sluiten
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {readOnly && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
@@ -408,7 +461,7 @@ export default function AgentsManager({ initialAgents, readOnly }: Props) {
                       className={inputClass}
                       value={editing.name}
                       onChange={(e) => updateDraft("name", e.target.value)}
-                      placeholder="bv. Nova, Schatter…"
+                      placeholder="bv. Lima, Schatter…"
                     />
                   </div>
 

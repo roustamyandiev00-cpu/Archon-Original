@@ -13,8 +13,10 @@ import type {
   CreateOffertePayload,
   SendOffertePayload,
   SendPaymentReminderPayload,
+  SendQuoteFollowupPayload,
 } from "@/lib/agents/types";
 import { executeIncassoStep } from "@/app/dashboard/facturen/incasso-actions";
+import { executeQuoteFollowup } from "@/lib/agents/followup-actions";
 
 async function logActivity(
   supabase: SupabaseClient,
@@ -68,7 +70,7 @@ export async function executeAgentAction(input: {
     return { ok: true, route: action.target_route ?? undefined };
   }
 
-  const agentName = action.agent_name || "Nova";
+  const agentName = action.agent_name || "Lima";
   const payload = (action.payload_json ?? {}) as Record<string, unknown>;
 
   try {
@@ -179,6 +181,73 @@ export async function executeAgentAction(input: {
 
       revalidatePath("/dashboard/facturen");
       return { ok: true, factuurId, route };
+    }
+
+    if (action.action_type === "send_quote_followup") {
+      const p = payload as unknown as SendQuoteFollowupPayload;
+      const meta = (p._meta ?? {}) as Record<string, unknown>;
+
+      const result = await executeQuoteFollowup({
+        supabase,
+        companyId,
+        userId,
+        payload: p,
+        meta,
+      });
+
+      if ("error" in result && result.error) {
+        if (result.blocked) {
+          await supabase
+            .from("agent_actions")
+            .update({
+              status: "rejected",
+              rejected_at: new Date().toISOString(),
+              reason: `${action.reason ?? ""} — geblokkeerd: ${result.error}`.trim(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", actionId);
+        }
+        throw new Error(result.error);
+      }
+      if (!("ok" in result) || !result.ok) {
+        throw new Error("Opvolging mislukt.");
+      }
+
+      const route = `/dashboard/offertes/${p.offerteId}`;
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_entity_type: "offerte",
+          target_entity_id: p.offerteId,
+          target_route: route,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Opvolging offerte #${p.offerteId} ${result.sentViaSmtp ? "verzonden" : "voorbereid"}`,
+        outputJson: {
+          offerteId: p.offerteId,
+          mailto: result.mailto,
+          sentViaSmtp: result.sentViaSmtp,
+        },
+      });
+
+      revalidatePath("/dashboard/offertes");
+      revalidatePath(`/dashboard/offertes/${p.offerteId}`);
+      revalidatePath("/dashboard/automatisaties");
+      return {
+        ok: true,
+        offerteId: p.offerteId,
+        route,
+        mailto: result.mailto,
+      };
     }
 
     if (

@@ -12,7 +12,7 @@ import {
 
 const agents = [
   {
-    name: "Nova",
+    name: "Lima",
     role: "Offerte-agent",
     color: "from-sky-500 to-cyan-400",
     status: "Analyseert 5 open offertes",
@@ -74,7 +74,7 @@ export default function AutomationShowcase() {
           <div className="flex items-start gap-2">
             <Sparkles size={14} className="mt-0.5 shrink-0 text-sky-400" />
             <p className="text-xs leading-relaxed text-zinc-300">
-              <span className="font-medium text-sky-300">Echte AI:</span> Nova
+              <span className="font-medium text-sky-300">Echte AI:</span> Lima
               analyseerde je pipeline, prioriteerde 3 acties en zette alles klaar
               ter goedkeuring — zonder handmatig werk.
             </p>

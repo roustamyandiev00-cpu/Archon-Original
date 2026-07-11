@@ -15,7 +15,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { decideAction } from "@/app/dashboard/automatisaties/actions";
+import { decideAction, snoozeAction } from "@/app/dashboard/automatisaties/actions";
 import { useAgentNavigation } from "@/components/dashboard/agent-navigation/AgentNavigationProvider";
 import type {
   OverviewAction,
@@ -127,6 +127,21 @@ export default function OverviewActionsPanel({
     setBusy(null);
   }
 
+  async function snooze(action: OverviewAction) {
+    if (!action.actionId || isDemo || action.actionId < 0) return;
+    setBusy(action.id);
+    setError(null);
+    const result = await snoozeAction(action.actionId, 24);
+    if ("error" in result && result.error) {
+      setError(result.error);
+      setBusy(null);
+      return;
+    }
+    setActions((prev) => prev.filter((a) => a.id !== action.id));
+    router.refresh();
+    setBusy(null);
+  }
+
   return (
     <section className="rounded-2xl border border-white/10 bg-zinc-900/60">
       <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -176,7 +191,7 @@ export default function OverviewActionsPanel({
           <div className="py-10 text-center">
             <p className="text-sm text-zinc-400">Geen open acties in deze categorie.</p>
             <p className="mt-1 text-xs text-zinc-600">
-              Alles is bij — {isDemo ? "demo" : "Nova"} blijft monitoren.
+              Alles is bij — {isDemo ? "demo" : "Lima"} blijft monitoren.
             </p>
           </div>
         ) : (
@@ -227,10 +242,39 @@ export default function OverviewActionsPanel({
                         {action.agent ? (
                           <span className="text-zinc-600">
                             {" "}
-                            · Gemaakt door {action.agent}
+                            · Agent: {action.agent}
                           </span>
                         ) : null}
                       </p>
+                      {action.type === "ai" && (
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+                          {action.riskLevel ? (
+                            <span className="rounded border border-white/10 px-1.5 py-0.5 text-zinc-500">
+                              Risico: {action.riskLevel}
+                            </span>
+                          ) : null}
+                          {action.impact ? (
+                            <span className="rounded border border-white/10 px-1.5 py-0.5 text-zinc-500">
+                              {action.impact === "external" ? "Extern effect" : "Intern"}
+                            </span>
+                          ) : null}
+                          {typeof action.confidence === "number" ? (
+                            <span className="rounded border border-white/10 px-1.5 py-0.5 text-zinc-500">
+                              {Math.round(action.confidence * 100)}% zeker
+                            </span>
+                          ) : null}
+                          {action.requiresApproval ? (
+                            <span className="rounded border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-amber-300">
+                              Goedkeuring vereist
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                      {action.draftPreview ? (
+                        <p className="mt-2 line-clamp-2 rounded-lg border border-white/5 bg-black/20 px-2.5 py-2 text-[11px] italic text-zinc-500">
+                          {action.draftPreview}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -254,6 +298,14 @@ export default function OverviewActionsPanel({
                               <Check size={13} />
                             )}
                             Goedkeuren
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => snooze(action)}
+                            disabled={busy === action.id}
+                            className="inline-flex items-center rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/5 disabled:opacity-60"
+                          >
+                            Later
                           </button>
                           <button
                             type="button"

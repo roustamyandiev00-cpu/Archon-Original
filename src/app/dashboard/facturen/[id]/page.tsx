@@ -8,6 +8,7 @@ import { factuurStatusMeta, documentTypeMeta } from "@/lib/facturen";
 import GlowCard from "@/components/dashboard/GlowCard";
 import DocumentDownload from "@/components/dashboard/documenten/DocumentDownload";
 import PeppolActions from "@/components/dashboard/documenten/PeppolActions";
+import MarkFactuurPaidButton from "@/components/dashboard/facturen/MarkFactuurPaidButton";
 import {
   buildDocumentValues,
   buildDocumentRows,
@@ -85,6 +86,7 @@ export default async function FactuurDetailPage({
   const meta = factuurStatusMeta(factuur.status);
   const typeMeta = documentTypeMeta(factuur.document_type);
   const isProforma = factuur.document_type === "proforma";
+  const isPaid = Boolean(factuur.paid_at) || factuur.status === "betaald";
 
   const { data: bedrijf } = await supabase
     .from("bedrijven")
@@ -131,7 +133,7 @@ export default async function FactuurDetailPage({
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <Link
-        href="/dashboard/facturen"
+        href="/dashboard/facturen/lijst"
         className="group inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
       >
         <ArrowLeft
@@ -265,6 +267,12 @@ export default async function FactuurDetailPage({
         )}
 
         <div className="mt-6 space-y-4 border-t border-white/10 pt-6">
+          {!isProforma && !isPaid && (
+            <MarkFactuurPaidButton
+              factuurId={factuur.id}
+              nummer={factuur.nummer ?? `#${factuur.id}`}
+            />
+          )}
           <DocumentDownload
             kind="invoice"
             documentId={factuur.id}

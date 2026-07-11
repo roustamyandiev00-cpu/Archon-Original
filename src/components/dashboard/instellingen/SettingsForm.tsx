@@ -821,12 +821,12 @@ export default function SettingsForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label="Jouw agentnaam"
-                hint="Persoonlijk per gebruiker — standaard Nova. Bedrijfsinstructies en AI-regels blijven gedeeld voor het hele team."
+                hint="Persoonlijk per gebruiker — standaard Lima. Bedrijfsinstructies en AI-regels blijven gedeeld voor het hele team."
               >
                 <input
                   value={form.ai.agentNaam}
                   onChange={(e) => setAi("agentNaam", e.target.value)}
-                  placeholder="Nova"
+                  placeholder="Lima"
                   className={inputClass}
                 />
               </Field>

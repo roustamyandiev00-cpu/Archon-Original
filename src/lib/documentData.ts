@@ -111,8 +111,19 @@ export function buildDocumentValues(
   bedrijf: BedrijfLite | null,
   customer: CustomerLite,
   lines: DocLineLite[],
+  adjustments?: {
+    discountAmount?: number;
+    totalOverride?: number;
+    btwOverride?: number;
+  },
 ): Record<string, string> {
   const totals = lineTotals(lines);
+  const discountAmount = Math.max(0, adjustments?.discountAmount ?? 0);
+  const subtotaal = totals.subtotaal;
+  const btw = adjustments?.btwOverride ?? totals.btw;
+  const totaal =
+    adjustments?.totalOverride ??
+    Math.max(0, totals.totaal - discountAmount);
   const btwTarieven = Array.from(new Set(lines.map((l) => l.btw_percentage)));
   const voorwaarden =
     bedrijf?.algemene_voorwaarden ?? bedrijf?.footer_tekst ?? "";
@@ -120,9 +131,10 @@ export function buildDocumentValues(
   const base: Record<string, string> = {
     ...bedrijfValues(bedrijf),
     ...klantValues(customer, doc.klant),
-    subtotaal: formatEuro(totals.subtotaal),
-    btw_bedrag: formatEuro(totals.btw),
-    totaal: formatEuro(totals.totaal),
+    subtotaal: formatEuro(subtotaal),
+    btw_bedrag: formatEuro(btw),
+    totaal: formatEuro(totaal),
+    korting: discountAmount > 0 ? formatEuro(discountAmount) : "",
     btw_tarief: btwTarieven.length === 1 ? `${btwTarieven[0]}%` : "",
   };
 

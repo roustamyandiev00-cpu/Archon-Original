@@ -12,15 +12,9 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
+import MarkFactuurPaidButton from "@/components/dashboard/facturen/MarkFactuurPaidButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
@@ -66,9 +60,11 @@ const statusBadgeVariant = (
 export default function FacturenDataTable({
   facturen,
   isDemo = false,
+  showFilters = true,
 }: {
   facturen: FactuurListItem[];
   isDemo?: boolean;
+  showFilters?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -112,24 +108,8 @@ export default function FacturenDataTable({
   }
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <CardTitle>Alle facturen</CardTitle>
-          <CardDescription>
-            Zoek, filter en open facturen en proforma&apos;s.
-          </CardDescription>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-zinc-500">
-          <SlidersHorizontal size={14} />
-          <span>
-            {filtered.length.toLocaleString("nl-BE")} van{" "}
-            {facturen.length.toLocaleString("nl-BE")} documenten
-          </span>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      {showFilters && (
         <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_12rem_12rem_auto]">
           <label className="relative block">
             <span className="sr-only">Zoek facturen</span>
@@ -190,6 +170,15 @@ export default function FacturenDataTable({
             Reset
           </Button>
         </div>
+      )}
+
+      <div className="flex items-center gap-2 text-xs text-zinc-500">
+        <SlidersHorizontal size={14} />
+        <span>
+          {filtered.length.toLocaleString("nl-BE")} van{" "}
+          {facturen.length.toLocaleString("nl-BE")} documenten
+        </span>
+      </div>
 
         <div className="overflow-hidden rounded-2xl border border-white/10">
           <Table className="min-w-[920px]">
@@ -203,7 +192,7 @@ export default function FacturenDataTable({
                 <TableHead className="text-right">Bedrag</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Versturen</TableHead>
-                <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-white md:shadow-[-16px_0_24px_rgba(250,250,250,0.92)] dark:md:bg-zinc-900 dark:md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
                   <span className="sr-only">Acties</span>
                 </TableHead>
               </TableRow>
@@ -233,7 +222,9 @@ export default function FacturenDataTable({
                       <TableCell>
                         <Badge variant="default">{typeMeta.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-zinc-200">{f.klant}</TableCell>
+                      <TableCell className="text-zinc-200">
+                        {f.klant}
+                      </TableCell>
                       <TableCell className="font-mono text-xs text-zinc-500">
                         {formatDate(f.datum)}
                       </TableCell>
@@ -266,16 +257,16 @@ export default function FacturenDataTable({
                         />
                       </TableCell>
                       <TableCell className="text-right md:sticky md:right-0 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
-                        {!isDemo && (
-                          <FactuurRowMenu
-                            id={f.id}
-                            nummer={f.nummer ?? `#${f.id}`}
-                            open={openMenuId === f.id}
-                            onOpenChange={(open) =>
-                              setOpenMenuId(open ? f.id : null)
-                            }
-                          />
-                        )}
+                        <FactuurRowMenu
+                          id={f.id}
+                          nummer={f.nummer ?? `#${f.id}`}
+                          isPaid={Boolean(f.paid_at) || f.status === "betaald"}
+                          isDemo={isDemo}
+                          open={openMenuId === f.id}
+                          onOpenChange={(open) =>
+                            setOpenMenuId(open ? f.id : null)
+                          }
+                        />
                       </TableCell>
                     </TableRow>
                   );
@@ -288,10 +279,14 @@ export default function FacturenDataTable({
                         <Receipt size={22} />
                       </span>
                       <p className="mt-3 text-sm font-medium text-zinc-200">
-                        Geen facturen gevonden
+                        {facturen.length === 0
+                          ? "Nog geen facturen"
+                          : "Geen resultaten"}
                       </p>
                       <p className="mt-1 text-xs text-zinc-500">
-                        Pas je zoekopdracht of filters aan.
+                        {facturen.length === 0
+                          ? "Maak je eerste factuur via Nieuwe factuur."
+                          : "Pas je zoekopdracht of filters aan."}
                       </p>
                     </div>
                   </TableCell>
@@ -309,8 +304,8 @@ export default function FacturenDataTable({
             Toont{" "}
             <span className="font-mono text-zinc-300">
               {filtered.length === 0 ? 0 : pageStart + 1}
-            </span>
-            {" – "}
+            </span>{" "}
+            tot{" "}
             <span className="font-mono text-zinc-300">{pageEnd}</span> van{" "}
             <span className="font-mono text-zinc-300">
               {filtered.length.toLocaleString("nl-BE")}
@@ -343,19 +338,22 @@ export default function FacturenDataTable({
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
 function FactuurRowMenu({
   id,
   nummer,
+  isPaid,
+  isDemo,
   open,
   onOpenChange,
 }: {
   id: number;
   nummer: string;
+  isPaid: boolean;
+  isDemo: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -376,20 +374,36 @@ function FactuurRowMenu({
 
       {open && (
         <div className="absolute right-0 top-9 z-30 w-44 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 py-1 shadow-2xl">
+          {isDemo ? (
+            <span className="block px-3 py-2 text-sm text-zinc-500">
+              Demo-factuur
+            </span>
+          ) : (
+            <>
           <Link
             href={`/dashboard/facturen/${id}`}
-            className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-zinc-100"
+            className="block px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
             onClick={() => onOpenChange(false)}
           >
             Open factuur
           </Link>
           <Link
             href={`/dashboard/facturen/${id}/pdf`}
-            className="block px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-zinc-100"
+            className="block px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
             onClick={() => onOpenChange(false)}
           >
             Download PDF
           </Link>
+          {!isPaid && (
+            <MarkFactuurPaidButton
+              factuurId={id}
+              nummer={nummer}
+              variant="menu"
+              onDone={() => onOpenChange(false)}
+            />
+          )}
+            </>
+          )}
         </div>
       )}
     </div>

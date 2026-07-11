@@ -46,6 +46,10 @@ export default function FactuurDocumentPreview({
   lines,
   nummer,
   bare = false,
+  discountAmount = 0,
+  previewSubtotaal,
+  previewBtw,
+  previewTotaal,
 }: {
   templateId?: string;
   defaultTemplate: string;
@@ -62,6 +66,10 @@ export default function FactuurDocumentPreview({
   nummer?: string;
   /** Volledige papiergrootte; schaal wordt door FactuurInvoicePreview geregeld. */
   bare?: boolean;
+  discountAmount?: number;
+  previewSubtotaal?: number;
+  previewBtw?: number;
+  previewTotaal?: number;
 }) {
   const renderId = resolveDocumentTemplateId(templateId, defaultTemplate);
   const templateLabel = archonTemplateMeta(renderId)?.label ?? "Sjabloon";
@@ -106,6 +114,11 @@ export default function FactuurDocumentPreview({
       bedrijf,
       customer,
       docLines,
+      {
+        discountAmount,
+        totalOverride: previewTotaal,
+        btwOverride: previewBtw,
+      },
     );
     const rows = buildDocumentRows(docLines);
 
@@ -123,6 +136,9 @@ export default function FactuurDocumentPreview({
     omschrijving,
     renderId,
     vervaldatum,
+    discountAmount,
+    previewBtw,
+    previewTotaal,
   ]);
 
   const paper = (

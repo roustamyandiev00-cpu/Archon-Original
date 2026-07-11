@@ -6,7 +6,14 @@ export type UserAiPreferences = {
   agentNaam: string;
 };
 
-const DEFAULT_AGENT_NAME = "Nova";
+export const DEFAULT_AGENT_NAME = "Lima";
+
+/** Migreer oude standaardnaam naar Lima. */
+export function normalizeAgentName(name: string | null | undefined): string {
+  const trimmed = String(name ?? "").trim();
+  if (!trimmed || trimmed === "Nova") return DEFAULT_AGENT_NAME;
+  return trimmed;
+}
 
 export function parseUserAiPreferences(
   raw: Json | string | null | undefined,
@@ -16,8 +23,8 @@ export function parseUserAiPreferences(
     const parsed =
       typeof raw === "string" ? JSON.parse(raw) : (raw as UserAiPreferences);
     if (parsed && typeof parsed === "object" && "agentNaam" in parsed) {
-      const name = String(parsed.agentNaam ?? "").trim();
-      return { agentNaam: name || DEFAULT_AGENT_NAME };
+      const name = normalizeAgentName(parsed.agentNaam);
+      return { agentNaam: name };
     }
   } catch {
     // ignore

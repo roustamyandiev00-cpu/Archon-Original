@@ -226,7 +226,7 @@ export default async function EFacturenPage() {
                 Maak eerst een factuur om via Peppol te versturen.
               </p>
               <Link
-                href="/dashboard/facturen/nieuw"
+                href="/dashboard/facturen"
                 className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.1] px-4 py-2 text-sm text-zinc-200 hover:bg-white/[0.04]"
               >
                 <Receipt size={14} />

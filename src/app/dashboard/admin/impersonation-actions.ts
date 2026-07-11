@@ -8,7 +8,7 @@ export async function actAsCompanyAction(companyId: number): Promise<void> {
   if ("error" in result) {
     throw new Error(result.error);
   }
-  redirect("/dashboard/overzicht");
+  redirect("/dashboard/command-center");
 }
 
 export async function stopImpersonationAction(): Promise<void> {

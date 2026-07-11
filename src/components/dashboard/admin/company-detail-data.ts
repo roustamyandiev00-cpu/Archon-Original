@@ -255,7 +255,7 @@ function buildProjects(company: ManagedCompany, count: number): CompanyProject[]
   return Array.from({ length: count }, (_, index) => ({
     id: `${company.id}-project-${index + 1}`,
     project: `${projectTemplates[index % projectTemplates.length]} ${index + 1}`,
-    customer: ["Familie Peeters", "VME Parkzicht", "Studio Nova", "Gemeente Lier", "Kantoor Veld"][index % 5],
+    customer: ["Familie Peeters", "VME Parkzicht", "Studio Lima", "Gemeente Lier", "Kantoor Veld"][index % 5],
     status: index === 0 ? "active" : index === 1 ? "planning" : index === 2 ? "paused" : index === 3 ? "completed" : "active",
     value: Math.round(company.monthlyRevenue * (8 + index * 2.4)),
     startDate: `2026-0${(index % 6) + 1}-0${(index % 8) + 1}T09:00:00Z`,
@@ -280,7 +280,7 @@ function buildInvoices(company: ManagedCompany): CompanyInvoice[] {
   return Array.from({ length: 5 }, (_, index) => ({
     id: `${company.id}-invoice-${index + 1}`,
     invoiceNumber: `INV-${company.logoInitials}-${2026}${String(index + 41).padStart(3, "0")}`,
-    customer: ["VME Parkzicht", "Bouwconsult Lier", "Familie Peeters", "Interieur Nova", "Atlas Engineering"][index],
+    customer: ["VME Parkzicht", "Bouwconsult Lier", "Familie Peeters", "Interieur Lima", "Atlas Engineering"][index],
     amount: Math.round(company.monthlyRevenue * (1.6 + index * 0.7)),
     status: index === 0 ? "paid" : index === 1 ? "open" : index === 2 ? "overdue" : index === 3 ? "draft" : "paid",
     dueDate: `2026-07-${String(16 + index * 3).padStart(2, "0")}T12:00:00Z`,
@@ -378,9 +378,9 @@ function buildActivity(company: ManagedCompany): ActivityEvent[] {
       id: `${company.id}-activity-ai`,
       type: "ai",
       title: "AI follow-up drafted",
-      detail: "Nova prepared a follow-up email for two open quotes",
+      detail: "Lima prepared a follow-up email for two open quotes",
       time: "2026-07-09T10:44:00Z",
-      actor: "Nova",
+      actor: "Lima",
     },
     {
       id: `${company.id}-activity-user`,

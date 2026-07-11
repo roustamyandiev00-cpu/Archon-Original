@@ -1,22 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Bot,
+  BrainCircuit,
+  ChevronDown,
   MessageCircle,
   Plus,
   Users,
 } from "lucide-react";
 import AgentChatOpenButton from "@/components/dashboard/agent-chat/AgentChatOpenButton";
+import AgentsManager from "@/components/dashboard/nova-agents/AgentsManager";
+import AgentKnowledgeForm from "@/components/dashboard/nova-agents/AgentKnowledgeForm";
 import type { DashboardHomeProps } from "@/components/dashboard/DashboardHome";
+import type { CustomAgent } from "@/components/dashboard/agents/config";
 import {
   CREW_AGENTS,
   crewAgentToChat,
   type CrewAgentDef,
 } from "@/components/dashboard/views/crew-display";
 import { DashboardPanel } from "@/components/dashboard/views/shared";
+
+type CrewPanel = "agents" | "knowledge" | null;
 
 function CrewAgentCard({ agent }: { agent: CrewAgentDef }) {
   return (
@@ -78,10 +85,24 @@ function CrewAgentCard({ agent }: { agent: CrewAgentDef }) {
 
 export default function AiCrewView({
   mission,
-}: Pick<DashboardHomeProps, "mission">) {
+  companyAgents,
+  initialPanel = null,
+}: Pick<DashboardHomeProps, "mission"> & {
+  companyAgents: CustomAgent[];
+  initialPanel?: CrewPanel;
+}) {
   const [crewMode, setCrewMode] = useState(false);
+  const [openPanel, setOpenPanel] = useState<CrewPanel>(initialPanel);
   const novaAgent =
     mission.agents.find((a) => a.id === "nova") ?? mission.agents[0];
+
+  useEffect(() => {
+    if (initialPanel) setOpenPanel(initialPanel);
+  }, [initialPanel]);
+
+  function togglePanel(panel: Exclude<CrewPanel, null>) {
+    setOpenPanel((current) => (current === panel ? null : panel));
+  }
 
   return (
     <div className="space-y-5">
@@ -89,15 +110,16 @@ export default function AiCrewView({
         <div className="max-w-2xl">
           <h2 className="text-xl font-semibold text-zinc-100">AI Crew</h2>
           <p className="mt-1 text-sm leading-relaxed text-zinc-500">
-            Jouw team van gespecialiseerde AI-assistenten – elk expert in zijn
-            domein. Kies een agent en vraag bijvoorbeeld om een brief,
-            document, offerte, factuur of planning.
+            Maak agents aan, voeg kennisdocumenten toe en start direct een
+            gesprek. Alles wat je hier instelt onthouden je agents in het
+            geheugen.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            {CREW_AGENTS.length} agents online
+            {CREW_AGENTS.length + companyAgents.filter((a) => !a.builtin).length}{" "}
+            agents online
           </span>
           <button
             type="button"
@@ -111,20 +133,68 @@ export default function AiCrewView({
             <Users size={12} className="mr-1.5 inline" />
             Crew Mode
           </button>
-          <Link
-            href="/dashboard/nova-agents"
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-white/15 hover:bg-white/[0.03]"
+          <button
+            type="button"
+            onClick={() => togglePanel("agents")}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              openPanel === "agents"
+                ? "border-orange-500/40 bg-orange-500/15 text-orange-300"
+                : "border-white/[0.08] text-zinc-300 hover:border-white/15 hover:bg-white/[0.03]"
+            }`}
           >
             <Plus size={12} />
             Agent toevoegen
-          </Link>
+            <ChevronDown
+              size={12}
+              className={`transition-transform ${openPanel === "agents" ? "rotate-180" : ""}`}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => togglePanel("knowledge")}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              openPanel === "knowledge"
+                ? "border-violet-500/40 bg-violet-500/15 text-violet-300"
+                : "border-white/[0.08] text-zinc-300 hover:border-white/15 hover:bg-white/[0.03]"
+            }`}
+          >
+            <BrainCircuit size={12} />
+            Kennis toevoegen
+            <ChevronDown
+              size={12}
+              className={`transition-transform ${openPanel === "knowledge" ? "rotate-180" : ""}`}
+            />
+          </button>
         </div>
       </div>
+
+      {openPanel === "agents" && (
+        <DashboardPanel title="Agents beheren" icon={Bot}>
+          <AgentsManager
+            initialAgents={companyAgents}
+            embedded
+            onClose={() => setOpenPanel(null)}
+          />
+        </DashboardPanel>
+      )}
+
+      {openPanel === "knowledge" && (
+        <DashboardPanel title="Kennis & geheugen" icon={BrainCircuit}>
+          <AgentKnowledgeForm companyAgents={companyAgents} />
+          <p className="mt-4 text-xs text-zinc-500">
+            Bekijk alles in{" "}
+            <Link href="/dashboard/geheugen" className="text-violet-400 hover:underline">
+              geheugen
+            </Link>
+            .
+          </p>
+        </DashboardPanel>
+      )}
 
       {crewMode && novaAgent ? (
         <DashboardPanel title="Crew Mode — gezamenlijke briefing" icon={Bot}>
           <p className="text-sm text-zinc-400">
-            {CREW_AGENTS.length} agents staan klaar. Stuur één vraag en Nova
+            {CREW_AGENTS.length} agents staan klaar. Stuur één vraag en Lima
             coördineert de crew.
           </p>
           <AgentChatOpenButton

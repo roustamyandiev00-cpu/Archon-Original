@@ -1,4 +1,5 @@
-import DashboardHub from "@/components/dashboard/DashboardHub";
+import { Suspense } from "react";
+import CommandCenterHub from "@/components/dashboard/CommandCenterHub";
 import CompanySetupCard from "@/components/werkposts/CompanySetupCard";
 import { getDashboardContext } from "@/components/dashboard/context";
 import {
@@ -17,7 +18,7 @@ export default async function CommandCenterPage() {
   const missionOptions = { useDemoWhenEmpty: isPreviewMode };
 
   const [agentName, core, agentConfig, charts] = await Promise.all([
-    user ? loadUserAgentName(supabase, user.id) : Promise.resolve("Nova"),
+    user ? loadUserAgentName(supabase, user.id) : Promise.resolve("Lima"),
     fetchMissionCore(supabase, companyId, missionOptions),
     loadCompanyAgents(supabase, companyId),
     fetchChartsData(supabase, companyId, missionOptions),
@@ -28,13 +29,15 @@ export default async function CommandCenterPage() {
   return (
     <div className="space-y-6">
       {!companyId && <CompanySetupCard />}
-      <DashboardHub
-        companyId={companyId}
-        agentName={agentName}
-        mission={mission}
-        charts={charts}
-        defaultView="command"
-      />
+      <Suspense fallback={null}>
+        <CommandCenterHub
+          companyId={companyId}
+          agentName={agentName}
+          mission={mission}
+          charts={charts}
+          companyAgents={agentConfig}
+        />
+      </Suspense>
     </div>
   );
 }

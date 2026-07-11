@@ -19,14 +19,14 @@ import Faq from "@/components/Faq";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "AI-metgezel — Nova maakt je offertes | ArchonPro",
+  title: "AI-metgezel — Lima maakt je offertes | ArchonPro",
   description:
-    "Praat, stuur je documenten, geef je instructies… Nova zet je uren achter de computer om in minuten op je gsm. Offertes & facturen met AI.",
+    "Praat, stuur je documenten, geef je instructies… Lima zet je uren achter de computer om in minuten op je gsm. Offertes & facturen met AI.",
 };
 
 const stats = [
   { value: "10 u", label: "bespaard per week met spraakherkenning" },
-  { value: "+15%", label: "per offerte dankzij de suggesties van Nova" },
+  { value: "+15%", label: "per offerte dankzij de suggesties van Lima" },
   { value: "+30%", label: "getekende offertes — vollediger en sneller verstuurd" },
   { value: "+10K", label: "vakmensen maken hun offertes al met AI" },
 ];
@@ -62,10 +62,10 @@ function Hero() {
       }
       title="Het beste van AI voor het opstellen van"
       accent="offertes & facturen"
-      subtitle="Praat, stuur je documenten, geef je instructies… Nova zet je uren achter de computer om in minuten op je gsm."
+      subtitle="Praat, stuur je documenten, geef je instructies… Lima zet je uren achter de computer om in minuten op je gsm."
       primary={{ label: "Gratis proberen", href: "/register" }}
       secondary={{ label: "Hoe werkt het?", href: "#hoe" }}
-      note="+10.000 vakmensen maken hun offertes met Nova"
+      note="+10.000 vakmensen maken hun offertes met Lima"
       visual={
         <div className="grid grid-cols-2 gap-4 rounded-3xl border border-white/10 bg-zinc-900/50 p-5 backdrop-blur-xl sm:p-6">
           {stats.map((s) => (
@@ -135,8 +135,8 @@ function ProcessSection() {
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           kicker="AI-functies"
-          title="Nova automatiseert de verwerking van informatie"
-          desc="Spraak, tekst, foto, document — het maakt niet uit hoe je je werken beschrijft. Nova begrijpt, analyseert en zet je instructies om in een gestructureerde offerte."
+          title="Lima automatiseert de verwerking van informatie"
+          desc="Spraak, tekst, foto, document — het maakt niet uit hoe je je werken beschrijft. Lima begrijpt, analyseert en zet je instructies om in een gestructureerde offerte."
         />
 
         <div className="mt-14 grid gap-5 lg:grid-cols-2">
@@ -166,10 +166,10 @@ function ProcessSection() {
               <Brain size={20} />
             </IconBadge>
             <h3 className="mt-5 text-lg font-semibold text-zinc-50">
-              Nova begrijpt en vat samen
+              Lima begrijpt en vat samen
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              Nova transcribeert niet zomaar — ze analyseert, begrijpt het
+              Lima transcribeert niet zomaar — ze analyseert, begrijpt het
               bouwvocabulaire, koppelt de info aan je prijzenbibliotheek en
               structureert in seconden een bruikbare offerte.
             </p>
@@ -180,7 +180,7 @@ function ProcessSection() {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
-                  <Check size={13} /> Nova begreep: 4 gestructureerde lijnen
+                  <Check size={13} /> Lima begreep: 4 gestructureerde lijnen
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-400">
                   <Clock size={13} /> Offerte klaar in 22 seconden
@@ -200,8 +200,8 @@ function RealitySection() {
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           kicker="Altijd bij de hand"
-          title="Nova past zich aan jouw werkelijkheid en vak aan"
-          desc="Onderweg, op kantoor of in de wagen — Nova is waar jij bent. 24/7 bereikbaar en ze verstaat jouw taal."
+          title="Lima past zich aan jouw werkelijkheid en vak aan"
+          desc="Onderweg, op kantoor of in de wagen — Lima is waar jij bent. 24/7 bereikbaar en ze verstaat jouw taal."
         />
 
         <div className="mt-14 grid gap-5 lg:grid-cols-2">
@@ -214,7 +214,7 @@ function RealitySection() {
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               Mobiele app voor iOS &amp; Android, webinterface op je computer, of
-              rechtstreeks via WhatsApp — Nova is bereikbaar waar je ook bent,
+              rechtstreeks via WhatsApp — Lima is bereikbaar waar je ook bent,
               zelfs op de werf tussen twee interventies door.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -239,11 +239,11 @@ function RealitySection() {
               <Globe size={20} />
             </IconBadge>
             <h3 className="mt-5 text-lg font-semibold text-zinc-50">
-              Spreek je eigen taal, Nova schrijft in het Nederlands
+              Spreek je eigen taal, Lima schrijft in het Nederlands
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               Op de werf spreekt niet iedereen Nederlands. Beschrijf je werken in
-              je eigen taal — Nova begrijpt en genereert een professionele
+              je eigen taal — Lima begrijpt en genereert een professionele
               offerte in het Nederlands, klaar om naar de klant te sturen.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -273,8 +273,8 @@ function AssistSection() {
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           kicker="Actieve partner"
-          title="Nova helpt je actief bij je calculatie"
-          desc="Nova voert niet alleen uit — ze stelt voor, vult aan en verrijkt. Een echte calculatiepartner, geen invoertool."
+          title="Lima helpt je actief bij je calculatie"
+          desc="Lima voert niet alleen uit — ze stelt voor, vult aan en verrijkt. Een echte calculatiepartner, geen invoertool."
         />
 
         <div className="mt-14 grid items-center gap-10 lg:grid-cols-2">
@@ -286,12 +286,12 @@ function AssistSection() {
               Suggesties voor prestaties
             </h3>
             <p className="mt-3 text-zinc-400">
-              Nova analyseert de context van je werf en stelt automatisch de
+              Lima analyseert de context van je werf en stelt automatisch de
               aanvullende prestaties voor die je vergeten zou kunnen zijn.
               Vollediger offertes, minder vergeten, betere rentabiliteit.
             </p>
             <p className="mt-4 text-sm text-zinc-500">
-              Voorbeeld: je dicteert &ldquo;tegels plaatsen badkamer&rdquo; — Nova
+              Voorbeeld: je dicteert &ldquo;tegels plaatsen badkamer&rdquo; — Lima
               stelt de uitbraak van de oude tegels, het egaliseren en de
               epoxyvoegen voor.
             </p>
@@ -300,7 +300,7 @@ function AssistSection() {
           <Card>
             <div className="flex items-center gap-2 text-zinc-400">
               <Sparkles size={16} className="text-sky-400" />
-              <span className="text-sm">Suggesties van Nova</span>
+              <span className="text-sm">Suggesties van Lima</span>
             </div>
             <div className="mt-5 space-y-2.5">
               {suggestions.map((s) => (
@@ -334,8 +334,8 @@ function QuoteSection() {
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           kicker="Volledige cyclus"
-          title="Nova hertekent het opstellen van offertes"
-          desc="Van spraaknotitie tot getekende offerte, en dan tot factuur — Nova regisseert de hele commerciële cyclus van je werven, zonder herinvoer, zonder tijdverlies."
+          title="Lima hertekent het opstellen van offertes"
+          desc="Van spraaknotitie tot getekende offerte, en dan tot factuur — Lima regisseert de hele commerciële cyclus van je werven, zonder herinvoer, zonder tijdverlies."
         />
 
         <div className="mt-14 grid gap-5 lg:grid-cols-2">
@@ -347,7 +347,7 @@ function QuoteSection() {
               Gestructureerde offertes in 2 minuten
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              Nova genereert volledige offertes met alle werklijnen, je tarieven,
+              Lima genereert volledige offertes met alle werklijnen, je tarieven,
               de btw en de wettelijke vermeldingen. Logo, kleuren,
               betalingsvoorwaarden — alles personaliseerbaar in jouw huisstijl.
             </p>
@@ -366,7 +366,7 @@ function QuoteSection() {
               Facturen automatisch gegenereerd
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              Zet een aanvaarde offerte met één klik om in een factuur. Nova neemt
+              Zet een aanvaarde offerte met één klik om in een factuur. Lima neemt
               alle info over, beheert voorschotten en saldofacturen. Conform
               e-facturatie via Peppol.
             </p>
@@ -457,7 +457,7 @@ function TradesSection() {
         <SectionHeading
           kicker="Voor alle vakmensen in de bouw"
           title="Jouw vak, jouw AI-offerte"
-          desc="Nova kent de eigenheden van elk vak. Wat je activiteit ook is, ze kent je prestaties en je manier van calculeren."
+          desc="Lima kent de eigenheden van elk vak. Wat je activiteit ook is, ze kent je prestaties en je manier van calculeren."
         />
 
         <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -490,7 +490,7 @@ function FinalCta() {
           <div className="aurora-glow opacity-80" />
           <div className="relative z-10">
             <h2 className="text-balance text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Maak je eerste offerte met Nova in 2 minuten
+              Maak je eerste offerte met Lima in 2 minuten
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
               14 dagen gratis proberen. Zonder creditcard. Zonder verplichting.

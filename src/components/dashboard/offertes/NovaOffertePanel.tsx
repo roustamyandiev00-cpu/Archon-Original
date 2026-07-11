@@ -3,8 +3,9 @@
 import Image from "next/image";
 import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Loader2, Sparkles, Mic, MicOff, ImageIcon, Trash2, Lightbulb, Calculator, AlertTriangle, ChevronRight, ChevronLeft } from "lucide-react";
-import { requestNovaOfferte } from "@/app/dashboard/offertes/nova-actions";
+import { Bot, Loader2, Save, Sparkles, Mic, MicOff, ImageIcon, Trash2, Lightbulb, Calculator, AlertTriangle, ChevronRight, ChevronLeft } from "lucide-react";
+import { createOfferte } from "@/app/dashboard/offertes/actions";
+import { approveAndExecuteAction, requestNovaOfferte } from "@/app/dashboard/offertes/nova-actions";
 import type { OfferteLijnInput } from "@/lib/offertes";
 import { formatEuro } from "@/lib/offertes";
 
@@ -46,7 +47,7 @@ type SpeechRecognitionWindow = Window &
   };
 
 export default function NovaOffertePanel({
-  agentName = "Nova",
+  agentName = "Lima",
   customers,
   onApplyDraft,
 }: {
@@ -80,7 +81,9 @@ export default function NovaOffertePanel({
   
   const [summary, setSummary] = useState<string | null>(null);
   const [preview, setPreview] = useState<OfferteLijnInput[] | null>(null);
+  const [pendingActionId, setPendingActionId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [pending, startTransition] = useTransition();
 
   // Spraakinvoer states
@@ -228,10 +231,21 @@ export default function NovaOffertePanel({
     return c?.company_name || c?.name || "";
   }
 
+  function buildNotes() {
+    return `Project: ${projectName}\nAfmetingen: ${dimensions || "Niet gespecificeerd"}\nKwaliteit: ${quality}\nBeschrijving: ${description}`;
+  }
+
+  function defaultGeldigTot() {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().slice(0, 10);
+  }
+
   function handleGenerate() {
     setError(null);
     setSummary(null);
     setPreview(null);
+    setPendingActionId(null);
     setGeneratedTips([]);
     setCalculations([]);
 
@@ -288,6 +302,7 @@ Beschrijving werkzaamheden: ${description}
           if (result.preview) {
             setPreview(result.preview.lines);
           }
+          setPendingActionId(result.actionId ?? null);
           setStep(4); // Move to Step 4 for review
           router.refresh();
         }
@@ -306,9 +321,60 @@ Beschrijving werkzaamheden: ${description}
       onApplyDraft?.({
         customerId: customerId ? Number(customerId) : null,
         klant: selectedKlant() || "Klant",
-        notes: `Project: ${projectName}\nAfmetingen: ${dimensions}\nKwaliteit: ${quality}\nBeschrijving: ${description}`,
+        notes: buildNotes(),
         lines: preview,
       });
+    }
+  }
+
+  async function handleSaveOfferte() {
+    if (!preview?.length) return;
+
+    setError(null);
+    setSaving(true);
+
+    try {
+      if (pendingActionId) {
+        const result = await approveAndExecuteAction(pendingActionId);
+        if ("error" in result && result.error) {
+          setError(result.error);
+          return;
+        }
+        const offerteId =
+          "offerteId" in result && typeof result.offerteId === "number"
+            ? result.offerteId
+            : null;
+        const route =
+          "route" in result && typeof result.route === "string"
+            ? result.route
+            : offerteId
+              ? `/dashboard/offertes/${offerteId}`
+              : "/dashboard/offertes";
+        router.push(route);
+        router.refresh();
+        return;
+      }
+
+      const result = await createOfferte({
+        customerId: customerId ? Number(customerId) : null,
+        klant: selectedKlant() || "Klant",
+        datum: new Date().toISOString().slice(0, 10),
+        geldigTot: defaultGeldigTot(),
+        notes: buildNotes(),
+        lines: preview,
+      });
+
+      if ("error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+
+      if ("id" in result && result.id) {
+        router.push(`/dashboard/offertes/${result.id}`);
+        router.refresh();
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -811,22 +877,42 @@ Beschrijving werkzaamheden: ${description}
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="rounded-full border border-white/15 px-5 py-2.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors"
+                disabled={saving}
+                className="rounded-full border border-white/15 px-5 py-2.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-50"
               >
                 Terug naar stap 3
               </button>
               <button
                 type="button"
+                disabled={saving || !preview?.length}
                 onClick={() => {
                   handleApplyDraft();
                   setTimeout(() => {
                     document.getElementById("offerte-form-root")?.scrollIntoView({ behavior: "smooth" });
                   }, 100);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-6 py-2.5 text-xs font-semibold text-zinc-950 hover:bg-sky-400 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-5 py-2.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-50"
               >
                 <ChevronRight size={14} />
-                Offerte handmatig aanpassen
+                Handmatig aanpassen
+              </button>
+              <button
+                type="button"
+                disabled={saving || !preview?.length}
+                onClick={() => void handleSaveOfferte()}
+                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-6 py-2.5 text-xs font-semibold text-zinc-950 hover:bg-emerald-400 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Opslaan…
+                  </>
+                ) : (
+                  <>
+                    <Save size={14} />
+                    Offerte opslaan
+                  </>
+                )}
               </button>
             </>
           )}

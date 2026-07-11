@@ -1,4 +1,4 @@
-/** Vaste Nova-stem — wijzigt niet tussen zinnen. */
+/** Vaste Lima-stem — wijzigt niet tussen zinnen. */
 export const NOVA_VOICE_ID =
   process.env.ELEVENLABS_VOICE_ID ?? "JBFqnCBsd6RMkjVDRZzb";
 

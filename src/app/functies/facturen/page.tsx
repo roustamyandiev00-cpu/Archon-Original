@@ -20,7 +20,7 @@ import Footer from "@/components/Footer";
 export const metadata: Metadata = {
   title: "Facturen — Van offerte naar factuur in 1 klik | ArchonPro",
   description:
-    "Offerte aanvaard? Nova maakt er in seconden een conforme factuur van. Voorschotten, saldo's, opvolging — alles geautomatiseerd. Conform e-facturatie via Peppol.",
+    "Offerte aanvaard? Lima maakt er in seconden een conforme factuur van. Voorschotten, saldo's, opvolging — alles geautomatiseerd. Conform e-facturatie via Peppol.",
 };
 
 const faqItems = [
@@ -30,11 +30,11 @@ const faqItems = [
   },
   {
     q: "Hoe zet ik een offerte om in een factuur?",
-    a: "Zodra je klant de offerte aanvaardt, klik je op 'Factuur maken'. Nova neemt alle lijnen, bedragen en klantgegevens over en kent automatisch het factuurnummer toe. Je hoeft niets opnieuw in te voeren.",
+    a: "Zodra je klant de offerte aanvaardt, klik je op 'Factuur maken'. Lima neemt alle lijnen, bedragen en klantgegevens over en kent automatisch het factuurnummer toe. Je hoeft niets opnieuw in te voeren.",
   },
   {
     q: "Kan ik voorschotfacturen maken?",
-    a: "Ja. Je stelt je voorschot in (percentage of vast bedrag) en Nova genereert de bijhorende voorschotfactuur. De saldofactuur wordt daarna automatisch berekend. Je kunt meerdere voorschotten per werf maken.",
+    a: "Ja. Je stelt je voorschot in (percentage of vast bedrag) en Lima genereert de bijhorende voorschotfactuur. De saldofactuur wordt daarna automatisch berekend. Je kunt meerdere voorschotten per werf maken.",
   },
   {
     q: "Hoe volg ik de betaling van mijn facturen op?",
@@ -154,7 +154,7 @@ function Hero() {
       }
       title="Van offerte naar factuur in"
       accent="één klik"
-      subtitle="Offerte aanvaard? Nova maakt er in seconden een conforme factuur van. Voorschotten, saldo's, herinneringen — alles geautomatiseerd."
+      subtitle="Offerte aanvaard? Lima maakt er in seconden een conforme factuur van. Voorschotten, saldo's, herinneringen — alles geautomatiseerd."
       primary={{ label: "Gratis factureren proberen", href: "/register" }}
       secondary={{ label: "Hoe maak je een factuur?", href: "#hoe" }}
       visual={
@@ -509,7 +509,7 @@ function ExportSection() {
                   <span className="text-gradient">ArchonPro koppelt ermee</span>
                 </>
               }
-              desc="ArchonPro is compatibel met de belangrijkste boekhoud- en beheersoftware. Behoud je bestaande tools en voeg de kracht van Nova toe — zonder iets opnieuw in te voeren."
+              desc="ArchonPro is compatibel met de belangrijkste boekhoud- en beheersoftware. Behoud je bestaande tools en voeg de kracht van Lima toe — zonder iets opnieuw in te voeren."
             />
             <ul className="mt-8 space-y-3">
               <Bullet>Professionele PDF-export met je logo</Bullet>

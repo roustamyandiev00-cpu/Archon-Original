@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/peppol-inbox",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/agent-followups",
+      "schedule": "0 7 * * *"
     }
   ],
   "buildCommand": "pnpm run build",

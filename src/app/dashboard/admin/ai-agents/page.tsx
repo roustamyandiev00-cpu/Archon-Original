@@ -83,7 +83,7 @@ export default async function AdminAiAgentsPage() {
             Agent-status per bedrijf
           </CardTitle>
           <CardDescription>
-            Nova, Schatter, Facturatie en Opvolger over alle klanten
+            Lima, Schatter, Facturatie en Opvolger over alle klanten
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0 pb-0">

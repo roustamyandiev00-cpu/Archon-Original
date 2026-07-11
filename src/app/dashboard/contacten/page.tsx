@@ -1,5 +1,5 @@
 import { getCompanyContext } from "@/lib/company";
-import KlantenPanel from "@/components/dashboard/contacten/KlantenPanel";
+import ContactenView from "@/components/dashboard/contacten/ContactenView";
 import type { KlantRecord } from "@/components/dashboard/contacten/KlantForm";
 import { NoCompanyNotice } from "@/components/dashboard/mission";
 
@@ -27,5 +27,5 @@ export default async function ContactenPage() {
 
   const klanten = (data ?? []) as KlantRecord[];
 
-  return <KlantenPanel klanten={klanten} />;
+  return <ContactenView klanten={klanten} />;
 }

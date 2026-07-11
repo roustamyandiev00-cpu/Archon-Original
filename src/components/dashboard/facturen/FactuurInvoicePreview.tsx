@@ -39,6 +39,13 @@ type Props = {
   notities: string;
   lines: OfferteLijnInput[];
   nummer: string;
+  discountAmount?: number;
+  subtotaal?: number;
+  btw?: number;
+  totaal?: number;
+  previewSubtotaal?: number;
+  previewBtw?: number;
+  previewTotaal?: number;
 };
 
 /** Preview-paneel — layout gelijk aan Studio Admin / next-shadcn-admin-dashboard invoice. */
@@ -59,6 +66,7 @@ export default function FactuurInvoicePreview(props: Props) {
             type="button"
             variant="ghost"
             size="sm"
+            className="border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
             onClick={() => window.print()}
           >
             <Printer size={14} />
@@ -70,7 +78,7 @@ export default function FactuurInvoicePreview(props: Props) {
             size="sm"
             disabled
             title="Beschikbaar zodra de factuur is opgeslagen"
-            className="border-zinc-200 bg-zinc-100 text-zinc-950 hover:bg-white dark:border-white/20 dark:bg-zinc-100 dark:text-zinc-950"
+            className="border-zinc-900 bg-zinc-900 text-zinc-50 hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
           >
             <Download size={14} />
             PDF downloaden
@@ -80,7 +88,7 @@ export default function FactuurInvoicePreview(props: Props) {
 
       <div
         ref={previewBodyRef}
-        className="@container/preview invoice-preview-canvas relative min-h-[420px] flex-1 overflow-hidden rounded-b-xl bg-zinc-100/80 p-4 dark:bg-zinc-950/40 sm:min-h-[calc(100svh-15rem)]"
+        className="@container/preview invoice-preview-canvas relative min-h-[420px] flex-1 overflow-hidden rounded-b-xl bg-zinc-100 p-4 dark:bg-zinc-950/60 sm:min-h-[calc(100svh-15rem)]"
       >
         {paperLayout === null ? (
           <div className="absolute inset-0 grid place-items-center text-sm text-zinc-500">
@@ -106,7 +114,14 @@ export default function FactuurInvoicePreview(props: Props) {
             style={{ transform: `scale(${paperLayout?.scale ?? FACTUUR_PAPER_MAX_SCALE})` }}
             className="origin-top-left"
           >
-            <FactuurDocumentPreview {...props} bare />
+            <FactuurDocumentPreview
+              {...props}
+              discountAmount={props.discountAmount}
+              previewSubtotaal={props.previewSubtotaal ?? props.subtotaal}
+              previewBtw={props.previewBtw ?? props.btw}
+              previewTotaal={props.previewTotaal ?? props.totaal}
+              bare
+            />
           </div>
         </div>
       </div>

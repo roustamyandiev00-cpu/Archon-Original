@@ -4,10 +4,19 @@ import type { CreateOfferteInput } from "@/app/dashboard/offertes/actions";
 export type AgentActionType =
   | "create_offerte"
   | "send_offerte"
+  | "send_quote_followup"
   | "create_invoice_from_offerte"
   | "send_payment_reminder"
   | "send_formal_notice"
   | "forward_to_bailiff";
+
+export type SendQuoteFollowupPayload = {
+  offerteId: number;
+  draftMessage: string;
+  recipientEmail?: string | null;
+  channel?: "email" | "whatsapp";
+  _meta?: Record<string, unknown>;
+};
 
 export type IncassoStage =
   | "herinnering"

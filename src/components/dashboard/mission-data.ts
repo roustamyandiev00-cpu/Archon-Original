@@ -26,6 +26,10 @@ type PendingActionRow = {
   agent_name: string | null;
   target_entity_type: string | null;
   target_route: string | null;
+  confidence: number | null;
+  payload_json: unknown;
+  requires_approval: boolean;
+  created_at: string;
 };
 
 type OpenFactuurRow = {
@@ -43,7 +47,7 @@ export const fetchPendingAgentActions = cache(
     const { data } = await supabase
       .from("agent_actions")
       .select(
-        "id, title, reason, action_type, agent_name, target_entity_type, target_route",
+        "id, title, reason, action_type, agent_name, target_entity_type, target_route, confidence, payload_json, requires_approval, created_at",
       )
       .eq("company_id", companyId)
       .eq("status", "pending")
@@ -134,6 +138,45 @@ export type TopbarSummary = {
   notifications: { id: string; title: string; detail: string; href: string }[];
   syncedAt: string;
 };
+
+export type TopbarProfile = {
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+};
+
+export async function loadTopbarProfile(
+  supabase: SupabaseClient,
+  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null,
+): Promise<TopbarProfile | null> {
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name, email, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const meta = user.user_metadata ?? {};
+  const metaAvatar =
+    (typeof meta.avatar_url === "string" && meta.avatar_url) ||
+    (typeof meta.picture === "string" && meta.picture) ||
+    null;
+
+  const email = data?.email?.trim() || user.email?.trim() || "";
+  const fullName = data?.full_name?.trim();
+  const name =
+    fullName ||
+    (typeof meta.full_name === "string" && meta.full_name.trim()) ||
+    email.split("@")[0] ||
+    "Account";
+
+  return {
+    name,
+    email,
+    avatarUrl: data?.avatar_url || metaAvatar,
+  };
+}
 
 function euro(n: number) {
   if (n >= 1000) return `€ ${(n / 1000).toFixed(1)}k`;
@@ -835,7 +878,7 @@ function suggestionForAgent(
   ) {
     return counts.factuurTodo > 0
       ? { label: "Herinneringen versturen", href: "/dashboard/facturen" }
-      : { label: "Nieuwe factuur aanmaken", href: "/dashboard/facturen/nieuw" };
+      : { label: "Nieuwe factuur aanmaken", href: "/dashboard/facturen" };
   }
   if (agent.capabilities.includes("leads")) {
     return counts.leadTodo > 0

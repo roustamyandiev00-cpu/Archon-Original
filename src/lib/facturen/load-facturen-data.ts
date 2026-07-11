@@ -1,6 +1,4 @@
 import { getCompanyContext } from "@/lib/company";
-import { isActivePreviewMode } from "@/components/dashboard/context";
-import { showDemoData } from "@/lib/demo-mode";
 import { DEMO_FACTUREN } from "@/lib/demo";
 import type { FactuurListItem } from "@/components/dashboard/facturen/FacturenDataTable";
 import type { FactuurDocumentContext } from "@/components/dashboard/facturen/FactuurForm";
@@ -33,7 +31,6 @@ export type FacturenDashboardData = {
 };
 
 export async function loadFacturenDashboardData(): Promise<FacturenDashboardData> {
-  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   const now = new Date();
@@ -132,7 +129,7 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
     });
   }
 
-  const isDemo = showDemoData(preview, facturen.length === 0);
+  const isDemo = facturen.length === 0;
   if (isDemo) facturen = DEMO_FACTUREN;
 
   const maandOmzet = facturen

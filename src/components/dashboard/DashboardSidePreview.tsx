@@ -13,7 +13,7 @@ type LogRow = {
 };
 
 const agentColorMap: Record<string, { badge: string; text: string; border: string }> = {
-  Nova: {
+  Lima: {
     badge: "bg-sky-500/10 text-sky-400 border-sky-500/20",
     text: "text-sky-400",
     border: "border-sky-500/20",
@@ -36,12 +36,13 @@ const agentColorMap: Record<string, { badge: string; text: string; border: strin
 };
 
 function colorsFor(name: string) {
-  const direct = agentColorMap[name];
+  const normalized = name === "Nova" ? "Lima" : name;
+  const direct = agentColorMap[normalized];
   if (direct) return direct;
   const key = Object.keys(agentColorMap).find((k) =>
-    name.toLowerCase().includes(k.toLowerCase()),
+    normalized.toLowerCase().includes(k.toLowerCase()),
   );
-  return key ? agentColorMap[key] : agentColorMap.Nova;
+  return key ? agentColorMap[key] : agentColorMap.Lima;
 }
 
 function getRelativeTime(isoString: string): string {
@@ -81,7 +82,7 @@ const mockLogs: LogRow[] = [
   },
   {
     id: 4,
-    agent_name: "Nova",
+    agent_name: "Lima",
     action_type: "opvolging",
     message: "Lead winratio geanalyseerd voor wekelijkse rapportage",
     created_at: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
@@ -105,7 +106,7 @@ export default async function DashboardSidePreview({
 
   if (companyId && !isPreview) {
     const [agentName, agentConfig] = await Promise.all([
-      userId ? loadUserAgentName(supabase, userId) : Promise.resolve("Nova"),
+      userId ? loadUserAgentName(supabase, userId) : Promise.resolve("Lima"),
       loadCompanyAgents(supabase, companyId),
     ]);
 
@@ -125,7 +126,7 @@ export default async function DashboardSidePreview({
     agents.length > 0
       ? agents
       : [
-          { id: "nova", name: "Nova", role: "AI-metgezel", status: "idle" as const, statusLabel: "Stand-by", pending: 0 },
+          { id: "nova", name: "Lima", role: "AI-metgezel", status: "idle" as const, statusLabel: "Stand-by", pending: 0 },
           { id: "schatter", name: "Schatter", role: "Offertes", status: "actief" as const, statusLabel: "Actief", pending: 0 },
           { id: "facturatie", name: "Facturatie", role: "Peppol", status: "idle" as const, statusLabel: "Stand-by", pending: 0 },
           { id: "opvolger", name: "Opvolger", role: "Leads", status: "actief" as const, statusLabel: "Actief", pending: 0 },

@@ -15,9 +15,17 @@ import {
   loadCompanyAgents,
   saveCompanyAgents,
 } from "@/components/dashboard/agents/storage";
-import type { CustomAgent } from "@/components/dashboard/agents/config";
-import { rememberChatInsight } from "@/app/dashboard/geheugen/actions";
+import {
+  DEFAULT_AGENTS,
+  type CustomAgent,
+} from "@/components/dashboard/agents/config";
+import {
+  customAgentToChatAgent,
+  chatAgentFromId,
+} from "@/components/dashboard/agent-chat/agents";
+import { DEFAULT_AGENT_NAME, normalizeAgentName } from "@/lib/agents/userAi";
 import { sendAgentChatMessage } from "@/app/dashboard/agent-chat/actions";
+import { rememberChatInsight } from "@/app/dashboard/geheugen/actions";
 import {
   detectNavigationIntent,
   detectQuickAction,
@@ -40,11 +48,12 @@ export type ChatAgent = {
   name: string;
   role: string;
   gradient: string;
+  instructies?: string;
 };
 
 export const NOVA_AGENT: ChatAgent = {
   id: "nova",
-  name: "Nova",
+  name: DEFAULT_AGENT_NAME,
   role: "AI-metgezel",
   gradient: "from-sky-400 to-indigo-500",
 };
@@ -57,6 +66,8 @@ type AgentChatContextValue = {
   close: () => void;
   toggle: () => void;
   activeAgent: ChatAgent;
+  availableAgents: ChatAgent[];
+  syncCompanyAgents: (agents: CustomAgent[]) => void;
   position: { x: number; y: number };
   setPosition: (position: { x: number; y: number }) => void;
   messages: AgentChatMessage[];
@@ -96,15 +107,21 @@ function starterFor(agent: ChatAgent): AgentChatMessage[] {
     opvolger: ["📞 Nieuwe leads opvolgen", "🤝 Lead status bekijken"],
   };
 
+  const customIntro = agent.instructies?.trim()
+    ? `Ik ben **${agent.name}**, je ${agent.role}. ${agent.instructies.trim()} Geef me een taak of stel een vraag — ik zet acties klaar ter goedkeuring.`
+    : `Ik ben ${agent.name} (${agent.role}). Geef me een taak of stel een vraag — ik zet acties klaar ter goedkeuring.`;
+
   return [
     {
       id: `welcome-${agent.id}`,
       role: "agent",
-      text:
-        intros[agent.id] ??
-        `Ik ben ${agent.name} (${agent.role}). Geef me een taak of stel een vraag — ik zet acties klaar ter goedkeuring.`,
+      text: intros[agent.id] ?? customIntro,
       time: "Nu",
-      options: optionsMap[agent.id] ?? [],
+      options: optionsMap[agent.id] ?? [
+        "Geef me een taak",
+        "Wat kan jij voor me doen?",
+        "Bekijk goedkeuringen",
+      ],
     },
   ];
 }
@@ -226,17 +243,31 @@ function novaAgentWithName(name?: string): ChatAgent {
 export function AgentChatProvider({
   children,
   companyId,
-  userAgentName = "Nova",
+  userAgentName = DEFAULT_AGENT_NAME,
+  initialCompanyAgents,
 }: {
   children: ReactNode;
   companyId: number | null;
   userAgentName?: string;
+  initialCompanyAgents?: CustomAgent[];
 }) {
   const router = useRouter();
   const { navigateTo } = useAgentNavigation();
   const primaryAgent = useMemo(
     () => novaAgentWithName(userAgentName),
     [userAgentName],
+  );
+  const [companyAgents, setCompanyAgents] = useState<CustomAgent[]>(
+    () => initialCompanyAgents ?? DEFAULT_AGENTS.map((a) => ({ ...a })),
+  );
+  const availableAgents = useMemo(
+    () =>
+      companyAgents
+        .filter((a) => a.enabled)
+        .map((a) =>
+          a.id === "nova" ? { ...customAgentToChatAgent(a), name: primaryAgent.name } : customAgentToChatAgent(a),
+        ),
+    [companyAgents, primaryAgent.name],
   );
   const [view, setView] = useState<AgentChatView>("minimized");
   const [position, setPositionState] = useState({ x: 16, y: 72 });
@@ -258,13 +289,26 @@ export function AgentChatProvider({
   const messages = historyByAgent[activeAgent.id] ?? starterFor(activeAgent);
 
   useEffect(() => {
-    setActiveAgent((prev) => (prev.id === "nova" ? primaryAgent : prev));
+    setActiveAgent((prev) => {
+      if (prev.id === "nova") return primaryAgent;
+      const refreshed = chatAgentFromId(companyAgents, prev.id, userAgentName);
+      return refreshed ?? prev;
+    });
     setHistoryByAgent((prev) => {
       const welcome = prev.nova?.[0];
       if (!welcome || welcome.id !== "welcome-nova") return prev;
       return { ...prev, nova: starterFor(primaryAgent) };
     });
-  }, [primaryAgent]);
+  }, [primaryAgent, companyAgents, userAgentName]);
+
+  useEffect(() => {
+    if (!initialCompanyAgents?.length) return;
+    setCompanyAgents(initialCompanyAgents);
+  }, [initialCompanyAgents]);
+
+  const syncCompanyAgents = useCallback((agents: CustomAgent[]) => {
+    setCompanyAgents(agents);
+  }, []);
 
   useEffect(() => {
     setView(readStoredView());
@@ -626,7 +670,7 @@ export function AgentChatProvider({
                   // Log action creation
                   await supabase.from("agent_activity_logs").insert({
                     company_id: companyId,
-                    agent_name: "Nova",
+                    agent_name: DEFAULT_AGENT_NAME,
                     action_type: "opvolging",
                     message: `Nieuwe AI-agent ${name} (${role}) succesvol aangemaakt via AI Control Center.`,
                   });
@@ -699,7 +743,7 @@ export function AgentChatProvider({
                   agent_name: "Schatter",
                   action_type: "send_offerte",
                   title: `Offerte verzenden naar ${email}`,
-                  reason: `Gevraagd via Nova AI-metgezel voor ${target}`,
+                  reason: `Gevraagd via ${DEFAULT_AGENT_NAME} AI-metgezel voor ${target}`,
                   payload_json: { email, target },
                   target_entity_type: "offerte",
                   status: "pending",
@@ -710,9 +754,9 @@ export function AgentChatProvider({
                 // Add log entry
                 await supabase.from("agent_activity_logs").insert({
                   company_id: companyId,
-                  agent_name: "Nova",
+                  agent_name: DEFAULT_AGENT_NAME,
                   action_type: "opvolging",
-                  message: `Nova heeft een voorstel klaargezet om offerte te verzenden naar ${email}`,
+                  message: `${DEFAULT_AGENT_NAME} heeft een voorstel klaargezet om offerte te verzenden naar ${email}`,
                 });
 
                 router.refresh();
@@ -896,6 +940,8 @@ export function AgentChatProvider({
       close,
       toggle,
       activeAgent,
+      availableAgents,
+      syncCompanyAgents,
       position,
       setPosition,
       messages,
@@ -913,6 +959,8 @@ export function AgentChatProvider({
       close,
       toggle,
       activeAgent,
+      availableAgents,
+      syncCompanyAgents,
       position,
       setPosition,
       messages,

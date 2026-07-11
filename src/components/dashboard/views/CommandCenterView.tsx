@@ -231,7 +231,7 @@ export default function CommandCenterView({
         <QuickActionCard
           title="Nieuwe Factuur"
           subtitle="Sneller betaald"
-          href="/dashboard/facturen/nieuw"
+          href="/dashboard/facturen"
           icon={Receipt}
         />
       </div>

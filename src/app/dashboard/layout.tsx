@@ -10,6 +10,7 @@ import AgentChatWidget from "@/components/dashboard/agent-chat/AgentChatWidget";
 import { AgentNavigationProvider } from "@/components/dashboard/agent-navigation/AgentNavigationProvider";
 import { ProactiveAgentProvider } from "@/components/dashboard/ProactiveAgentProvider";
 import { PendingApprovalsProvider } from "@/components/dashboard/PendingApprovalsProvider";
+import { AgentCompletionsProvider } from "@/components/dashboard/AgentCompletionsProvider";
 import {
   ImpersonationBanner,
   PreviewBanner,
@@ -22,8 +23,9 @@ import {
   DashboardSidePanelProvider,
 } from "@/components/dashboard/DashboardSidePanel";
 import { getDashboardContext } from "@/components/dashboard/context";
-import { loadTopbarSummary } from "@/components/dashboard/mission-data";
-import { loadUserAgentName } from "@/lib/agents/userAi";
+import { loadTopbarProfile, loadTopbarSummary } from "@/components/dashboard/mission-data";
+import { loadCompanyAgents } from "@/components/dashboard/agents/storage";
+import { DEFAULT_AGENT_NAME, loadUserAgentName } from "@/lib/agents/userAi";
 import { isPlatformAdmin } from "@/lib/platform-admin";
 import {
   DashboardTourProvider,
@@ -56,20 +58,30 @@ export default async function DashboardLayout({
   const topbarOffset = showExtraBanner ? "top-28" : "top-14";
   const mainTop = showExtraBanner ? "pt-28" : "pt-14";
   const topbarSummary = await loadTopbarSummary(supabase, companyId);
+  const topbarProfile = await loadTopbarProfile(supabase, user);
+  const companyAgents = await loadCompanyAgents(supabase, companyId);
   const userAgentName = user
     ? await loadUserAgentName(supabase, user.id)
-    : "Nova";
+    : DEFAULT_AGENT_NAME;
   const showCeoConsole = user
     ? await isPlatformAdmin(user.id, user.email)
     : false;
 
   return (
     <DashboardThemeProvider>
-      <AgentChatProvider companyId={companyId} userAgentName={userAgentName}>
+      <AgentChatProvider
+        companyId={companyId}
+        userAgentName={userAgentName}
+        initialCompanyAgents={companyAgents}
+      >
       <DashboardTourProvider>
       <AgentNavigationProvider>
       <ProactiveAgentProvider enabled={!isPreviewMode && Boolean(companyId)}>
       <PendingApprovalsProvider
+        companyId={companyId}
+        enabled={!isPreviewMode && Boolean(companyId)}
+      >
+      <AgentCompletionsProvider
         companyId={companyId}
         enabled={!isPreviewMode && Boolean(companyId)}
       >
@@ -81,7 +93,11 @@ export default async function DashboardLayout({
         Ga naar inhoud
       </a>
       <Sidebar isPreviewMode={isPreviewMode} showCeoConsole={showCeoConsole} />
-      <Topbar initial={topbarSummary} />
+      <Topbar
+        initial={topbarSummary}
+        profile={topbarProfile}
+        isPreviewMode={isPreviewMode}
+      />
       {isPreviewMode && <PreviewBanner />}
       {showTrialBanner && <TrialBanner trial={trial} />}
       {showImpersonationBanner && (
@@ -111,6 +127,7 @@ export default async function DashboardLayout({
       <AgentChatWidget />
       <DashboardTourUi />
       </DashboardSidePanelProvider>
+      </AgentCompletionsProvider>
       </PendingApprovalsProvider>
       </ProactiveAgentProvider>
       </AgentNavigationProvider>

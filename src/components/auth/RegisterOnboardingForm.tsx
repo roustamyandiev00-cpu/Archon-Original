@@ -70,7 +70,7 @@ const inputClass =
 export default function RegisterOnboardingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/dashboard/overzicht?tour=1";
+  const redirectTo = searchParams.get("redirect") ?? "/dashboard/command-center?tour=1";
   const refFromUrl = searchParams.get("ref")?.trim() ?? "";
   const prefillEmail = searchParams.get("email") ?? "";
 
@@ -230,14 +230,14 @@ export default function RegisterOnboardingForm() {
 
   return (
     <div>
-      {/* Nova coach header */}
+      {/* Lima coach header */}
       <div className="mb-5 flex items-start gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-4">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 text-sm font-bold text-white">
           N
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-zinc-100">Nova helpt je opstarten</p>
+            <p className="text-sm font-semibold text-zinc-100">Lima helpt je opstarten</p>
             <button
               type="button"
               onClick={toggleSpeech}

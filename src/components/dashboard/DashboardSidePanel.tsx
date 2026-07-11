@@ -2,11 +2,15 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Radio } from "lucide-react";
 
 const STORAGE_KEY = "archon-dashboard-side-panel-collapsed";
@@ -15,6 +19,7 @@ type SidePanelContextValue = {
   collapsed: boolean;
   toggle: () => void;
   open: () => void;
+  close: () => void;
 };
 
 export function dispatchOpenControlCenter() {
@@ -23,6 +28,10 @@ export function dispatchOpenControlCenter() {
 }
 
 const SidePanelContext = createContext<SidePanelContextValue | null>(null);
+
+const subscribeToClient = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 function readStoredCollapsed() {
   if (typeof window === "undefined") return true;
@@ -47,12 +56,14 @@ export function DashboardSidePanelProvider({
   children: ReactNode;
   enabled: boolean;
 }) {
-  // SSR + eerste client-render moeten identiek zijn (collapsed). localStorage pas na mount.
   const [collapsed, setCollapsed] = useState(true);
   const [hydrated, setHydrated] = useState(false);
+  const userInteractedRef = useRef(false);
 
   useEffect(() => {
-    setCollapsed(readStoredCollapsed());
+    if (!userInteractedRef.current) {
+      setCollapsed(readStoredCollapsed());
+    }
     setHydrated(true);
   }, []);
 
@@ -61,22 +72,34 @@ export function DashboardSidePanelProvider({
     localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
   }, [collapsed, enabled, hydrated]);
 
-  const toggle = () => setCollapsed((value) => !value);
-  const open = () => setCollapsed(false);
+  const setCollapsedUser = useCallback(
+    (next: boolean | ((value: boolean) => boolean)) => {
+      userInteractedRef.current = true;
+      setCollapsed(next);
+    },
+    [],
+  );
+
+  const toggle = useCallback(
+    () => setCollapsedUser((value) => !value),
+    [setCollapsedUser],
+  );
+  const open = useCallback(() => setCollapsedUser(false), [setCollapsedUser]);
+  const close = useCallback(() => setCollapsedUser(true), [setCollapsedUser]);
 
   useEffect(() => {
     if (!enabled) return;
-    const handler = () => setCollapsed(false);
+    const handler = () => open();
     window.addEventListener("archon:open-control-center", handler);
     return () => window.removeEventListener("archon:open-control-center", handler);
-  }, [enabled]);
+  }, [enabled, open]);
 
   if (!enabled) {
     return <>{children}</>;
   }
 
   return (
-    <SidePanelContext.Provider value={{ collapsed, toggle, open }}>
+    <SidePanelContext.Provider value={{ collapsed, toggle, open, close }}>
       {children}
     </SidePanelContext.Provider>
   );
@@ -116,51 +139,63 @@ export function DashboardSidePanel({
   children: ReactNode;
   topbarOffset: string;
 }) {
-  const { collapsed, toggle } = useSidePanel();
+  const { collapsed, open, close } = useSidePanel();
+  const mounted = useSyncExternalStore(
+    subscribeToClient,
+    clientSnapshot,
+    serverSnapshot,
+  );
 
-  return (
+  if (!mounted) return null;
+
+  const panel = (
     <>
       <aside
         aria-label="AI Control Center"
         aria-hidden={collapsed}
-        className={`fixed bottom-0 right-0 z-20 hidden w-[min(22rem,26vw)] border-l border-zinc-800 bg-zinc-950 p-3.5 transition-transform duration-300 ease-in-out lg:block xl:w-[24rem] 2xl:w-[26rem] ${topbarOffset} ${
-          collapsed ? "pointer-events-none translate-x-full" : "translate-x-0"
+        inert={collapsed ? true : undefined}
+        className={`fixed bottom-0 right-0 z-40 hidden w-[min(22rem,26vw)] border-l border-zinc-800 bg-zinc-950 p-3.5 transition-transform duration-300 ease-in-out lg:block xl:w-[24rem] 2xl:w-[26rem] ${topbarOffset} ${
+          collapsed ? "translate-x-full" : "translate-x-0"
         }`}
       >
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={!collapsed}
-          aria-label="AI Control Center inklappen"
-          title="Inklappen"
-          className="absolute -left-3.5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-        >
-          <ChevronRight size={15} />
-        </button>
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={close}
+            aria-expanded
+            aria-label="AI Control Center inklappen"
+            title="Inklappen"
+            data-no-swipe
+            className="absolute -left-3.5 top-5 z-50 flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+          >
+            <ChevronRight size={15} />
+          </button>
+        )}
         <div
           className={`h-full min-h-0 transition-opacity duration-200 ${
-            collapsed ? "opacity-0" : "opacity-100"
+            collapsed ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
         >
           {children}
         </div>
       </aside>
 
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={!collapsed}
-        aria-label="AI Control Center openen"
-        title="AI Control Center"
-        className={`fixed right-0 top-1/2 z-20 hidden -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-zinc-800 bg-zinc-950 px-2 py-3 text-zinc-400 transition-all duration-300 hover:bg-zinc-900 hover:text-zinc-200 lg:flex ${
-          collapsed
-            ? "translate-x-0 opacity-100"
-            : "pointer-events-none translate-x-full opacity-0"
-        }`}
-      >
-        <Radio size={14} className="text-zinc-500" />
-        <ChevronLeft size={14} />
-      </button>
+      {collapsed && (
+        <button
+          type="button"
+          onClick={open}
+          aria-expanded={false}
+          aria-label="AI Control Center openen"
+          title="AI Control Center"
+          data-no-swipe
+          className="fixed right-0 top-1/2 z-50 hidden min-h-[4.5rem] min-w-[2.75rem] -translate-y-1/2 flex-col items-center justify-center gap-1 rounded-l-xl border border-r-0 border-zinc-800 bg-zinc-950 px-2.5 py-3 text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-200 lg:flex"
+        >
+          <Radio size={14} className="text-zinc-500" />
+          <ChevronLeft size={14} />
+        </button>
+      )}
     </>
   );
+
+  return createPortal(panel, document.body);
 }

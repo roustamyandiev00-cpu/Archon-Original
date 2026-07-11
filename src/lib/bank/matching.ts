@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { untyped } from "@/lib/integraties";
 import { normalizeStructuredCommunication } from "@/lib/peppol/be";
+import { notifyPaymentReceived } from "@/lib/agents/events/payment-received";
 
 type OpenFactuur = {
   id: number;
@@ -92,6 +93,16 @@ export async function matchBankTransactions(
       datum: now.slice(0, 10),
       betaalmethode: "overschrijving",
       referentie: txOgm ?? tx.omschrijving ?? null,
+    });
+
+    await notifyPaymentReceived(supabase, {
+      tenantId: companyId,
+      factuurId: hit.id,
+      amount: txAmount,
+      source: "bank_match",
+      actorType: "integration",
+      referenceId: tx.id,
+      betaalmethode: "overschrijving",
     });
 
     openFacturen.splice(openFacturen.indexOf(hit), 1);

@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Bell,
   Radio,
   Activity,
   X,
-  Settings,
   ChevronDown,
   BarChart3,
   LineChart,
@@ -24,15 +23,17 @@ import {
 } from "@/components/ui/command";
 import ThemeToggle from "@/components/dashboard/ThemeToggle";
 import AgentChatTopbarButton from "@/components/dashboard/agent-chat/AgentChatTopbarButton";
+import AgentAvatar from "@/components/dashboard/agents/AgentAvatar";
+import { useAgentCompletions } from "@/components/dashboard/AgentCompletionsProvider";
 import { usePendingApprovals } from "@/components/dashboard/PendingApprovalsProvider";
-import type { TopbarSummary } from "@/components/dashboard/mission-data";
+import TopbarProfileMenu from "@/components/dashboard/TopbarProfileMenu";
+import type { TopbarProfile, TopbarSummary } from "@/components/dashboard/mission-data";
 import {
-  SIDEBAR_SETTINGS,
   TOPBAR_OBSERVEER_ITEMS,
 } from "@/components/dashboard/sidebar-nav";
 
 const quickLinks = [
-  { label: "Overzicht", href: "/dashboard/overzicht" },
+  { label: "Command Center", href: "/dashboard/command-center" },
   { label: "Offertes", href: "/dashboard/offertes" },
   { label: "Facturen", href: "/dashboard/facturen" },
   { label: "Leads / CRM", href: "/dashboard/leads" },
@@ -52,19 +53,25 @@ function euro(n: number) {
 
 export default function Topbar({
   initial,
+  profile = null,
+  isPreviewMode = false,
 }: {
   initial: TopbarSummary;
+  profile?: TopbarProfile | null;
+  isPreviewMode?: boolean;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const { items: pendingItems } = usePendingApprovals();
+  const {
+    unreadItems: completedItems,
+    unreadCount: completedUnreadCount,
+    markNotificationsRead,
+  } = useAgentCompletions();
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [observeOpen, setObserveOpen] = useState(false);
   const observeRef = useRef<HTMLDivElement>(null);
   const [syncedAgo, setSyncedAgo] = useState("nu");
-
-  const settingsActive = pathname.startsWith("/dashboard/instellingen");
 
   useEffect(() => {
     const tick = () => {
@@ -109,14 +116,25 @@ export default function Topbar({
   const liveNotifications = [
     ...pendingItems.slice(0, 6).map((item) => ({
       id: `approval-${item.id}`,
+      kind: "approval" as const,
       title: item.title,
       detail: `${item.agent_name} · wacht op goedkeuring`,
+      agent_name: item.agent_name,
+      href: item.href,
+    })),
+    ...completedItems.slice(0, 6).map((item) => ({
+      id: `completed-${item.id}`,
+      kind: "completed" as const,
+      title: item.title,
+      detail: item.detail,
+      agent_name: item.agent_name,
       href: item.href,
     })),
     ...initial.notifications.filter((n) => !n.id.startsWith("action-")),
-  ].slice(0, 8);
+  ].slice(0, 10);
 
-  const notifyCount = liveNotifications.length;
+  const notifyCount =
+    pendingItems.length + completedUnreadCount + initial.notifications.filter((n) => !n.id.startsWith("action-")).length;
 
   return (
     <>
@@ -200,24 +218,16 @@ export default function Topbar({
               )}
             </div>
 
-            <Link
-              href={SIDEBAR_SETTINGS.href}
-              aria-label={SIDEBAR_SETTINGS.label}
-              className={`relative grid h-8 w-8 place-items-center rounded-lg transition-colors hover:bg-white/5 ${
-                settingsActive
-                  ? "bg-sky-500/15 text-sky-300"
-                  : "text-zinc-400 hover:text-zinc-100"
-              }`}
-            >
-              <Settings size={16} aria-hidden />
-            </Link>
-
             <ThemeToggle />
 
             <IconButton
               label="Meldingen"
               onClick={() => {
-                setNotifyOpen((v) => !v);
+                setNotifyOpen((v) => {
+                  const next = !v;
+                  if (next) markNotificationsRead();
+                  return next;
+                });
                 setSearchOpen(false);
               }}
               active={notifyOpen}
@@ -255,6 +265,8 @@ export default function Topbar({
                 gesync {syncedAgo}
               </span>
             </div>
+
+            <TopbarProfileMenu profile={profile} isPreviewMode={isPreviewMode} />
           </div>
         </div>
 
@@ -283,12 +295,23 @@ export default function Topbar({
                     type="button"
                     onClick={() => {
                       setNotifyOpen(false);
+                      markNotificationsRead();
                       router.push(n.href);
                     }}
-                    className="w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-white/5"
+                    className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-white/5"
                   >
-                    <p className="text-sm font-medium text-zinc-100">{n.title}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">{n.detail}</p>
+                    {"agent_name" in n && n.agent_name ? (
+                      <AgentAvatar agentName={String(n.agent_name)} size="sm" />
+                    ) : null}
+                    <span className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-zinc-100">{n.title}</p>
+                      <p className="mt-0.5 text-xs text-zinc-500">{n.detail}</p>
+                    </span>
+                    {"kind" in n && n.kind === "completed" ? (
+                      <span className="mt-0.5 shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                        Klaar
+                      </span>
+                    ) : null}
                   </button>
                 ))
               )}

@@ -47,7 +47,7 @@ export async function updateSettings(input: SettingsInput) {
 
   const extras: Extras = {
     ai: {
-      agentNaam: "Nova",
+      agentNaam: "Lima",
       vakgebied: input.ai.vakgebied.trim(),
       toon: input.ai.toon,
       toestemming: input.ai.toestemming,

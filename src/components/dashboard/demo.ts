@@ -16,7 +16,7 @@ export const demoApprovals = [
     title: "Offerte 2024-118 versturen naar Bouwbedrijf De Vlaming",
     reason: "Klant vroeg om prijsindicatie voor gevelrenovatie",
     action_type: "send_offerte",
-    agent_name: "Nova",
+    agent_name: "Lima",
     created_at: minAgo(12),
   },
   {
@@ -151,7 +151,7 @@ export function demoCronJobs() {
     { id: "d-afs-1", title: "Werfbezoek Sint-Niklaas", sub: "Afspraak · plaatsbezoek", when: at(10), kind: "afspraak" as const },
     { id: "d-rem-2", title: "Offerte De Vlaming opvolgen", sub: "Herinnering · offerte", when: at(14), kind: "reminder" as const },
     { id: "d-afs-2", title: "Intake Immo Coninckx", sub: "Afspraak · verkoop", when: at(11, 1), kind: "afspraak" as const },
-    { id: "d-task-1", title: "Maandrapport genereren", sub: "Taak · Nova · normaal", when: null, kind: "taak" as const },
+    { id: "d-task-1", title: "Maandrapport genereren", sub: "Taak · Lima · normaal", when: null, kind: "taak" as const },
     { id: "d-task-2", title: "Nieuwe leads verrijken", sub: "Taak · Opvolger · hoog", when: null, kind: "taak" as const },
   ];
 }
@@ -159,13 +159,13 @@ export function demoCronJobs() {
 // ── Activiteit ───────────────────────────────────────────────────────
 
 export const demoActivity = [
-  { id: -1, message: "Offerte 2024-118 opgesteld voor Bouwbedrijf De Vlaming", agent_name: "Nova", action_type: "create_offerte", error_message: null, created_at: minAgo(15) },
+  { id: -1, message: "Offerte 2024-118 opgesteld voor Bouwbedrijf De Vlaming", agent_name: "Lima", action_type: "create_offerte", error_message: null, created_at: minAgo(15) },
   { id: -2, message: "Betalingsherinnering verstuurd voor factuur 2024-091", agent_name: "Facturatie", action_type: "send_reminder", error_message: null, created_at: minAgo(95) },
   { id: -3, message: "3 nieuwe leads verrijkt met bedrijfsgegevens", agent_name: "Opvolger", action_type: "enrich", error_message: null, created_at: minAgo(180) },
   { id: -4, message: "Opvolgmail gepland voor Renovatie Peeters", agent_name: "Opvolger", action_type: "follow_up", error_message: null, created_at: minAgo(300) },
-  { id: -5, message: "Kon offerte 2024-110 niet versturen — ongeldig e-mailadres", agent_name: "Nova", action_type: "send_offerte_failed", error_message: "SMTP: recipient rejected", created_at: minAgo(360) },
+  { id: -5, message: "Kon offerte 2024-110 niet versturen — ongeldig e-mailadres", agent_name: "Lima", action_type: "send_offerte_failed", error_message: "SMTP: recipient rejected", created_at: minAgo(360) },
   { id: -6, message: "Factuur 2024-090 aangemaakt en verzonden", agent_name: "Facturatie", action_type: "create_invoice", error_message: null, created_at: dayAgo(1) },
-  { id: -7, message: "Dagrapport samengesteld en gedeeld", agent_name: "Nova", action_type: "report", error_message: null, created_at: dayAgo(1) },
+  { id: -7, message: "Dagrapport samengesteld en gedeeld", agent_name: "Lima", action_type: "report", error_message: null, created_at: dayAgo(1) },
   { id: -8, message: "Afspraak werfbezoek Sint-Niklaas ingepland", agent_name: "Opvolger", action_type: "create_afspraak", error_message: null, created_at: dayAgo(2) },
 ];
 
@@ -188,8 +188,8 @@ export const demoSignalTypes = ["opportunity", "regulation", "competitor", "pain
 // ── Deploy ───────────────────────────────────────────────────────────
 
 export const demoRuntimeLog = [
-  { id: -1, message: "Automatiseringscyclus voltooid — 4 acties verwerkt", agent_name: "Nova", action_type: "cycle", created_at: minAgo(8) },
+  { id: -1, message: "Automatiseringscyclus voltooid — 4 acties verwerkt", agent_name: "Lima", action_type: "cycle", created_at: minAgo(8) },
   { id: -2, message: "Synchronisatie klantgegevens afgerond", agent_name: "Systeem", action_type: "sync", created_at: minAgo(35) },
-  { id: -3, message: "Geplande taak 'maandrapport' uitgevoerd", agent_name: "Nova", action_type: "cron", created_at: minAgo(120) },
+  { id: -3, message: "Geplande taak 'maandrapport' uitgevoerd", agent_name: "Lima", action_type: "cron", created_at: minAgo(120) },
   { id: -4, message: "Databaseverbinding gezond — 0 fouten", agent_name: "Systeem", action_type: "health", created_at: minAgo(240) },
 ];

@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LayoutGrid } from "lucide-react";
 import MobileMoreSheet from "@/components/dashboard/MobileMoreSheet";
+import MobileAgentChatNavButton from "@/components/dashboard/agent-chat/MobileAgentChatNavButton";
+import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 import {
   getActiveMobileTabId,
   MOBILE_SWIPE_TABS,
@@ -20,6 +22,7 @@ const serverSnapshot = () => false;
 
 export default function MobileBottomNav({ isPreviewMode = false }: Props) {
   const pathname = usePathname();
+  const { view: agentChatView } = useAgentChat();
   const [moreOpen, setMoreOpen] = useState(false);
   const mounted = useSyncExternalStore(
     subscribeToClient,
@@ -58,7 +61,7 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
       block: "nearest",
       inline: "center",
     });
-  }, [activeId, mounted, pathname]);
+  }, [activeId, mounted, pathname, agentChatView]);
 
   return (
     <>
@@ -105,6 +108,8 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
                 </Link>
               );
             })}
+
+            <MobileAgentChatNavButton mounted={mounted} />
 
             <button
               type="button"

@@ -15,8 +15,6 @@ import {
   MessageCircle,
   MessageSquare,
   Phone,
-  Shield,
-  Sparkles,
   Trash2,
   User,
   Users,
@@ -67,24 +65,18 @@ const perks = [
   {
     icon: BadgeCheck,
     title: "Persoonlijk advies",
-    text: "Praat rechtstreeks met onze specialisten voor de Belgische bouwsector.",
+    text: "Praat rechtstreeks met onze specialisten.",
   },
   {
     icon: MessageSquare,
     title: "Oplossing op maat",
-    text: "Een aanpak die past bij jouw team, workflow en groeifase.",
+    text: "Een aanpak die bij jouw onderneming past.",
   },
   {
     icon: Clock,
     title: "Snel antwoord",
-    text: "We komen dezelfde werkdag bij je terug — gemiddeld binnen 4 uur.",
+    text: "We komen dezelfde werkdag bij je terug.",
   },
-];
-
-const trustBadges = [
-  { icon: Shield, label: "GDPR compliant" },
-  { icon: Building2, label: "Belgische support" },
-  { icon: Sparkles, label: "14 dagen gratis" },
 ];
 
 const companySizes = ["1–5", "6–20", "21–50", "51–200", "200+"];
@@ -170,32 +162,32 @@ export default function ContactForm() {
         aria-hidden
         className="pointer-events-none absolute -inset-x-6 -top-8 bottom-0 -z-10"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(249,115,22,0.12),transparent)]" />
-        <div className="absolute right-0 top-1/4 h-64 w-64 rounded-full bg-orange-500/[0.04] blur-3xl" />
-        <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-sky-500/[0.04] blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(56,189,248,0.14),transparent)]" />
+        <div className="absolute right-0 top-1/4 h-64 w-64 rounded-full bg-sky-500/[0.05] blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-cyan-500/[0.05] blur-3xl" />
       </div>
 
       <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-zinc-950/80 shadow-[0_40px_100px_-50px_rgba(0,0,0,0.8)] backdrop-blur-sm">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
           <div className="flex flex-col border-b border-white/[0.06] p-6 sm:p-8 lg:border-b-0 lg:border-r lg:p-10">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-400/90">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-400/90">
               Contact
             </p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-[2.35rem] sm:leading-tight">
               Ontdek de perfecte fit met{" "}
-              <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-cyan-400 to-sky-400 bg-clip-text text-transparent">
                 ArchonPro
               </span>
             </h1>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">
-              Vertel ons kort iets over je onderneming. We plannen een vrijblijvend
-              gesprek en tonen hoe ArchonPro past bij jouw dagelijkse werking.
+              Vertel ons kort iets over je onderneming en we nemen snel contact
+              met je op.
             </p>
 
             <ul className="mt-8 space-y-5">
               {perks.map((p) => (
                 <li key={p.title} className="flex items-start gap-3.5">
-                  <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400">
+                  <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-400">
                     <p.icon size={16} />
                   </span>
                   <div>
@@ -210,18 +202,6 @@ export default function ContactForm() {
               ))}
             </ul>
 
-            <div className="mt-8 flex flex-wrap gap-2">
-              {trustBadges.map((badge) => (
-                <span
-                  key={badge.label}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-zinc-400"
-                >
-                  <badge.icon size={12} className="text-orange-400/80" />
-                  {badge.label}
-                </span>
-              ))}
-            </div>
-
             <div className="mt-auto pt-10">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
                 Of bereik ons direct
@@ -229,24 +209,24 @@ export default function ContactForm() {
               <div className="mt-4 space-y-3">
                 <a
                   href="mailto:hallo@archonpro.be"
-                  className="group flex items-center gap-3 rounded-xl border border-transparent px-1 py-1 text-sm text-zinc-300 transition-colors hover:text-orange-200"
+                  className="group flex items-center gap-3 rounded-xl border border-transparent px-1 py-1 text-sm text-zinc-300 transition-colors hover:text-sky-200"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-orange-400 transition-colors group-hover:border-orange-500/20 group-hover:bg-orange-500/10">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-sky-400 transition-colors group-hover:border-sky-500/20 group-hover:bg-sky-500/10">
                     <Mail size={15} />
                   </span>
                   hallo@archonpro.be
                 </a>
                 <a
                   href="tel:+3231234567"
-                  className="group flex items-center gap-3 rounded-xl border border-transparent px-1 py-1 text-sm text-zinc-300 transition-colors hover:text-orange-200"
+                  className="group flex items-center gap-3 rounded-xl border border-transparent px-1 py-1 text-sm text-zinc-300 transition-colors hover:text-sky-200"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-orange-400 transition-colors group-hover:border-orange-500/20 group-hover:bg-orange-500/10">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-sky-400 transition-colors group-hover:border-sky-500/20 group-hover:bg-sky-500/10">
                     <Phone size={15} />
                   </span>
                   +32 3 123 45 67
                 </a>
                 <div className="flex items-center gap-3 px-1 py-1 text-sm text-zinc-500">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-orange-400/80">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.06] bg-zinc-900/80 text-sky-400/80">
                     <Clock size={15} />
                   </span>
                   Gemiddelde reactietijd: binnen 4 uur
@@ -261,17 +241,8 @@ export default function ContactForm() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <h2 className="text-lg font-semibold text-zinc-100">
-                    Jouw gegevens
-                  </h2>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Velden met * zijn verplicht. Je gegevens blijven vertrouwelijk.
-                  </p>
-                </div>
-
-                <div>
                   <span className="mb-2 block text-xs font-medium text-zinc-400">
-                    Ik ben een <span className="text-orange-400">*</span>
+                    Ik ben een <span className="text-sky-400">*</span>
                   </span>
                   <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/[0.08] bg-zinc-950/60 p-1">
                     <SegmentButton
@@ -302,7 +273,7 @@ export default function ContactForm() {
                       name="voornaam"
                       type="text"
                       autoComplete="given-name"
-                      placeholder="Jan"
+                      placeholder="Sarah"
                       className={inputCls}
                     />
                   </Field>
@@ -312,7 +283,7 @@ export default function ContactForm() {
                       name="achternaam"
                       type="text"
                       autoComplete="family-name"
-                      placeholder="Peeters"
+                      placeholder="Thompson"
                       className={inputCls}
                     />
                   </Field>
@@ -385,7 +356,7 @@ export default function ContactForm() {
                       name="email"
                       type="email"
                       autoComplete="email"
-                      placeholder={isBedrijf ? "jan@bouwbedrijf.be" : "jan@email.be"}
+                      placeholder={isBedrijf ? "jij@bedrijf.be" : "jan@email.be"}
                       className={inputCls}
                     />
                   </Field>
@@ -422,7 +393,7 @@ export default function ContactForm() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3.5 text-sm font-semibold text-zinc-950 transition-all hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-3.5 text-sm font-semibold text-zinc-950 transition-all hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submitting ? (
                     <>
@@ -524,7 +495,7 @@ function ContactList({
             Contacten via dit formulier
           </p>
         </div>
-        <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-orange-300">
+        <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-sky-300">
           {contacts.length}
         </span>
       </div>
@@ -569,7 +540,7 @@ function ContactList({
                   onClick={() => onSelect(c)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-orange-500/15 bg-orange-500/10 text-xs font-semibold uppercase text-orange-300">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-sky-500/15 bg-sky-500/10 text-xs font-semibold uppercase text-sky-300">
                     {initialen}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -598,7 +569,7 @@ function ContactList({
                     href={mailLink}
                     label={`Mail ${naam}`}
                     icon={<Mail size={15} />}
-                    tone="text-orange-400 hover:bg-orange-500/15 hover:text-orange-300"
+                    tone="text-sky-400 hover:bg-sky-500/15 hover:text-sky-300"
                   />
                   <RowIcon
                     href={telLink}
@@ -747,7 +718,7 @@ function ContactDetail({
         className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl border border-white/[0.08] bg-zinc-950 shadow-2xl sm:max-w-lg sm:rounded-2xl"
       >
         <div className="flex items-start gap-3 border-b border-white/[0.06] p-5">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-orange-500/15 bg-orange-500/10 text-sm font-semibold uppercase text-orange-300">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-sky-500/15 bg-sky-500/10 text-sm font-semibold uppercase text-sky-300">
             {initialen}
           </span>
           <div className="min-w-0 flex-1">
@@ -836,7 +807,7 @@ function ContactDetail({
               href={mailLink}
               icon={<Mail size={16} />}
               label="E-mail"
-              tone="text-orange-300"
+              tone="text-sky-300"
             />
             <SendAction
               href={telLink}
@@ -886,7 +857,7 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/[0.06] bg-zinc-900/80 text-orange-400">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/[0.06] bg-zinc-900/80 text-sky-400">
         {icon}
       </span>
       <div className="min-w-0">
@@ -937,7 +908,7 @@ function SendAction({
 }
 
 const inputCls =
-  "w-full rounded-xl border border-white/[0.08] bg-zinc-950/70 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-[border-color,box-shadow] focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/15";
+  "w-full rounded-xl border border-white/[0.08] bg-zinc-950/70 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-[border-color,box-shadow] focus:border-sky-500/50 focus:ring-2 focus:ring-sky-500/15";
 
 function SegmentButton({
   active,
@@ -957,7 +928,7 @@ function SegmentButton({
       aria-pressed={active}
       className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
         active
-          ? "bg-orange-500/15 text-orange-200 shadow-sm ring-1 ring-inset ring-orange-500/30"
+          ? "bg-sky-500/15 text-sky-200 shadow-sm ring-1 ring-inset ring-sky-500/30"
           : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300"
       }`}
     >
@@ -980,7 +951,7 @@ function Field({
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium text-zinc-400">
         {label}
-        {required && <span className="text-orange-400"> *</span>}
+        {required && <span className="text-sky-400"> *</span>}
       </span>
       {children}
     </label>

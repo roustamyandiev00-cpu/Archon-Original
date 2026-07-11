@@ -36,6 +36,7 @@ function labelForAction(t: string) {
   const map: Record<string, string> = {
     create_offerte: "Offerte opstellen",
     send_offerte: "Offerte versturen",
+    send_quote_followup: "Offerte opvolgen",
     send_invoice: "Factuur versturen",
     send_reminder: "Herinnering sturen",
     send_payment_reminder: "Betalingsherinnering",
@@ -231,9 +232,9 @@ export default async function AutomatisatiesPage() {
         <Panel title="Dagschema">
           <div className="space-y-2.5 text-sm">
             <ScheduleRow tijd="08:30" taak="Openstaande offertes opvolgen" agent="Opvolger" />
-            <ScheduleRow tijd="09:00" taak="Nieuwe leads verwerken" agent="Nova" />
+            <ScheduleRow tijd="09:00" taak="Nieuwe leads verwerken" agent="Lima" />
             <ScheduleRow tijd="12:00" taak="Betalingsherinneringen controleren" agent="Facturatie" />
-            <ScheduleRow tijd="16:00" taak="Dagrapport samenstellen" agent="Nova" />
+            <ScheduleRow tijd="16:00" taak="Dagrapport samenstellen" agent="Lima" />
           </div>
           <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3 text-[10px] text-zinc-500">
             <Calendar size={12} /> Alleen op weekdagen (ma–vr)

@@ -70,13 +70,6 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         icon: Receipt,
         badge: 3,
         badgeTone: "warning",
-        children: [
-          {
-            label: "Factuur",
-            href: "/dashboard/facturen/nieuw",
-            icon: FileText,
-          },
-        ],
       },
       {
         label: "Leads / CRM",
@@ -157,7 +150,7 @@ export const SIDEBAR_LOGOUT = {
 /** Pad matcht actief item (inclusief subroutes). */
 export function sidebarItemIsActive(pathname: string, href: string): boolean {
   const current = pathname.replace(/\/$/, "");
-  const target = href.replace(/\/$/, "");
+  const target = href.replace(/\/$/, "").split("?")[0] ?? href;
 
   if (target === "/dashboard/overzicht") {
     return current === "/dashboard/overzicht" || current === "/dashboard";
@@ -175,11 +168,7 @@ export function sidebarItemIsActive(pathname: string, href: string): boolean {
   }
 
   if (target === "/dashboard/facturen") {
-    return (
-      current === "/dashboard/facturen" ||
-      (current.startsWith("/dashboard/facturen/") &&
-        !current.startsWith("/dashboard/facturen/nieuw"))
-    );
+    return current.startsWith("/dashboard/facturen");
   }
 
   return current === target || current.startsWith(`${target}/`);

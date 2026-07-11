@@ -6,6 +6,7 @@ import { notifySlackNewFactuur } from "@/components/dashboard/integraties/slackN
 import { lineTotals, type OfferteLijnInput } from "@/lib/offertes";
 import { documentTypeMeta, type FactuurDocumentType } from "@/lib/facturen";
 import { loadCompanyDefaultTemplate } from "@/components/dashboard/documenten/documentTemplate";
+import { notifyPaymentReceived } from "@/lib/agents/events/payment-received";
 
 export type CreateFactuurInput = {
   documentType: FactuurDocumentType;
@@ -130,6 +131,78 @@ export async function createFactuur(input: CreateFactuurInput) {
   });
 
     revalidatePath("/dashboard/facturen");
+    revalidatePath("/dashboard/facturen/lijst");
     revalidatePath("/dashboard/facturen/nieuw");
   return { id: factuur.id as number };
+}
+
+export async function markFactuurAsPaid(factuurId: number) {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, user, companyId } = access;
+
+  const { data: factuur } = await supabase
+    .from("facturen")
+    .select("id, nummer, klant, totaal_bedrag, status, paid_at")
+    .eq("id", factuurId)
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  if (!factuur) return { error: "Factuur niet gevonden." };
+  if (factuur.paid_at || factuur.status === "betaald") {
+    return { ok: true, alreadyPaid: true };
+  }
+
+  const now = new Date().toISOString();
+  const amount = Number(factuur.totaal_bedrag ?? 0);
+
+  const { error: updateError } = await supabase
+    .from("facturen")
+    .update({
+      status: "betaald",
+      paid_at: now,
+      updated_at: now,
+    })
+    .eq("id", factuurId)
+    .eq("bedrijf_id", companyId)
+    .is("paid_at", null);
+
+  if (updateError) return { error: updateError.message };
+
+  await supabase.from("betalingen").insert({
+    bedrijf_id: companyId,
+    factuur_id: factuurId,
+    bedrag: amount,
+    datum: now.slice(0, 10),
+    betaalmethode: "handmatig",
+    referentie: `Handmatig gemarkeerd door gebruiker`,
+    user_id: user.id,
+  });
+
+  const notified = await notifyPaymentReceived(supabase, {
+    tenantId: companyId,
+    factuurId,
+    amount,
+    source: "manual",
+    actorType: "user",
+    actorId: user.id,
+    referenceId: user.id,
+    betaalmethode: "handmatig",
+  });
+
+  if ("error" in notified) {
+    return { error: notified.error };
+  }
+
+  revalidatePath("/dashboard/facturen");
+  revalidatePath("/dashboard/facturen/lijst");
+  revalidatePath(`/dashboard/facturen/${factuurId}`);
+  revalidatePath("/dashboard/automatisaties");
+  revalidatePath("/dashboard/overzicht");
+
+  return {
+    ok: true,
+    nummer: factuur.nummer,
+    klant: factuur.klant,
+  };
 }
