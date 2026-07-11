@@ -14,6 +14,9 @@ const variants = {
     "border-rose-500/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15",
 } as const;
 
+export const primaryActionClass =
+  "inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/15 px-3 text-sm font-medium text-sky-100 transition-colors hover:bg-sky-500/20";
+
 const sizes = {
   sm: "h-9 px-3 text-sm",
   icon: "h-8 w-8 p-0",

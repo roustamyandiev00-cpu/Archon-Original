@@ -13,6 +13,7 @@ import FacturenDataTable, {
 } from "@/components/dashboard/facturen/FacturenDataTable";
 import FacturenSectionNav from "@/components/dashboard/facturen/FacturenSectionNav";
 import { Badge } from "@/components/ui/badge";
+import { primaryActionClass } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
@@ -71,10 +72,7 @@ export default function FacturenListView({
           </p>
         </div>
 
-        <Link
-          href="/dashboard/facturen"
-          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-zinc-900 bg-zinc-900 px-3 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-        >
+        <Link href="/dashboard/facturen" className={primaryActionClass}>
           <Plus size={15} />
           Nieuwe factuur
         </Link>

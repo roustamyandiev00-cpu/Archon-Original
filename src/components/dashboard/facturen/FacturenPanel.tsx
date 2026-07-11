@@ -7,7 +7,7 @@ import FacturenDataTable, {
   type FactuurListItem,
 } from "@/components/dashboard/facturen/FacturenDataTable";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, primaryActionClass } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -68,10 +68,7 @@ export default function FacturenPanel({
             <Download size={15} />
             <span className="hidden sm:inline">Export</span>
           </Button>
-          <Link
-            href="/dashboard/facturen/nieuw"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-transparent bg-zinc-100 px-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-          >
+          <Link href="/dashboard/facturen/nieuw" className={primaryActionClass}>
             <Plus size={15} />
             Nieuwe factuur
           </Link>

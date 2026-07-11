@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import FacturenPanel from "@/components/dashboard/facturen/FacturenPanel";
 import type { FactuurListItem } from "@/components/dashboard/facturen/FacturenDataTable";
+import { primaryActionClass } from "@/components/ui/button";
 
 export default function FacturenView({
   facturen,
@@ -28,10 +29,7 @@ export default function FacturenView({
             Maak, verstuur en volg je facturen en proforma&apos;s op.
           </p>
         </div>
-        <Link
-          href="/dashboard/facturen/nieuw"
-          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-transparent bg-zinc-100 px-3 text-sm font-medium text-zinc-900 transition-colors hover:bg-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
-        >
+        <Link href="/dashboard/facturen/nieuw" className={primaryActionClass}>
           <Plus size={15} />
           Nieuwe factuur
         </Link>
