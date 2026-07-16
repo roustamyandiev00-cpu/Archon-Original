@@ -35,7 +35,7 @@ export interface Document {
   period_start?: string | null;
   period_end?: string | null;
   lines?: DocumentLine[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
 }

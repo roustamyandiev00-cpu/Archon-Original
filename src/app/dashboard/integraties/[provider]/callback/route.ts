@@ -67,7 +67,7 @@ export async function GET(
   }
 
   const now = new Date().toISOString();
-  let extraConfig: Record<string, unknown> = { tokens: result.tokens };
+  const extraConfig: Record<string, unknown> = { tokens: result.tokens };
   if (provider === "exact-online") {
     try {
       const meRes = await fetch(
