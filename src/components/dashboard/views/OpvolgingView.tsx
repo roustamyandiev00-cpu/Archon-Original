@@ -49,7 +49,7 @@ export default function OpvolgingView({
   const pipelineTasks = mission.tasks.filter((t) => t.kind === "opvolging");
 
   return (
-    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
+    <div className="grid grid-cols-1 gap-5 overflow-y-auto pb-4 xl:grid-cols-[1fr_320px]">
       <DashboardPanel
         title="Vandaag"
         badge={

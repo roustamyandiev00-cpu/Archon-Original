@@ -27,7 +27,7 @@ export default async function BouwmaterialenPage({
   let query = supabase
     .from("bouwmateriaal_winkels")
     .select(
-      "id, naam, categorie, adres, postcode, stad, regio, telefoon, website, beschrijving, fotos, toegevoegd_door, lat, lng, created_at",
+      "id, naam, categorie, adres, postcode, stad, regio, telefoon, website, beschrijving, fotos, toegevoegd_door, lat, lng, verificatiestatus, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -49,6 +49,7 @@ export default async function BouwmaterialenPage({
       lng: w.lng as number,
       adres: w.adres,
       stad: w.stad,
+      verificatiestatus: w.verificatiestatus ?? "niet_geverifieerd",
     }));
 
   return (

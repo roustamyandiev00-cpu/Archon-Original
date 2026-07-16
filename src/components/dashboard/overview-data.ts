@@ -186,7 +186,7 @@ function buildDemoOverview(
       client: "Janssens Renovatie",
       detail: "Concept voor badkamerrenovatie — 6 lijnen, BTW 21%",
       value: "€ 2.850",
-      agent: "Lima",
+      agent: "Ela",
       urgency: "attention",
       href: "/dashboard/automatisaties",
       primaryLabel: "Goedkeuren",
@@ -338,7 +338,7 @@ function buildDemoOverview(
       {
         id: "r4",
         title: "8 AI-acties wachten op goedkeuring",
-        detail: "Lima heeft voorstellen klaargezet",
+        detail: "Ela heeft voorstellen klaargezet",
         severity: "info",
         href: "/dashboard/automatisaties",
       },

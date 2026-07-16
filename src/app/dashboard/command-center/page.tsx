@@ -18,7 +18,7 @@ export default async function CommandCenterPage() {
   const missionOptions = { useDemoWhenEmpty: isPreviewMode };
 
   const [agentName, core, agentConfig, charts] = await Promise.all([
-    user ? loadUserAgentName(supabase, user.id) : Promise.resolve("Lima"),
+    user ? loadUserAgentName(supabase, user.id) : Promise.resolve("Ela"),
     fetchMissionCore(supabase, companyId, missionOptions),
     loadCompanyAgents(supabase, companyId),
     fetchChartsData(supabase, companyId, missionOptions),
@@ -27,7 +27,7 @@ export default async function CommandCenterPage() {
   const mission = assembleMissionOverview(core, agentName, agentConfig);
 
   return (
-    <div className="dashboard-page space-y-2 lg:space-y-0">
+    <div className="dashboard-page flex min-h-0 flex-1 flex-col space-y-2 lg:space-y-0">
       {!companyId && (
         <div className="shrink-0">
           <CompanySetupCard />

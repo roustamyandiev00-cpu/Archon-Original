@@ -318,7 +318,7 @@ export function getCeoDashboardData(): CeoDashboardData {
       {
         id: "e1",
         company: "Construct Plus",
-        agent: "Lima",
+        agent: "Lara",
         message: "OpenAI rate limit exceeded — offerte-generatie mislukt",
         time: "2026-07-10T08:55:00Z",
         severity: "critical",
@@ -326,7 +326,7 @@ export function getCeoDashboardData(): CeoDashboardData {
       {
         id: "e2",
         company: "Bouwbedrijf De Vlaming",
-        agent: "Facturatie",
+        agent: "Nina",
         message: "Peppol endpoint timeout na 30s",
         time: "2026-07-10T07:32:00Z",
         severity: "warning",
@@ -334,7 +334,7 @@ export function getCeoDashboardData(): CeoDashboardData {
       {
         id: "e3",
         company: "Renovatie Peeters NV",
-        agent: "Opvolger",
+        agent: "Daan",
         message: "Geheugen-index corrupt — fallback naar cache",
         time: "2026-07-09T23:18:00Z",
         severity: "warning",

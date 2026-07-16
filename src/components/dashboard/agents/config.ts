@@ -79,7 +79,7 @@ export const GRADIENT_OPTIONS = [
 export const DEFAULT_AGENTS: CustomAgent[] = [
   {
     id: "nova",
-    name: "Lima",
+    name: "Lara",
     role: "AI-metgezel",
     instructies:
       "Monitor offertes, facturen en leads. Stel proactief acties voor en wacht op goedkeuring.",
@@ -92,7 +92,7 @@ export const DEFAULT_AGENTS: CustomAgent[] = [
   },
   {
     id: "schatter",
-    name: "Schatter",
+    name: "Viktor",
     role: "Offertes",
     instructies:
       "Bereid offertes voor, structureer regels en volg verzonden offertes op.",
@@ -105,7 +105,7 @@ export const DEFAULT_AGENTS: CustomAgent[] = [
   },
   {
     id: "facturatie",
-    name: "Facturatie",
+    name: "Nina",
     role: "Peppol",
     instructies:
       "Maak facturen aan, verstuur via Peppol en stuur betalingsherinneringen.",
@@ -118,7 +118,7 @@ export const DEFAULT_AGENTS: CustomAgent[] = [
   },
   {
     id: "opvolger",
-    name: "Opvolger",
+    name: "Daan",
     role: "Leads",
     instructies:
       "Verrijk nieuwe leads, plan opvolging en houd de pipeline actueel.",
@@ -149,7 +149,10 @@ export function mergeAgents(stored: CustomAgent[] | undefined): CustomAgent[] {
     return {
       ...def,
       ...saved,
-      name: saved.name?.trim() === "Nova" ? def.name : saved.name || def.name,
+      name:
+        saved.name?.trim() === "Nova" || saved.name?.trim() === "Lima" || saved.name?.trim() === "Ela" || saved.name?.trim() === "Schatter" || saved.name?.trim() === "Facturatie" || saved.name?.trim() === "Opvolger"
+          ? def.name
+          : saved.name || def.name,
       builtin: true,
       capabilities:
         saved.capabilities?.length ? saved.capabilities : def.capabilities,

@@ -222,8 +222,8 @@ export async function runProactiveAgentScan(): Promise<{
 
     await supabase.from("agent_tasks").insert({
       company_id: companyId,
-      assigned_agent: "Opvolger",
-      requested_by_agent: "Lima",
+      assigned_agent: "Daan",
+      requested_by_agent: "Lara",
       title: `Lead opvolgen: ${klant} (deal ${deal.id})`,
       description: status.reason,
       type: "follow_up_lead",
@@ -239,14 +239,14 @@ export async function runProactiveAgentScan(): Promise<{
     await supabase.from("agent_activity_logs").insert({
       company_id: companyId,
       created_by_user_id: user.id,
-      agent_name: "Opvolger",
-      action_type: "lead_opvolging",
+      agent_name: "Daan",
+      action_type: "proactive_lead_followup",
       message: `Proactief: ${klant} (deal ${deal.id}) verdient opvolging — ${status.reason}`,
     });
 
     alerts.push({
       id: `lead-followup-${deal.id}`,
-      agentName: "Opvolger",
+      agentName: "Daan",
       title: `${klant} opvolgen`,
       message: `${status.reason} Bekijk de pipeline om in te plannen.`,
       href: "/dashboard/leads",
@@ -260,9 +260,9 @@ export async function runProactiveAgentScan(): Promise<{
     const days = daysSince(factuur.vervaldatum);
     alerts.push({
       id: `incasso-alert-${factuur.id}`,
-      agentName: "Lima",
+      agentName: "Lara",
       title: `Factuur ${factuur.nummer} vervallen`,
-      message: `${factuur.klant} — ${days > 0 ? `${days} dagen over vervaldatum` : "vandaag vervallen"}. Lima bewaakt incasso in je inbox.`,
+      message: `${factuur.klant} — ${days > 0 ? `${days} dagen over vervaldatum` : "vandaag vervallen"}. Lara bewaakt incasso in je inbox.`,
       href: "/dashboard/automatisaties",
       options: ["Bekijk voorstel", "Later"],
     });
@@ -282,7 +282,7 @@ export async function runProactiveAgentScan(): Promise<{
     const proposedAction = await proposeAgentAction({
       supabase,
       companyId,
-      agentName: "Facturatie",
+      agentName: "Nina",
       actionType: "create_invoice_from_offerte",
       title: `Factuur aanmaken voor offerte ${offerte.nummer}`,
       reason: `${offerte.klant} heeft geaccepteerd — factuur nog niet aangemaakt.`,
@@ -299,14 +299,14 @@ export async function runProactiveAgentScan(): Promise<{
       await supabase.from("agent_activity_logs").insert({
         company_id: companyId,
         created_by_user_id: user.id,
-        agent_name: "Facturatie",
-        action_type: "factuur",
+        agent_name: "Nina",
+        action_type: "proactive_invoice_from_offerte",
         message: `Proactief: factuur klaargezet voor geaccepteerde offerte ${offerte.nummer} (${offerte.klant}).`,
       });
 
       alerts.push({
         id: `invoice-${offerte.id}`,
-        agentName: "Facturatie",
+        agentName: "Nina",
         title: `Factuur voor ${offerte.klant}`,
         message: `Offerte ${offerte.nummer} is geaccepteerd. Ik heb een factuurvoorstel klaargezet ter goedkeuring.`,
         href: "/dashboard/automatisaties",

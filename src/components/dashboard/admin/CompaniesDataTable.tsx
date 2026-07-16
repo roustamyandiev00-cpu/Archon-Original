@@ -256,6 +256,7 @@ export default function CompaniesDataTable({
                 <TableHead className="text-right">Storage Used</TableHead>
                 <TableHead>Last Login</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Risico</TableHead>
                 <TableHead>Created Date</TableHead>
                 <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
                   <span className="sr-only">Actions</span>
@@ -323,6 +324,17 @@ export default function CompaniesDataTable({
                         {statusLabels[company.status]}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          company.risicoStatus === "normaal"
+                            ? "default"
+                            : "warning"
+                        }
+                      >
+                        {(company.risicoStatus ?? "normaal").replaceAll("_", " ")}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="font-mono text-xs text-zinc-500">
                       {formatDate(company.createdAt)}
                     </TableCell>
@@ -339,7 +351,7 @@ export default function CompaniesDataTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-12 text-center">
+                  <TableCell colSpan={13} className="py-12 text-center">
                     <div className="mx-auto max-w-sm">
                       <p className="text-sm font-medium text-zinc-200">
                         No companies found

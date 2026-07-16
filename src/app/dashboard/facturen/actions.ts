@@ -11,6 +11,7 @@ import { notifyPaymentReceived } from "@/lib/agents/events/payment-received";
 export type CreateFactuurInput = {
   documentType: FactuurDocumentType;
   customerId: number | null;
+  projectId?: string | null;
   klant: string;
   datum: string;
   vervaldatum: string | null;
@@ -70,6 +71,7 @@ export async function createFactuur(input: CreateFactuurInput) {
         nummer,
         klant: input.klant || "Onbekende klant",
         customer_id: input.customerId,
+        project_id: input.projectId || null,
         bedrijf_id: companyId,
         user_id: user.id,
         document_type: input.documentType,

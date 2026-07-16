@@ -70,8 +70,8 @@ export default function Features() {
         </div>
 
         {/* Mobiel: horizontaal scrollen · tablet+: grid */}
-        <div className="mt-8 sm:mt-14">
-          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 lg:gap-5 [&::-webkit-scrollbar]:hidden">
+        <div className="mt-8 overflow-x-hidden sm:mt-14">
+          <div className="flex gap-3 overflow-x-auto overscroll-x-contain px-0.5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 lg:gap-5 [&::-webkit-scrollbar]:hidden">
             {features.map((f) => (
               <div
                 key={f.title}

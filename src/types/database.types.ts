@@ -1177,6 +1177,7 @@ export type Database = {
           id: string
           rating: number
           reviewer_company_id: number
+          samenwerking_contract_id: string | null
           target_company_id: number
         }
         Insert: {
@@ -1185,6 +1186,7 @@ export type Database = {
           id?: string
           rating: number
           reviewer_company_id: number
+          samenwerking_contract_id?: string | null
           target_company_id: number
         }
         Update: {
@@ -1193,6 +1195,7 @@ export type Database = {
           id?: string
           rating?: number
           reviewer_company_id?: number
+          samenwerking_contract_id?: string | null
           target_company_id?: number
         }
         Relationships: [
@@ -1208,6 +1211,13 @@ export type Database = {
             columns: ["reviewer_company_id"]
             isOneToOne: false
             referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_reviews_samenwerking_contract_id_fkey"
+            columns: ["samenwerking_contract_id"]
+            isOneToOne: false
+            referencedRelation: "samenwerking_contracts"
             referencedColumns: ["id"]
           },
           {
@@ -1301,6 +1311,8 @@ export type Database = {
           peppol_participant_id: string | null
           plan: string | null
           postcode: string | null
+          risicostatus: string
+          betrouwbaarheidsscore: number | null
           slug: string | null
           stad: string | null
           status: string
@@ -1308,6 +1320,7 @@ export type Database = {
           telefoon: string | null
           updated_at: string | null
           user_id: string | null
+          verificatiestatus: string
         }
         Insert: {
           adres?: string | null
@@ -1332,6 +1345,8 @@ export type Database = {
           peppol_participant_id?: string | null
           plan?: string | null
           postcode?: string | null
+          risicostatus?: string
+          betrouwbaarheidsscore?: number | null
           slug?: string | null
           stad?: string | null
           status?: string
@@ -1339,6 +1354,7 @@ export type Database = {
           telefoon?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verificatiestatus?: string
         }
         Update: {
           adres?: string | null
@@ -1363,6 +1379,8 @@ export type Database = {
           peppol_participant_id?: string | null
           plan?: string | null
           postcode?: string | null
+          risicostatus?: string
+          betrouwbaarheidsscore?: number | null
           slug?: string | null
           stad?: string | null
           status?: string
@@ -1370,6 +1388,7 @@ export type Database = {
           telefoon?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verificatiestatus?: string
         }
         Relationships: []
       }
@@ -1618,13 +1637,18 @@ export type Database = {
           fotos: string[]
           id: number
           lat: number | null
+          laatste_controle_datum: string | null
+          leveringsgebied: string | null
           lng: number | null
+          materialen: string[]
           naam: string
+          openingsuren: string | null
           postcode: string | null
           regio: string | null
           stad: string | null
           telefoon: string | null
           toegevoegd_door: string | null
+          verificatiestatus: string
           website: string | null
         }
         Insert: {
@@ -1635,13 +1659,18 @@ export type Database = {
           fotos?: string[]
           id?: never
           lat?: number | null
+          laatste_controle_datum?: string | null
+          leveringsgebied?: string | null
           lng?: number | null
+          materialen?: string[]
           naam: string
+          openingsuren?: string | null
           postcode?: string | null
           regio?: string | null
           stad?: string | null
           telefoon?: string | null
           toegevoegd_door?: string | null
+          verificatiestatus?: string
           website?: string | null
         }
         Update: {
@@ -1652,16 +1681,86 @@ export type Database = {
           fotos?: string[]
           id?: never
           lat?: number | null
+          laatste_controle_datum?: string | null
+          leveringsgebied?: string | null
           lng?: number | null
+          materialen?: string[]
           naam?: string
+          openingsuren?: string | null
           postcode?: string | null
           regio?: string | null
           stad?: string | null
           telefoon?: string | null
           toegevoegd_door?: string | null
+          verificatiestatus?: string
           website?: string | null
         }
         Relationships: []
+      }
+      bouwmateriaal_prijzen: {
+        Row: {
+          bron_url: string | null
+          btw_status: string
+          created_at: string
+          created_by_company_id: number | null
+          eenheid: string
+          gecontroleerd_op: string
+          hoeveelheid_beschikbaar: number | null
+          id: string
+          leveringskosten: number | null
+          levertijd_dagen: number | null
+          merk: string | null
+          prijs: number
+          productnaam: string
+          specificaties: string | null
+          updated_at: string
+          winkel_id: number
+        }
+        Insert: {
+          bron_url?: string | null
+          btw_status?: string
+          created_at?: string
+          created_by_company_id?: number | null
+          eenheid?: string
+          gecontroleerd_op: string
+          hoeveelheid_beschikbaar?: number | null
+          id?: string
+          leveringskosten?: number | null
+          levertijd_dagen?: number | null
+          merk?: string | null
+          prijs: number
+          productnaam: string
+          specificaties?: string | null
+          updated_at?: string
+          winkel_id: number
+        }
+        Update: {
+          bron_url?: string | null
+          btw_status?: string
+          created_at?: string
+          created_by_company_id?: number | null
+          eenheid?: string
+          gecontroleerd_op?: string
+          hoeveelheid_beschikbaar?: number | null
+          id?: string
+          leveringskosten?: number | null
+          levertijd_dagen?: number | null
+          merk?: string | null
+          prijs?: number
+          productnaam?: string
+          specificaties?: string | null
+          updated_at?: string
+          winkel_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bouwmateriaal_prijzen_winkel_id_fkey"
+            columns: ["winkel_id"]
+            isOneToOne: false
+            referencedRelation: "bouwmateriaal_winkels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bouwnetwerk_channel_members: {
         Row: {
@@ -1949,6 +2048,7 @@ export type Database = {
           low_balance_notified: boolean
           low_balance_threshold: number | null
           stripe_customer_id: string | null
+          token_limit: number | null
           total_purchased: number
           total_spent: number | null
           updated_at: string
@@ -1965,6 +2065,7 @@ export type Database = {
           low_balance_notified?: boolean
           low_balance_threshold?: number | null
           stripe_customer_id?: string | null
+          token_limit?: number | null
           total_purchased?: number
           total_spent?: number | null
           updated_at?: string
@@ -1981,6 +2082,7 @@ export type Database = {
           low_balance_notified?: boolean
           low_balance_threshold?: number | null
           stripe_customer_id?: string | null
+          token_limit?: number | null
           total_purchased?: number
           total_spent?: number | null
           updated_at?: string
@@ -2242,6 +2344,8 @@ export type Database = {
       company_memberships: {
         Row: {
           activated_at: string | null
+          chat_terms_accepted_at: string | null
+          chat_terms_version: string | null
           company_id: number
           created_at: string | null
           custom_permissions: Json | null
@@ -2258,6 +2362,8 @@ export type Database = {
         }
         Insert: {
           activated_at?: string | null
+          chat_terms_accepted_at?: string | null
+          chat_terms_version?: string | null
           company_id: number
           created_at?: string | null
           custom_permissions?: Json | null
@@ -2274,6 +2380,8 @@ export type Database = {
         }
         Update: {
           activated_at?: string | null
+          chat_terms_accepted_at?: string | null
+          chat_terms_version?: string | null
           company_id?: number
           created_at?: string | null
           custom_permissions?: Json | null
@@ -2301,6 +2409,53 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_rapportages: {
+        Row: {
+          created_at: string
+          id: string
+          reden: string
+          reporter_company_id: number
+          reporter_user_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reden: string
+          reporter_company_id: number
+          reporter_user_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reden?: string
+          reporter_company_id?: number
+          reporter_user_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_rapportages_reporter_company_id_fkey"
+            columns: ["reporter_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
             referencedColumns: ["id"]
           },
         ]
@@ -2765,13 +2920,17 @@ export type Database = {
           fotos: string[]
           id: number
           lat: number | null
+          laatste_controle_datum: string | null
+          leveringsgebied: string | null
           lng: number | null
           naam: string
+          openingsuren: string | null
           postcode: string | null
           regio: string | null
           stad: string | null
           telefoon: string | null
           toegevoegd_door: string | null
+          verificatiestatus: string
           website: string | null
         }
         Insert: {
@@ -2782,13 +2941,17 @@ export type Database = {
           fotos?: string[]
           id?: never
           lat?: number | null
+          laatste_controle_datum?: string | null
+          leveringsgebied?: string | null
           lng?: number | null
           naam: string
+          openingsuren?: string | null
           postcode?: string | null
           regio?: string | null
           stad?: string | null
           telefoon?: string | null
           toegevoegd_door?: string | null
+          verificatiestatus?: string
           website?: string | null
         }
         Update: {
@@ -2799,13 +2962,17 @@ export type Database = {
           fotos?: string[]
           id?: never
           lat?: number | null
+          laatste_controle_datum?: string | null
+          leveringsgebied?: string | null
           lng?: number | null
           naam?: string
+          openingsuren?: string | null
           postcode?: string | null
           regio?: string | null
           stad?: string | null
           telefoon?: string | null
           toegevoegd_door?: string | null
+          verificatiestatus?: string
           website?: string | null
         }
         Relationships: []
@@ -3106,6 +3273,75 @@ export type Database = {
           },
         ]
       }
+      geschillen: {
+        Row: {
+          agent_action_id: number | null
+          ai_samenvatting: string | null
+          beheerder_id: string | null
+          beschrijving: string
+          beslist_op: string | null
+          bezwaar_op: string | null
+          bezwaar_reden: string | null
+          channel_id: string | null
+          created_at: string
+          id: string
+          melder_company_id: number
+          melder_verklaring: string | null
+          motivatie: string | null
+          samenwerking_contract_id: string | null
+          status: string
+          tegenpartij_company_id: number | null
+          tegenpartij_verklaring: string | null
+          titel: string
+          updated_at: string
+          werkpost_id: string | null
+        }
+        Insert: {
+          agent_action_id?: number | null
+          ai_samenvatting?: string | null
+          beheerder_id?: string | null
+          beschrijving: string
+          beslist_op?: string | null
+          bezwaar_op?: string | null
+          bezwaar_reden?: string | null
+          channel_id?: string | null
+          created_at?: string
+          id?: string
+          melder_company_id: number
+          melder_verklaring?: string | null
+          motivatie?: string | null
+          samenwerking_contract_id?: string | null
+          status?: string
+          tegenpartij_company_id?: number | null
+          tegenpartij_verklaring?: string | null
+          titel: string
+          updated_at?: string
+          werkpost_id?: string | null
+        }
+        Update: {
+          agent_action_id?: number | null
+          ai_samenvatting?: string | null
+          beheerder_id?: string | null
+          beschrijving?: string
+          beslist_op?: string | null
+          bezwaar_op?: string | null
+          bezwaar_reden?: string | null
+          channel_id?: string | null
+          created_at?: string
+          id?: string
+          melder_company_id?: number
+          melder_verklaring?: string | null
+          motivatie?: string | null
+          samenwerking_contract_id?: string | null
+          status?: string
+          tegenpartij_company_id?: number | null
+          tegenpartij_verklaring?: string | null
+          titel?: string
+          updated_at?: string
+          werkpost_id?: string | null
+        }
+        Relationships: []
+      }
       facturen: {
         Row: {
           accounting_export_error: string | null
@@ -3136,6 +3372,7 @@ export type Database = {
           peppol_message_id: string | null
           peppol_sent_at: string | null
           peppol_status: string
+          project_id: string | null
           reminder_count: number
           sent_at: string | null
           status: string
@@ -3176,6 +3413,7 @@ export type Database = {
           peppol_message_id?: string | null
           peppol_sent_at?: string | null
           peppol_status?: string
+          project_id?: string | null
           reminder_count?: number
           sent_at?: string | null
           status?: string
@@ -3216,6 +3454,7 @@ export type Database = {
           peppol_message_id?: string | null
           peppol_sent_at?: string | null
           peppol_status?: string
+          project_id?: string | null
           reminder_count?: number
           sent_at?: string | null
           status?: string
@@ -4055,6 +4294,8 @@ export type Database = {
           klant: string | null
           notes: string | null
           nummer: string | null
+          project_naam: string | null
+          afmetingen: string | null
           public_token: string | null
           rejected_at: string | null
           rejection_reason: string | null
@@ -4070,6 +4311,7 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          afmetingen?: string | null
           bedrag?: number
           bedrijf_id: number
           converted_at?: string | null
@@ -4086,6 +4328,7 @@ export type Database = {
           klant?: string | null
           notes?: string | null
           nummer?: string | null
+          project_naam?: string | null
           public_token?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -4101,6 +4344,7 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          afmetingen?: string | null
           bedrag?: number
           bedrijf_id?: number
           converted_at?: string | null
@@ -4117,6 +4361,7 @@ export type Database = {
           klant?: string | null
           notes?: string | null
           nummer?: string | null
+          project_naam?: string | null
           public_token?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -4541,27 +4786,33 @@ export type Database = {
         Row: {
           bedrijf_id: number | null
           created_at: string
+          customer_id: number | null
           id: string
           klant_naam: string
           naam: string
+          offerte_id: number | null
           start_datum_label: string
           status: string
         }
         Insert: {
           bedrijf_id?: number | null
           created_at?: string
+          customer_id?: number | null
           id?: string
           klant_naam: string
           naam: string
+          offerte_id?: number | null
           start_datum_label?: string
           status?: string
         }
         Update: {
           bedrijf_id?: number | null
           created_at?: string
+          customer_id?: number | null
           id?: string
           klant_naam?: string
           naam?: string
+          offerte_id?: number | null
           start_datum_label?: string
           status?: string
         }
@@ -4578,6 +4829,103 @@ export type Database = {
             columns: ["bedrijf_id"]
             isOneToOne: false
             referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projecten_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projecten_offerte_id_fkey"
+            columns: ["offerte_id"]
+            isOneToOne: false
+            referencedRelation: "offertes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_bestanden: {
+        Row: {
+          category: string
+          company_id: number
+          created_at: string
+          customer_id: number | null
+          file_name: string
+          id: string
+          mime_type: string | null
+          offerte_id: number | null
+          original_name: string
+          project_id: string | null
+          size_bytes: number | null
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string
+          company_id: number
+          created_at?: string
+          customer_id?: number | null
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          offerte_id?: number | null
+          original_name: string
+          project_id?: string | null
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          company_id?: number
+          created_at?: string
+          customer_id?: number | null
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          offerte_id?: number | null
+          original_name?: string
+          project_id?: string | null
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_bestanden_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bestanden_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bestanden_offerte_id_fkey"
+            columns: ["offerte_id"]
+            isOneToOne: false
+            referencedRelation: "offertes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bestanden_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
             referencedColumns: ["id"]
           },
         ]
@@ -5350,6 +5698,8 @@ export type Database = {
           gesloten_reden: string | null
           id: string
           is_actief: boolean | null
+          pipeline_status: string | null
+          zichtbaarheid: string
           postcode: string | null
           regio: string
           stad: string | null
@@ -5385,6 +5735,8 @@ export type Database = {
           gesloten_reden?: string | null
           id?: string
           is_actief?: boolean | null
+          pipeline_status?: string | null
+          zichtbaarheid?: string
           postcode?: string | null
           regio: string
           stad?: string | null
@@ -5420,6 +5772,8 @@ export type Database = {
           gesloten_reden?: string | null
           id?: string
           is_actief?: boolean | null
+          pipeline_status?: string | null
+          zichtbaarheid?: string
           postcode?: string | null
           regio?: string
           stad?: string | null

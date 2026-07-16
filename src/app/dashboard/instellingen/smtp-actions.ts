@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireWriteAccess } from "@/components/dashboard/context";
+import { requireAdminAccess } from "@/components/dashboard/context";
 import {
   GMAIL_SMTP,
   loadCompanySmtpSettings,
@@ -10,6 +10,7 @@ import {
   verifyCompanySmtp,
   type CompanySmtpSettings,
 } from "@/components/dashboard/email/smtp";
+import { decryptSecret, encryptSecret } from "@/lib/crypto/secrets";
 
 export type SmtpSettingsInput = {
   preset: "gmail" | "custom";
@@ -55,7 +56,12 @@ async function resolvePassword(
     .eq("bedrijf_id", companyId)
     .maybeSingle();
 
-  return data?.smtp_pass ?? null;
+  if (!data?.smtp_pass) return null;
+  try {
+    return decryptSecret(data.smtp_pass);
+  } catch {
+    return null;
+  }
 }
 
 function toSettings(
@@ -76,7 +82,7 @@ function toSettings(
 export async function saveSmtpSettings(
   input: SmtpSettingsInput,
 ): Promise<{ ok: true } | { error: string }> {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 
@@ -108,7 +114,7 @@ export async function saveSmtpSettings(
     smtp_host,
     smtp_port,
     smtp_user: input.smtp_user.trim(),
-    smtp_pass: password,
+    smtp_pass: encryptSecret(password),
     from_email: input.from_email.trim(),
     from_name: input.from_name.trim() || input.from_email.trim(),
     updated_at: now,
@@ -134,7 +140,7 @@ export async function testSmtpSettings(
   input: SmtpSettingsInput,
   testRecipient?: string,
 ): Promise<{ ok: true } | { error: string }> {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 

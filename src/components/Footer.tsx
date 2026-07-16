@@ -43,16 +43,22 @@ const columns = [
   },
 ];
 
-export default function Footer() {
+export default function Footer({ theme = "dark" }: { theme?: "dark" | "light" }) {
+  const isLight = theme === "light";
+
   return (
-    <footer className="border-t border-white/10 py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:py-14">
+    <footer
+      className={`py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:py-14 ${
+        isLight ? "border-t border-zinc-200 bg-zinc-50" : "border-t border-white/10"
+      }`}
+    >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-[1.5fr_repeat(4,1fr)] md:gap-10">
           <div>
             <Link href="/" className="inline-flex transition-opacity hover:opacity-95">
               <BrandFull width={168} priority />
             </Link>
-            <p className="mt-4 max-w-xs text-sm text-zinc-400">
+            <p className={`mt-4 max-w-xs text-sm ${isLight ? "text-zinc-600" : "text-zinc-400"}`}>
               De slimme CRM-werkruimte voor zelfstandige vakmensen in bouw,
               renovatie, installatie en onderhoud.
             </p>
@@ -60,7 +66,7 @@ export default function Footer() {
 
           {columns.map((col) => (
             <div key={col.title}>
-              <h3 className="text-sm font-semibold text-zinc-200">
+              <h3 className={`text-sm font-semibold ${isLight ? "text-zinc-900" : "text-zinc-200"}`}>
                 {col.title}
               </h3>
               <ul className="mt-4 space-y-2.5">
@@ -68,7 +74,11 @@ export default function Footer() {
                   <li key={l.label}>
                     <Link
                       href={l.href}
-                      className="text-sm text-zinc-400 transition-colors hover:text-zinc-100"
+                      className={`text-sm transition-colors ${
+                        isLight
+                          ? "text-zinc-600 hover:text-zinc-900"
+                          : "text-zinc-400 hover:text-zinc-100"
+                      }`}
                     >
                       {l.label}
                     </Link>
@@ -79,14 +89,20 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 sm:flex-row">
-          <p className="text-xs text-zinc-500">
+        <div
+          className={`mt-12 flex flex-col items-center justify-between gap-3 border-t pt-6 sm:flex-row ${
+            isLight ? "border-zinc-200" : "border-white/10"
+          }`}
+        >
+          <p className={`text-xs ${isLight ? "text-zinc-500" : "text-zinc-500"}`}>
             © {new Date().getFullYear()} ArchonPro. Alle rechten voorbehouden.
           </p>
           <div className="flex items-center gap-4">
             <a
               href="mailto:support@archonpro.be"
-              className="text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+              className={`text-xs transition-colors ${
+                isLight ? "text-zinc-500 hover:text-zinc-800" : "text-zinc-500 hover:text-zinc-300"
+              }`}
             >
               support@archonpro.be
             </a>

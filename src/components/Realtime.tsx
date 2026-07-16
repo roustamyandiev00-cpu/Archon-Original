@@ -6,7 +6,7 @@ const steps = [
     icon: Bot,
     title: "Agents monitoren je bedrijf",
     description:
-      "Lima, Scout en Pulse scannen offertes, facturen en leads — 24/7 op de achtergrond.",
+      "Ela, Scout en Pulse scannen offertes, facturen en leads — 24/7 op de achtergrond.",
   },
   {
     icon: Workflow,

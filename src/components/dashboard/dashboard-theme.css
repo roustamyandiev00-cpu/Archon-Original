@@ -208,34 +208,57 @@
 
 .dashboard-root[data-theme="light"] {
   color-scheme: light;
-  --dash-bg: #fafafa;
+  --dash-bg: #f5f6f8;
   --dash-surface: #ffffff;
-  --dash-elevated: #f4f4f5;
-  --dash-border: rgba(24, 24, 27, 0.1);
-  --dash-border-strong: rgba(24, 24, 27, 0.14);
-  --dash-hover: rgba(24, 24, 27, 0.04);
-  --dash-hover-strong: rgba(24, 24, 27, 0.07);
-  --dash-text: #18181b;
-  --dash-text-secondary: #3f3f46;
-  --dash-text-muted: #71717a;
-  --dash-text-faint: #a1a1aa;
+  --dash-elevated: #eef0f3;
+  --dash-border: rgba(33, 37, 41, 0.12);
+  --dash-border-strong: rgba(33, 37, 41, 0.18);
+  --dash-hover: rgba(33, 37, 41, 0.04);
+  --dash-hover-strong: rgba(33, 37, 41, 0.07);
+  --dash-text: #212529;
+  --dash-text-secondary: #495057;
+  --dash-text-muted: #6c757d;
+  --dash-text-faint: #adb5bd;
 }
 
-/* Shell */
-.dashboard-root[data-theme="light"].bg-zinc-950,
-.dashboard-root[data-theme="light"] .bg-zinc-950,
-.dashboard-root[data-theme="light"] .bg-zinc-950\/90,
+/* Shell — sidebar uitgesloten (blijft donker) */
+.dashboard-root[data-theme="light"].bg-zinc-950:not(.dashboard-sidebar),
+.dashboard-root[data-theme="light"] .bg-zinc-950:not(.dashboard-sidebar),
+.dashboard-root[data-theme="light"] .bg-zinc-950\/90:not(.dashboard-sidebar),
 .dashboard-root[data-theme="light"] .bg-zinc-950\/70,
 .dashboard-root[data-theme="light"] .bg-zinc-950\/60 {
   background-color: var(--dash-bg) !important;
 }
 
+.dashboard-root[data-theme="light"] .bg-zinc-950\/50,
+.dashboard-root[data-theme="light"] .bg-zinc-950\/40,
+.dashboard-root[data-theme="light"] .bg-zinc-950\/20 {
+  background-color: var(--dash-elevated) !important;
+}
+
+.dashboard-root[data-theme="light"] .bg-zinc-950\/80,
+.dashboard-root[data-theme="light"] .bg-zinc-950\/85,
+.dashboard-root[data-theme="light"] .bg-zinc-950\/98 {
+  background-color: var(--dash-surface) !important;
+}
+
 .dashboard-root[data-theme="light"] .bg-zinc-800,
 .dashboard-root[data-theme="light"] .bg-zinc-800\/90,
+.dashboard-root[data-theme="light"] .bg-zinc-800\/80,
 .dashboard-root[data-theme="light"] .bg-zinc-800\/70,
+.dashboard-root[data-theme="light"] .bg-zinc-800\/60,
 .dashboard-root[data-theme="light"] .bg-zinc-800\/50,
 .dashboard-root[data-theme="light"] .bg-zinc-800\/40 {
   background-color: var(--dash-elevated) !important;
+}
+
+.dashboard-root[data-theme="light"] .bg-zinc-700\/50 {
+  background-color: #e9ecef !important;
+}
+
+.dashboard-root[data-theme="light"] .bg-zinc-900\/80,
+.dashboard-root[data-theme="light"] .bg-zinc-900\/85 {
+  background-color: var(--dash-surface) !important;
 }
 
 .dashboard-root[data-theme="light"] .border-zinc-700\/40,
@@ -249,32 +272,52 @@
 .dashboard-root[data-theme="light"] .bg-zinc-900\/70,
 .dashboard-root[data-theme="light"] .bg-zinc-900\/60,
 .dashboard-root[data-theme="light"] .bg-zinc-900\/50,
-.dashboard-root[data-theme="light"] .bg-zinc-900\/40 {
+.dashboard-root[data-theme="light"] .bg-zinc-900\/40,
+.dashboard-root[data-theme="light"] .bg-zinc-900\/30,
+.dashboard-root[data-theme="light"] .bg-zinc-900\/20 {
   background-color: var(--dash-surface) !important;
 }
 
 .dashboard-root[data-theme="light"] .bg-white\/5,
 .dashboard-root[data-theme="light"] .bg-white\/8,
+.dashboard-root[data-theme="light"] .bg-white\/10,
 .dashboard-root[data-theme="light"] .bg-white\/\[0\.02\],
 .dashboard-root[data-theme="light"] .bg-white\/\[0\.03\],
-.dashboard-root[data-theme="light"] .bg-white\/\[0\.04\] {
+.dashboard-root[data-theme="light"] .bg-white\/\[0\.04\],
+.dashboard-root[data-theme="light"] .bg-white\/\[0\.06\] {
   background-color: var(--dash-hover) !important;
 }
 
 .dashboard-root[data-theme="light"] .hover\:bg-white\/5:hover,
 .dashboard-root[data-theme="light"] .hover\:bg-white\/\[0\.04\]:hover,
 .dashboard-root[data-theme="light"] .hover\:bg-white\/\[0\.03\]:hover,
-.dashboard-root[data-theme="light"] .hover\:bg-white\/10:hover {
+.dashboard-root[data-theme="light"] .hover\:bg-white\/10:hover,
+.dashboard-root[data-theme="light"] .hover\:bg-white\/\[0\.06\]:hover {
   background-color: var(--dash-hover-strong) !important;
+}
+
+.dashboard-root[data-theme="light"] .hover\:bg-zinc-900:hover {
+  background-color: var(--dash-elevated) !important;
 }
 
 /* Borders */
 .dashboard-root[data-theme="light"] .border-white\/10,
+.dashboard-root[data-theme="light"] .border-white\/\[0\.08\],
 .dashboard-root[data-theme="light"] .border-white\/\[0\.06\],
-.dashboard-root[data-theme="light"] .border-white\/5,
+.dashboard-root[data-theme="light"] .border-white\/\[0\.05\],
 .dashboard-root[data-theme="light"] .border-white\/\[0\.04\],
-.dashboard-root[data-theme="light"] .border-white\/20 {
+.dashboard-root[data-theme="light"] .border-white\/5,
+.dashboard-root[data-theme="light"] .border-white\/20,
+.dashboard-root[data-theme="light"] .border-white\/15,
+.dashboard-root[data-theme="light"] .border-white\/\[0\.1\] {
   border-color: var(--dash-border) !important;
+}
+
+.dashboard-root[data-theme="light"] .hover\:border-white\/12:hover,
+.dashboard-root[data-theme="light"] .hover\:border-white\/15:hover,
+.dashboard-root[data-theme="light"] .hover\:border-white\/20:hover,
+.dashboard-root[data-theme="light"] .hover\:border-white\/25:hover {
+  border-color: var(--dash-border-strong) !important;
 }
 
 .dashboard-root[data-theme="light"] .divide-white\/10 > :not([hidden]) ~ :not([hidden]) {
@@ -282,6 +325,7 @@
 }
 
 /* Text */
+.dashboard-root[data-theme="light"].text-zinc-100,
 .dashboard-root[data-theme="light"] .text-zinc-50,
 .dashboard-root[data-theme="light"] .text-zinc-100 {
   color: var(--dash-text) !important;
@@ -429,17 +473,333 @@
 
 /* Disabled nav items */
 .dashboard-root[data-theme="light"] .text-zinc-600.cursor-default {
-  color: #d4d4d8 !important;
+  color: #ced4da !important;
 }
 
-.dashboard-root[data-theme="light"] .text-zinc-700 {
-  color: #d4d4d8 !important;
+.dashboard-root[data-theme="light"] .cursor-default.text-zinc-700,
+.dashboard-root[data-theme="light"] .text-zinc-700.cursor-default {
+  color: #ced4da !important;
 }
 
 /* Shadow aanpassing licht */
 .dashboard-root[data-theme="light"] .shadow-2xl,
-.dashboard-root[data-theme="light"] .shadow-\[0_30px_80px_-40px_rgba\(14\,165\,233\,0\.5\)\] {
-  box-shadow: 0 20px 50px -24px rgba(24, 24, 27, 0.18) !important;
+.dashboard-root[data-theme="light"] .shadow-\[0_30px_80px_-40px_rgba\(14\,165\,233\,0\.5\)\],
+.dashboard-root[data-theme="light"] .shadow-\[0_40px_100px_-50px_rgba\(0\,0\,0\,0\.8\)\] {
+  box-shadow: 0 8px 24px -12px rgba(33, 37, 41, 0.14) !important;
+}
+
+/* Topbar + hub — Billit-achtig wit vlak */
+.dashboard-root[data-theme="light"] .dashboard-topbar {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: var(--dash-border) !important;
+  backdrop-filter: blur(12px);
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar .bg-white\/10 {
+  background-color: var(--dash-elevated) !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar .bg-white\/5 {
+  background-color: var(--dash-surface) !important;
+  border-color: var(--dash-border) !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar .h-4.w-px.bg-white\/10 {
+  background-color: var(--dash-border) !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-hub-header,
+.dashboard-root[data-theme="light"] .dashboard-panel {
+  background-color: var(--dash-surface) !important;
+  border-color: var(--dash-border) !important;
+  box-shadow: 0 1px 2px rgba(33, 37, 41, 0.04);
+}
+
+.dashboard-root[data-theme="light"] .dashboard-panel > div:first-child {
+  border-color: var(--dash-border) !important;
+}
+
+/* GlowCard — lichte kaarten i.p.v. donkere kern */
+.dashboard-root[data-theme="light"] .dashboard-glow-card-inner {
+  background-color: var(--dash-surface) !important;
+  border: 1px solid var(--dash-border);
+}
+
+.dashboard-root[data-theme="light"] .dashboard-glow-card-ring {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.22),
+    rgba(255, 255, 255, 0.9),
+    rgba(249, 115, 22, 0.18)
+  ) !important;
+  box-shadow: 0 4px 20px -8px rgba(33, 37, 41, 0.12) !important;
+}
+
+/* Accenttekst leesbaar op lichte achtergrond */
+.dashboard-root[data-theme="light"] .text-orange-300,
+.dashboard-root[data-theme="light"] .text-orange-100,
+.dashboard-root[data-theme="light"] .group-hover\:text-orange-100:hover {
+  color: #c2410c !important;
+}
+
+.dashboard-root[data-theme="light"] .text-orange-400\/45 {
+  color: rgba(234, 88, 12, 0.55) !important;
+}
+
+.dashboard-root[data-theme="light"] .text-emerald-300 {
+  color: #047857 !important;
+}
+
+.dashboard-root[data-theme="light"] .text-violet-300 {
+  color: #6d28d9 !important;
+}
+
+.dashboard-root[data-theme="light"] .border-orange-500\/55,
+.dashboard-root[data-theme="light"] .border-orange-500\/40,
+.dashboard-root[data-theme="light"] .border-orange-500\/25 {
+  border-color: rgba(249, 115, 22, 0.32) !important;
+}
+
+.dashboard-root[data-theme="light"] .bg-orange-500\/\[0\.05\] {
+  background-color: rgba(249, 115, 22, 0.08) !important;
+}
+
+.dashboard-root[data-theme="light"] .bg-orange-500\/15,
+.dashboard-root[data-theme="light"] .bg-orange-500\/10 {
+  background-color: rgba(249, 115, 22, 0.1) !important;
+}
+
+.dashboard-root[data-theme="light"] .bg-emerald-500\/10,
+.dashboard-root[data-theme="light"] .bg-emerald-500\/15 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+.dashboard-root[data-theme="light"] .bg-violet-500\/15 {
+  background-color: rgba(139, 92, 246, 0.1) !important;
+}
+
+.dashboard-root[data-theme="light"] .border-emerald-500\/20,
+.dashboard-root[data-theme="light"] .border-emerald-500\/30 {
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+.dashboard-root[data-theme="light"] .border-violet-500\/40 {
+  border-color: rgba(139, 92, 246, 0.28) !important;
+}
+
+.dashboard-root[data-theme="light"] .hover\:border-orange-500\/25:hover {
+  border-color: rgba(249, 115, 22, 0.35) !important;
+}
+
+/* Topbar metrics & knoppen */
+.dashboard-root[data-theme="light"] .dashboard-topbar-stat-label {
+  color: #6c757d !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-stat-value {
+  color: #212529 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-action,
+.dashboard-root[data-theme="light"] .dashboard-topbar-icon-btn,
+.dashboard-root[data-theme="light"] .dashboard-topbar-sync {
+  border-color: var(--dash-border) !important;
+  background-color: var(--dash-surface) !important;
+  color: #495057 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-action:hover,
+.dashboard-root[data-theme="light"] .dashboard-topbar-icon-btn:hover {
+  background-color: var(--dash-hover) !important;
+  color: #212529 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-icon-btn.bg-white\/5 {
+  background-color: var(--dash-elevated) !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-sync .text-zinc-400 {
+  color: #6c757d !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-agent.border-white\/10 {
+  border-color: var(--dash-border) !important;
+  background-color: var(--dash-surface) !important;
+  color: #495057 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-agent.border-sky-500\/30,
+.dashboard-root[data-theme="light"] .dashboard-topbar-agent.border-sky-400\/50 {
+  border-color: rgba(59, 130, 246, 0.35) !important;
+  background-color: rgba(59, 130, 246, 0.08) !important;
+  color: #1d4ed8 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-agent .text-sky-200,
+.dashboard-root[data-theme="light"] .dashboard-topbar-agent .text-sky-100 {
+  color: #1d4ed8 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-agent .text-emerald-400 {
+  color: #047857 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-topbar-agent .bg-emerald-500\/15 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+
+/* Pagina-actieknoppen */
+.dashboard-root[data-theme="light"] .dashboard-page-action-secondary {
+  border-color: var(--dash-border-strong) !important;
+  background-color: var(--dash-surface) !important;
+  color: #212529 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-page-action-secondary:hover {
+  background-color: var(--dash-hover) !important;
+  border-color: rgba(33, 37, 41, 0.22) !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-page-action-primary {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-page-action-primary:hover {
+  background-color: #1d4ed8 !important;
+}
+
+/* Sticky actie-kolom — geen zwarte overlay in light mode */
+@media (min-width: 1024px) {
+  .dashboard-table-sticky-actions {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+  }
+}
+
+.dashboard-root:not([data-theme="light"]) .dashboard-table-sticky-actions {
+  background-color: #09090b;
+  box-shadow: -8px 0 16px rgba(9, 9, 11, 0.45);
+}
+
+.dashboard-root[data-theme="light"] .dashboard-table-sticky-actions {
+  background-color: var(--dash-surface) !important;
+  box-shadow: -8px 0 16px rgba(33, 37, 41, 0.06);
+}
+
+.dashboard-root[data-theme="light"] .dashboard-panel-menu {
+  background-color: var(--dash-surface) !important;
+  border-color: var(--dash-border) !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-panel-menu label {
+  color: #212529 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-panel-menu label:hover {
+  background-color: var(--dash-hover) !important;
+}
+
+/* Shadcn-achtige kaarten & knoppen in dashboard */
+.dashboard-root[data-theme="light"] .rounded-2xl.border-zinc-700\/45,
+.dashboard-root[data-theme="light"] .border-zinc-700\/45.bg-zinc-800\/90 {
+  border-color: var(--dash-border) !important;
+  background-color: var(--dash-surface) !important;
+  color: #212529 !important;
+}
+
+.dashboard-root[data-theme="light"] button.border-sky-500\/40.bg-sky-500\/15,
+.dashboard-root[data-theme="light"] a.border-sky-500\/40.bg-sky-500\/15 {
+  border-color: rgba(37, 99, 235, 0.28) !important;
+  background-color: rgba(37, 99, 235, 0.08) !important;
+  color: #1d4ed8 !important;
+}
+
+.dashboard-root[data-theme="light"] button.border-sky-500\/40.bg-sky-500\/15:hover,
+.dashboard-root[data-theme="light"] a.border-sky-500\/40.bg-sky-500\/15:hover {
+  background-color: rgba(37, 99, 235, 0.14) !important;
+}
+
+.dashboard-root[data-theme="light"] button.border-transparent.text-zinc-400,
+.dashboard-root[data-theme="light"] button.border-transparent.bg-transparent {
+  color: #6c757d !important;
+}
+
+.dashboard-root[data-theme="light"] button.border-transparent:hover {
+  background-color: var(--dash-hover) !important;
+  color: #212529 !important;
+}
+
+.dashboard-root[data-theme="light"] .border-white\/10.bg-white\/5.text-zinc-300,
+.dashboard-root[data-theme="light"] span.border-white\/10.bg-white\/5 {
+  border-color: var(--dash-border) !important;
+  background-color: var(--dash-elevated) !important;
+  color: #495057 !important;
+}
+
+.dashboard-root[data-theme="light"] .border-sky-500\/30.bg-sky-500\/10.text-sky-400 {
+  border-color: rgba(37, 99, 235, 0.22) !important;
+  background-color: rgba(37, 99, 235, 0.08) !important;
+  color: #1d4ed8 !important;
+}
+
+.dashboard-root[data-theme="light"] .border-emerald-500\/30.bg-emerald-500\/10.text-emerald-400 {
+  color: #047857 !important;
+}
+
+.dashboard-root[data-theme="light"] .border-amber-500\/30.bg-amber-500\/10.text-amber-400 {
+  color: #b45309 !important;
+}
+
+/* Side panel — licht thema, geen zwarte overlap */
+.dashboard-root[data-theme="light"] .dashboard-side-panel {
+  background-color: var(--dash-surface) !important;
+  border-color: var(--dash-border) !important;
+  box-shadow: -8px 0 24px rgba(33, 37, 41, 0.06);
+}
+
+.dashboard-root[data-theme="light"] .dashboard-side-panel-tab,
+.dashboard-root[data-theme="light"] .dashboard-side-panel-handle {
+  background-color: var(--dash-surface) !important;
+  border-color: var(--dash-border) !important;
+  color: #6c757d !important;
+  box-shadow: -4px 0 16px rgba(33, 37, 41, 0.06);
+}
+
+.dashboard-root[data-theme="light"] .dashboard-side-panel-tab:hover,
+.dashboard-root[data-theme="light"] .dashboard-side-panel-handle:hover {
+  background-color: var(--dash-elevated) !important;
+  color: #212529 !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-side-panel .border-zinc-800,
+.dashboard-root[data-theme="light"] .dashboard-side-panel .bg-zinc-900 {
+  border-color: var(--dash-border) !important;
+  background-color: var(--dash-elevated) !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-side-panel .text-zinc-300,
+.dashboard-root[data-theme="light"] .dashboard-side-panel .text-zinc-400 {
+  color: #495057 !important;
+}
+
+/* Bouwnetwerk hub */
+.dashboard-root[data-theme="light"] .dashboard-bouwnetwerk {
+  background-color: var(--dash-surface) !important;
+  border-color: var(--dash-border) !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-page-header {
+  border-color: var(--dash-border) !important;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-page-content > .dashboard-data-panel,
+  .dashboard-page-content > .dashboard-bouwnetwerk {
+    min-height: 0;
+    flex: 1 1 auto;
+  }
 }
 
 /* Mobiele bottom nav + swipe */
@@ -547,21 +907,75 @@
     overflow: visible;
   }
 
-  .facturen-create-shell {
-    height: calc(100dvh - 3.5rem);
-    max-height: calc(100dvh - 3.5rem);
-    overflow: hidden;
-  }
-
   .facturen-create-shell .mobile-swipe-dots {
     display: none;
   }
 }
 
-/* Studio Admin invoice clone — fixed viewport, no scroll */
-.studio-invoice-shell {
+/*
+ * Nieuwe-factuur: vult het dashboard-contentvlak volledig (geen zwarte gutters,
+ * geen page-scroll). Shell is absolute t.o.v. main-body.
+ */
+.dashboard-main:has(.facturen-create-shell) {
+  background-color: #f4f4f5 !important;
+}
+
+.dashboard-main-body:has(.facturen-create-shell) {
+  position: relative;
+  max-width: none;
+  margin: 0;
+  padding: 0 !important;
+  background: #f4f4f5;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dashboard-main-body:has(.facturen-create-shell) .dashboard-swipe-root,
+.dashboard-main-body:has(.facturen-create-shell) .mobile-swipe-shell,
+.dashboard-main-body:has(.facturen-create-shell) .mobile-swipe-content {
+  position: absolute;
+  inset: 0;
+  display: block;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.facturen-create-shell.studio-invoice-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
   color: #18181b;
-  background: #ffffff;
+  background: #f4f4f5;
+  padding: 0.75rem 0.875rem;
+}
+
+@media (min-width: 1024px) {
+  .facturen-create-shell.studio-invoice-shell {
+    padding: 0.75rem 1rem;
+  }
+}
+
+.facturen-create-shell.studio-invoice-shell > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.studio-invoice-shell .studio-invoice-create {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .studio-invoice-shell .studio-invoice-create,
@@ -576,6 +990,8 @@
   background-color: #ffffff;
   color: #18181b;
   border-radius: 0.5rem;
+  height: 2rem;
+  font-size: 0.8125rem;
 }
 
 .studio-invoice-shell .studio-invoice-form input:focus,
@@ -585,16 +1001,9 @@
   outline: none;
 }
 
-@media (min-width: 1280px) {
-  .studio-invoice-shell .studio-invoice-form > div:last-child {
-    overflow: hidden;
-  }
-}
-
-@media (max-width: 1023px) {
-  .facturen-create-shell {
-    min-height: 0;
-  }
+.studio-invoice-preview {
+  min-height: 0;
+  height: 100%;
 }
 
 .mobile-more-sheet {
@@ -635,10 +1044,10 @@
   border-color: var(--dash-border) !important;
 }
 
-/* Sidebar blijft donker in light mode */
+/* Sidebar blijft donker in light mode — iets lichter dan puur zwart */
 .dashboard-root[data-theme="light"] .dashboard-sidebar {
-  background-color: #09090b !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: #151921 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
   color-scheme: dark;
 }
 
@@ -689,7 +1098,7 @@
 }
 
 .dashboard-root[data-theme="light"] .dashboard-sidebar .bg-zinc-950\/90 {
-  background-color: rgba(9, 9, 11, 0.9) !important;
+  background-color: rgba(21, 25, 33, 0.92) !important;
 }
 
 .dashboard-root[data-theme="light"] .dashboard-sidebar .bg-white\/\[0\.03\],
@@ -729,6 +1138,11 @@
 
 .dashboard-root[data-theme="light"] .dashboard-sidebar [class*="scrollbar-color"] {
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-access-banner {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: var(--dash-border) !important;
 }
 
 .dashboard-root[data-theme="light"] .agent-chat-widget {
@@ -801,9 +1215,33 @@ body:has(.dashboard-root) {
 @media (max-width: 1023px) {
   .dashboard-hub-view,
   .dashboard-page-content {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    /* Zorg dat laatste knop/item niet achter bottom-nav valt op mobile */
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  }
+
+  .dashboard-mobile-card {
+    background-color: rgba(24, 24, 27, 0.45);
+  }
+
+  .dashboard-root[data-theme="light"] .dashboard-mobile-card {
+    background-color: var(--dash-surface) !important;
+    border-color: var(--dash-border) !important;
+  }
+
+  .dashboard-page-header .dashboard-page-action-primary,
+  .dashboard-page-header .dashboard-page-action-secondary {
+    flex: 1 1 calc(50% - 0.25rem);
+    justify-content: center;
+  }
+
+  .dashboard-topbar .ml-auto {
+    gap: 0.25rem;
   }
 }
 
@@ -899,10 +1337,5 @@ body:has(.dashboard-root) {
   .mobile-swipe-dots,
   .dashboard-swipe-root > p {
     display: none !important;
-  }
-
-  .facturen-create-shell {
-    height: 100%;
-    max-height: 100%;
   }
 }

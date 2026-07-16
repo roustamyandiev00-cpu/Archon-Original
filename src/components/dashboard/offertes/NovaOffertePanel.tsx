@@ -46,8 +46,11 @@ type SpeechRecognitionWindow = Window &
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
   };
 
+/** Foto-upload + vision-analyse (offerte-flow-onboarding-plan §4.4a). */
+const ENABLE_OFFERTE_PHOTO_VISION = true;
+
 export default function NovaOffertePanel({
-  agentName = "Lima",
+  agentName = "Ela",
   customers,
   onApplyDraft,
 }: {
@@ -274,9 +277,11 @@ Beschrijving werkzaamheden: ${description}
           description: fullDescription,
           customerId: customerId ? Number(customerId) : null,
           klant: selectedKlant(),
-          images: photoBase64s,
+          images: ENABLE_OFFERTE_PHOTO_VISION ? photoBase64s : undefined,
+          dimensions: dimensions.trim() || null,
+          projectNaam: projectName.trim() || null,
         });
-        
+
         setAnalyzingPhotos(false);
 
         if ("error" in result && result.error) {
@@ -293,6 +298,19 @@ Beschrijving werkzaamheden: ${description}
         setCalculations(calcs);
 
         if (result.mode === "direct" && result.offerteId) {
+          if (photoBase64s.length > 0) {
+            const { uploadOffertePhotosFromBase64 } = await import(
+              "@/app/dashboard/offertes/projecten/bestanden-actions"
+            );
+            await uploadOffertePhotosFromBase64({
+              offerteId: result.offerteId,
+              customerId: customerId ? Number(customerId) : null,
+              photos: photoBase64s.map((dataUrl, i) => ({
+                name: photos[i]?.name || `offerte-foto-${i + 1}.jpg`,
+                dataUrl,
+              })),
+            });
+          }
           router.push(`/dashboard/offertes/${result.offerteId}`);
           router.refresh();
           return;
@@ -309,11 +327,7 @@ Beschrijving werkzaamheden: ${description}
       });
     };
 
-    if (photos.length > 0) {
-      setTimeout(runGeneration, 1500); // 1.5s photo-analyse simulatie
-    } else {
-      runGeneration();
-    }
+    runGeneration();
   }
 
   function handleApplyDraft() {
@@ -362,6 +376,8 @@ Beschrijving werkzaamheden: ${description}
         geldigTot: defaultGeldigTot(),
         notes: buildNotes(),
         lines: preview,
+        projectNaam: projectName.trim() || null,
+        afmetingen: dimensions.trim() || null,
       });
 
       if ("error" in result && result.error) {
@@ -370,6 +386,19 @@ Beschrijving werkzaamheden: ${description}
       }
 
       if ("id" in result && result.id) {
+        if (photoBase64s.length > 0) {
+          const { uploadOffertePhotosFromBase64 } = await import(
+            "@/app/dashboard/offertes/projecten/bestanden-actions"
+          );
+          await uploadOffertePhotosFromBase64({
+            offerteId: result.id,
+            customerId: customerId ? Number(customerId) : null,
+            photos: photoBase64s.map((dataUrl, i) => ({
+              name: photos[i]?.name || `offerte-foto-${i + 1}.jpg`,
+              dataUrl,
+            })),
+          });
+        }
         router.push(`/dashboard/offertes/${result.id}`);
         router.refresh();
       }
@@ -631,22 +660,26 @@ Beschrijving werkzaamheden: ${description}
                     {isListening ? <MicOff size={14} /> : <Mic size={14} />}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200 transition-colors"
-                    title="Foto's uploaden"
-                  >
-                    <ImageIcon size={14} />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
+                  {ENABLE_OFFERTE_PHOTO_VISION && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200 transition-colors"
+                        title="Foto's uploaden"
+                      >
+                        <ImageIcon size={14} />
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    </>
+                  )}
                 </div>
                 
                 {isListening && (
@@ -657,8 +690,8 @@ Beschrijving werkzaamheden: ${description}
               </div>
             </div>
 
-            {/* Photo Preview */}
-            {photos.length > 0 && (
+            {/* Photo Preview — alleen als vision aanstaat */}
+            {ENABLE_OFFERTE_PHOTO_VISION && photos.length > 0 && (
               <div className="flex flex-wrap gap-2.5 rounded-xl border border-white/5 bg-zinc-900/20 p-2.5">
                 {photos.map((p, idx) => (
                   <div key={idx} className="group relative h-16 w-16 rounded-lg overflow-hidden border border-white/10">

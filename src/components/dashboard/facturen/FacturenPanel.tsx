@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Cog, Download, EyeOff, Plus, SlidersHorizontal } from "lucide-react";
+import { Plus } from "lucide-react";
 import FacturenDataTable, {
+  FACTUUR_COLUMN_OPTIONS,
+  defaultFactuurColumnVisibility,
+  type FactuurColumnVisibility,
   type FactuurListItem,
 } from "@/components/dashboard/facturen/FacturenDataTable";
+import DataPanelToolbar from "@/components/dashboard/DataPanelToolbar";
+import { exportFacturenCsv } from "@/components/dashboard/table-exports";
 import { Badge } from "@/components/ui/badge";
 import { Button, primaryActionClass } from "@/components/ui/button";
 import {
@@ -24,6 +29,9 @@ export default function FacturenPanel({
   isDemo: boolean;
 }) {
   const [showFilters, setShowFilters] = useState(true);
+  const [columnVisibility, setColumnVisibility] = useState<FactuurColumnVisibility>(
+    defaultFactuurColumnVisibility,
+  );
 
   const openCount = facturen.filter(
     (f) =>
@@ -48,31 +56,22 @@ export default function FacturenPanel({
           </CardDescription>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={showFilters ? "Filters verbergen" : "Filters tonen"}
-            onClick={() => setShowFilters((value) => !value)}
-          >
-            {showFilters ? <EyeOff size={15} /> : <SlidersHorizontal size={15} />}
-            <span className="hidden sm:inline">
-              {showFilters ? "Hide" : "Filters"}
-            </span>
-          </Button>
-          <Button type="button" variant="ghost" aria-label="Kolommen aanpassen">
-            <Cog size={15} />
-            <span className="hidden sm:inline">Customize</span>
-          </Button>
-          <Button type="button" variant="ghost" aria-label="Exporteer facturen">
-            <Download size={15} />
-            <span className="hidden sm:inline">Export</span>
-          </Button>
+        <DataPanelToolbar
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((value) => !value)}
+          columns={FACTUUR_COLUMN_OPTIONS}
+          columnVisibility={columnVisibility}
+          onColumnVisibilityChange={(id, visible) =>
+            setColumnVisibility((current) => ({ ...current, [id]: visible }))
+          }
+          onExport={() => exportFacturenCsv(facturen)}
+          exportLabel="Exporteer facturen"
+        >
           <Link href="/dashboard/facturen/nieuw" className={primaryActionClass}>
             <Plus size={15} />
             Nieuwe factuur
           </Link>
-        </div>
+        </DataPanelToolbar>
       </CardHeader>
 
       <CardContent className="dashboard-data-panel-body">
@@ -94,6 +93,7 @@ export default function FacturenPanel({
             facturen={facturen}
             isDemo={isDemo}
             showFilters={showFilters}
+            columnVisibility={columnVisibility}
           />
         </div>
       </CardContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Building2,
   ChevronLeft,
@@ -23,6 +23,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
+  DashboardMobileCard,
+  DashboardMobileEmpty,
+} from "@/components/dashboard/DashboardMobileCard";
+import { tableColumnClass } from "@/components/dashboard/table-columns";
+import {
   Table,
   TableBody,
   TableCell,
@@ -32,6 +37,24 @@ import {
 } from "@/components/ui/table";
 
 const pageSize = 5;
+
+export type ContactColumnKey = "phone" | "location" | "fiscal";
+
+export type ContactColumnVisibility = Record<ContactColumnKey, boolean>;
+
+export const CONTACT_COLUMN_OPTIONS = [
+  { id: "phone", label: "Telefoon" },
+  { id: "location", label: "Locatie" },
+  { id: "fiscal", label: "Fiscaal" },
+] as const;
+
+export const defaultContactColumnVisibility: ContactColumnVisibility = {
+  phone: true,
+  location: true,
+  fiscal: true,
+};
+
+const stickyActionsClass = "text-right dashboard-table-sticky-actions";
 
 type PeppolFilter = "all" | "ready" | "incomplete";
 type TypeFilter = "all" | "business" | "individual";
@@ -65,11 +88,13 @@ export default function ContactenDataTable({
   onEdit,
   onDelete,
   showFilters = true,
+  columnVisibility = defaultContactColumnVisibility,
 }: {
   klanten: KlantRecord[];
   onEdit: (klant: KlantRecord) => void;
   onDelete: (id: number, naam: string) => void;
   showFilters?: boolean;
+  columnVisibility?: ContactColumnVisibility;
 }) {
   const [query, setQuery] = useState("");
   const [peppolFilter, setPeppolFilter] = useState<PeppolFilter>("all");
@@ -163,6 +188,7 @@ export default function ContactenDataTable({
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
             />
             <Input
+              name="contact-search"
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -229,6 +255,86 @@ export default function ContactenDataTable({
       </div>
 
       <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
+        <div className="flex h-full flex-col gap-2 overflow-y-auto p-2 lg:hidden">
+          {visible.length > 0 ? (
+            visible.map((klant, index) => {
+              const peppolReady = isPeppolReady(klant);
+              const adres = [klant.postcode, klant.city].filter(Boolean).join(" ");
+              const tone =
+                avatarTones[index % avatarTones.length] ?? avatarTones[0];
+
+              return (
+                <DashboardMobileCard key={klant.id}>
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border font-mono text-xs font-semibold ${tone}`}
+                      aria-hidden
+                    >
+                      {initials(klant.name) || "?"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-zinc-100">{klant.name}</p>
+                          {klant.company_name ? (
+                            <p className="mt-0.5 truncate text-xs text-zinc-400">
+                              {klant.company_name}
+                            </p>
+                          ) : null}
+                        </div>
+                        <Badge variant={peppolReady ? "success" : "warning"}>
+                          <Radio size={10} />
+                          {peppolReady ? "Klaar" : "Onvolledig"}
+                        </Badge>
+                      </div>
+                      {klant.email ? (
+                        <p className="mt-1 flex items-center gap-1 truncate text-xs text-zinc-500">
+                          <Mail size={11} className="shrink-0" />
+                          {klant.email}
+                        </p>
+                      ) : null}
+                      {klant.phone ? (
+                        <p className="mt-1 flex items-center gap-1 truncate font-mono text-xs text-zinc-500">
+                          <Phone size={11} className="shrink-0" />
+                          {klant.phone}
+                        </p>
+                      ) : null}
+                      {adres ? (
+                        <p className="mt-1 flex items-center gap-1 text-xs text-zinc-500">
+                          <MapPin size={11} className="shrink-0" />
+                          <span className="truncate">{adres}</span>
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex justify-end border-t border-white/10 pt-2">
+                    <ContactActionMenu
+                      klant={klant}
+                      open={openMenuId === klant.id}
+                      onOpenChange={(open) =>
+                        setOpenMenuId(open ? klant.id : null)
+                      }
+                      onEdit={() => onEdit(klant)}
+                      onDelete={() => onDelete(klant.id, klant.name)}
+                    />
+                  </div>
+                </DashboardMobileCard>
+              );
+            })
+          ) : (
+            <DashboardMobileEmpty
+              icon={<User size={22} />}
+              title={klanten.length === 0 ? "Nog geen contacten" : "Geen resultaten"}
+              description={
+                klanten.length === 0
+                  ? "Voeg je eerste klant toe om offertes en facturen te versturen."
+                  : "Pas je zoekopdracht of filters aan."
+              }
+            />
+          )}
+        </div>
+
+        <div className="hidden h-full min-h-0 lg:block">
           <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -243,11 +349,17 @@ export default function ContactenDataTable({
                 </TableHead>
                 <TableHead className="min-w-[240px]">Contact</TableHead>
                 <TableHead className="min-w-0">Bedrijf</TableHead>
-                <TableHead className="hidden min-w-0 lg:table-cell">Telefoon</TableHead>
-                <TableHead className="hidden min-w-0 xl:table-cell">Locatie</TableHead>
-                <TableHead className="hidden min-w-0 2xl:table-cell">Fiscaal</TableHead>
+                <TableHead className={tableColumnClass(columnVisibility.phone, "lg")}>
+                  Telefoon
+                </TableHead>
+                <TableHead className={tableColumnClass(columnVisibility.location, "xl")}>
+                  Locatie
+                </TableHead>
+                <TableHead className={tableColumnClass(columnVisibility.fiscal, "2xl")}>
+                  Fiscaal
+                </TableHead>
                 <TableHead>Peppol</TableHead>
-                <TableHead className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                <TableHead className={stickyActionsClass}>
                   <span className="sr-only">Acties</span>
                 </TableHead>
               </TableRow>
@@ -306,7 +418,7 @@ export default function ContactenDataTable({
                           <span className="text-xs text-zinc-600">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 lg:table-cell">
+                      <TableCell className={tableColumnClass(columnVisibility.phone, "lg")}>
                         {klant.phone ? (
                           <span className="inline-flex items-center gap-1 truncate font-mono text-xs text-zinc-400">
                             <Phone size={11} />
@@ -316,7 +428,7 @@ export default function ContactenDataTable({
                           <span className="text-xs text-zinc-600">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 xl:table-cell">
+                      <TableCell className={tableColumnClass(columnVisibility.location, "xl")}>
                         {adres ? (
                           <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
                             <MapPin size={11} className="shrink-0" />
@@ -326,7 +438,7 @@ export default function ContactenDataTable({
                           <span className="text-xs text-zinc-600">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 2xl:table-cell">
+                      <TableCell className={tableColumnClass(columnVisibility.fiscal, "2xl")}>
                         <div className="space-y-0.5 font-mono text-[11px] text-zinc-500">
                           {klant.btw && <p>BTW: {klant.btw}</p>}
                           {klant.ondernemingsnummer && (
@@ -343,7 +455,7 @@ export default function ContactenDataTable({
                           {peppolReady ? "Klaar" : "Onvolledig"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                      <TableCell className={stickyActionsClass}>
                         <ContactActionMenu
                           klant={klant}
                           open={openMenuId === klant.id}
@@ -381,6 +493,7 @@ export default function ContactenDataTable({
             </TableBody>
           </Table>
         </div>
+      </div>
 
         <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
@@ -441,12 +554,27 @@ function ContactActionMenu({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        onOpenChange(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open, onOpenChange]);
+
   function closeMenu() {
     onOpenChange(false);
   }
 
   return (
-    <div className="relative inline-flex justify-end">
+    <div ref={menuRef} className="relative inline-flex justify-end">
       <Button
         type="button"
         variant="ghost"
@@ -465,7 +593,7 @@ function ContactActionMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-9 z-30 w-44 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 py-1 text-left shadow-2xl"
+          className="absolute right-0 top-9 z-40 w-44 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 py-1 text-left shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           <MenuItem

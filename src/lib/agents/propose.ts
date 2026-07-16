@@ -4,6 +4,10 @@ import type {
   AgentActionType,
   CreateInvoiceFromOffertePayload,
   CreateOffertePayload,
+  ProposeChatSanctionPayload,
+  ProposeWerkpostMatchPayload,
+  ProposeMateriaalvoorraadPayload,
+  ProposeGeschilSamenvattingPayload,
   SendOffertePayload,
   SendPaymentReminderPayload,
   SendQuoteFollowupPayload,
@@ -16,7 +20,16 @@ type ProposeInput = {
   actionType: AgentActionType;
   title: string;
   reason?: string;
-  payload: CreateOffertePayload | SendOffertePayload | CreateInvoiceFromOffertePayload | SendPaymentReminderPayload | SendQuoteFollowupPayload;
+  payload:
+    | CreateOffertePayload
+    | SendOffertePayload
+    | CreateInvoiceFromOffertePayload
+    | SendPaymentReminderPayload
+    | SendQuoteFollowupPayload
+    | ProposeChatSanctionPayload
+    | ProposeWerkpostMatchPayload
+    | ProposeMateriaalvoorraadPayload
+    | ProposeGeschilSamenvattingPayload;
   targetEntityType?: string | null;
   targetEntityId?: number | null;
   targetRoute?: string | null;

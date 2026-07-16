@@ -36,7 +36,7 @@ function buildOnboardingInstructions(data: OnboardingMeta): string {
 
 /**
  * Zet onboarding-antwoorden uit user_metadata door naar ai_assistant
- * zodat Lima het bedrijf meteen kent na registratie.
+ * zodat Ela het bedrijf meteen kent na registratie.
  */
 export async function seedOnboardingFromMetadata(
   supabase: AppSupabase,

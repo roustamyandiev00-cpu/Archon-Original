@@ -16,6 +16,7 @@ import {
   type SidebarGroup,
   type SidebarItem,
 } from "@/components/dashboard/sidebar-nav";
+import { TRIAL_DAYS } from "@/components/dashboard/trial";
 
 function itemIsAvailable(item: SidebarItem) {
   return item.available !== false;
@@ -92,6 +93,17 @@ export default function Sidebar({
           }`}
         />
         <span className="flex-1 truncate">{item.label}</span>
+        {item.tag && (
+          <span
+            className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+              !available
+                ? "bg-white/[0.03] text-zinc-600"
+                : "bg-amber-500/15 text-amber-300"
+            }`}
+          >
+            {item.tag}
+          </span>
+        )}
         {item.badge != null && (
           <span
             className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
@@ -249,7 +261,7 @@ export default function Sidebar({
               strokeWidth={1.75}
               className="text-sky-400 transition-colors group-hover:text-sky-300"
             />
-            Start 7 dagen gratis
+            Start {TRIAL_DAYS} dagen gratis
           </Link>
         ) : (
           <button

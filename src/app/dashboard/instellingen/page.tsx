@@ -23,6 +23,7 @@ export default async function InstellingenPage() {
   if (!companyId) {
     return (
       <PlaceholderPage
+        moduleId="instellingen-empty"
         title="Instellingen"
         description="Beheer je account, bedrijf en voorkeuren."
         icon={<Settings size={20} />}
@@ -34,7 +35,7 @@ export default async function InstellingenPage() {
   const { data } = await supabase
     .from("bedrijven")
     .select(
-      "naam, adres, postcode, stad, telefoon, email, kvk, btw, iban, peppol_participant_id, logo_url, betaalterm, algemene_voorwaarden, footer_tekst, default_quote_template, default_invoice_template, ai_assistant",
+      "naam, adres, postcode, stad, telefoon, email, kvk, btw, iban, peppol_participant_id, logo_url, betaalterm, algemene_voorwaarden, footer_tekst, default_quote_template, default_invoice_template, ai_assistant, verificatiestatus, betrouwbaarheidsscore",
     )
     .eq("id", companyId)
     .maybeSingle();
@@ -146,6 +147,12 @@ export default async function InstellingenPage() {
           integrationConnections={integrationConnections}
           slackPlatformReady={isSlackPlatformReady()}
           slackSetupIncomplete={slackSetupIncomplete}
+          verificatiestatus={data?.verificatiestatus ?? "onbevestigd"}
+          betrouwbaarheidsscore={
+            typeof data?.betrouwbaarheidsscore === "number"
+              ? data.betrouwbaarheidsscore
+              : null
+          }
         />
       </Suspense>
     </div>

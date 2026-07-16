@@ -26,6 +26,7 @@ export type MapWinkel = {
   lng: number;
   adres: string | null;
   stad: string | null;
+  verificatiestatus?: string | null;
 };
 
 function escapeHtml(str: string) {
@@ -76,6 +77,11 @@ export default function BouwmaterialenMapInner({
         `<div style="font-family:inherit;min-width:140px">
           <strong>${escapeHtml(w.naam)}</strong><br/>
           <span style="font-size:11px;color:#a1a1aa;">${escapeHtml(cMeta.label)}</span>
+          ${
+            w.verificatiestatus
+              ? `<br/><span style="font-size:11px;">Verificatie: ${escapeHtml(w.verificatiestatus.replaceAll("_", " "))}</span>`
+              : ""
+          }
           ${adresLijn ? `<br/><span style="font-size:12px;">${escapeHtml(adresLijn)}</span>` : ""}
         </div>`,
       );

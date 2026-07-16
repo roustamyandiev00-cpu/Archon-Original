@@ -44,6 +44,10 @@ function labelForAction(t: string) {
     forward_to_bailiff: "Dossier naar deurwaarder",
     follow_up: "Opvolging",
     create_invoice: "Factuur opstellen",
+    propose_chat_sanction: "Chat-sanctie voorstellen",
+    propose_werkpost_match: "Werkpost-match voorstellen",
+    propose_materiaal_zoek: "Materiaalvoorraad",
+    propose_geschil_samenvatting: "Geschil-samenvatting",
   };
   return map[t] ?? t.replace(/[_-]+/g, " ");
 }
@@ -231,10 +235,10 @@ export default async function AutomatisatiesPage() {
 
         <Panel title="Dagschema">
           <div className="space-y-2.5 text-sm">
-            <ScheduleRow tijd="08:30" taak="Openstaande offertes opvolgen" agent="Opvolger" />
-            <ScheduleRow tijd="09:00" taak="Nieuwe leads verwerken" agent="Lima" />
-            <ScheduleRow tijd="12:00" taak="Betalingsherinneringen controleren" agent="Facturatie" />
-            <ScheduleRow tijd="16:00" taak="Dagrapport samenstellen" agent="Lima" />
+            <ScheduleRow tijd="08:30" taak="Openstaande offertes opvolgen" agent="Daan" />
+            <ScheduleRow tijd="09:00" taak="Nieuwe leads verwerken" agent="Lara" />
+            <ScheduleRow tijd="12:00" taak="Betalingsherinneringen controleren" agent="Nina" />
+            <ScheduleRow tijd="16:00" taak="Dagrapport samenstellen" agent="Lara" />
           </div>
           <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3 text-[10px] text-zinc-500">
             <Calendar size={12} /> Alleen op weekdagen (ma–vr)

@@ -2,6 +2,7 @@ import {
   BarChart3,
   Bot,
   BrainCircuit,
+  CalendarDays,
   Contact,
   Crosshair,
   FileText,
@@ -17,6 +18,7 @@ import {
   Search,
   Settings,
   Shield,
+  Tags,
   Users,
   Wallet,
   Zap,
@@ -29,6 +31,8 @@ export type SidebarItem = {
   icon: LucideIcon;
   badge?: number;
   badgeTone?: "info" | "warning";
+  /** Optioneel label bv. "Beta" naast de link. */
+  tag?: string;
   available?: boolean;
   children?: SidebarItem[];
 };
@@ -86,6 +90,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         label: "E-Facturen",
         href: "/dashboard/e-facturen",
         icon: ScrollText,
+        tag: "Beta",
       },
       {
         label: "Boekhouding",
@@ -93,9 +98,34 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         icon: Wallet,
       },
       {
+        label: "Agenda",
+        href: "/dashboard/agenda",
+        icon: CalendarDays,
+      },
+      {
+        label: "Prijslijst",
+        href: "/dashboard/prijslijst",
+        icon: Tags,
+      },
+      {
         label: "Activiteiten",
         href: "/dashboard/activiteit",
         icon: List,
+      },
+      {
+        label: "Team",
+        href: "/dashboard/team",
+        icon: Users,
+      },
+      {
+        label: "Audit",
+        href: "/dashboard/audit",
+        icon: Shield,
+      },
+      {
+        label: "Telegram",
+        href: "/dashboard/telegram",
+        icon: MessageCircle,
       },
     ],
   },
@@ -111,9 +141,9 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
 
 /** Observeer-links in de topbar (niet in sidebar). */
 export const TOPBAR_OBSERVEER_ITEMS: SidebarItem[] = [
-  { label: "Onderzoek", href: "/dashboard/onderzoek", icon: Search, available: false },
-  { label: "KPI's", href: "/dashboard/kpi", icon: BarChart3, available: false },
-  { label: "Analytics", href: "/dashboard/analytics", icon: LineChart, available: false },
+  { label: "Onderzoek", href: "/dashboard/onderzoek", icon: Search, available: true },
+  { label: "KPI's", href: "/dashboard/kpi", icon: BarChart3, available: true },
+  { label: "Analytics", href: "/dashboard/analytics", icon: LineChart, available: true },
 ];
 
 export const SIDEBAR_CEO_CONSOLE = {

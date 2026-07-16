@@ -35,8 +35,9 @@ import {
   uploadTemplate,
   uploadLogo,
   clearLogo,
-  buyAiTokens,
 } from "@/app/dashboard/instellingen/actions";
+import { createAiTokenCheckoutSession } from "@/app/dashboard/instellingen/ai-credits-actions";
+import { AI_TOKEN_PACKAGES } from "@/lib/ai/token-packages";
 import {
   TEMPLATE_PRESETS,
   isUploadedTemplate,
@@ -52,13 +53,25 @@ import {
 } from "@/components/dashboard/instellingen/templatePreview";
 import { resolveTemplateId } from "@/components/dashboard/documenten/documentTemplate";
 import { INTEGRATIES_SETTINGS_TAB } from "@/lib/integraties";
+import {
+  LANGUAGES,
+  FONTS,
+  type AppLanguage,
+  type AppFont,
+  readLanguage,
+  readFont,
+  persistLanguage,
+  persistFont,
+} from "@/lib/appearance/config";
+import { useDashboardTheme } from "@/components/dashboard/DashboardThemeProvider";
+import { Globe, Type, Moon, Sun } from "lucide-react";
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
 const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
 const hintClass = "mt-1 text-xs text-zinc-500";
 
-type Section = "bedrijf" | "documenten" | "ai" | "import" | "api" | "integraties";
+type Section = "bedrijf" | "documenten" | "ai" | "import" | "api" | "integraties" | "weergave";
 
 const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "bedrijf", label: "Bedrijfsgegevens", icon: <Building2 size={15} /> },
@@ -71,6 +84,7 @@ const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "import", label: "Data importeren", icon: <Database size={15} /> },
   { id: "ai", label: "AI-agent", icon: <Bot size={15} /> },
   { id: "api", label: "API", icon: <KeyRound size={15} /> },
+  { id: "weergave", label: "Weergave", icon: <Globe size={15} /> },
 ];
 
 function isSection(value: string | null): value is Section {
@@ -418,6 +432,8 @@ export default function SettingsForm({
   integrationConnections = {},
   slackPlatformReady = true,
   slackSetupIncomplete = false,
+  verificatiestatus = "onbevestigd",
+  betrouwbaarheidsscore = null,
 }: {
   initial: SettingsInput;
   smtpInitial: SmtpSettingsView;
@@ -429,29 +445,38 @@ export default function SettingsForm({
   >;
   slackPlatformReady?: boolean;
   slackSetupIncomplete?: boolean;
+  /** Read-only badge (§8.1) — geen bewerkingslogica in Fase 1. */
+  verificatiestatus?: string;
+  /** Alleen resultaat (§4.12) — formule blijft server-side. */
+  betrouwbaarheidsscore?: number | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Section>("bedrijf");
   const [form, setForm] = useState<SettingsInput>(initial);
   const [pending, startTransition] = useTransition();
+  const { theme, toggleTheme } = useDashboardTheme();
+
+  // Weergave (taal + lettertype) — geladen uit localStorage
+  const [selectedLanguage, setSelectedLanguageState] = useState<AppLanguage>("nl");
+  const [selectedFont, setSelectedFontState] = useState<AppFont>("inter");
+
+  // Hydrate from localStorage on mount
+  useEffect(() => {
+    setSelectedLanguageState(readLanguage());
+    setSelectedFontState(readFont());
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // Token packages & checkout states
-  const TOKEN_PACKAGES = [
-    { id: "bronze", name: "Brons (Starter)", tokens: 50000, price: 9 },
-    { id: "silver", name: "Zilver (Pro)", tokens: 250000, price: 29, popular: true },
-    { id: "gold", name: "Goud (Enterprise)", tokens: 1000000, price: 79 },
-  ];
-  const [selectedPackage, setSelectedPackage] = useState<typeof TOKEN_PACKAGES[0] | null>(null);
+  // Token packages — Stripe Checkout via createAiTokenCheckoutSession
+  const TOKEN_PACKAGES = AI_TOKEN_PACKAGES;
+  const [selectedPackage, setSelectedPackage] = useState<
+    (typeof TOKEN_PACKAGES)[0] | null
+  >(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [cardHolder, setCardHolder] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCVC, setCardCVC] = useState("");
+  const [checkoutPending, setCheckoutPending] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const connectedParam = searchParams.get("connected");
   const integrationError = searchParams.get("error");
@@ -464,6 +489,47 @@ export default function SettingsForm({
       setTab(INTEGRATIES_SETTINGS_TAB);
     }
   }, [searchParams, connectedParam, integrationError]);
+
+  function handleLanguageChange(lang: AppLanguage) {
+    persistLanguage(lang);
+    setSelectedLanguageState(lang);
+  }
+
+  function handleFontChange(font: AppFont) {
+    // Dynamically load Google Font if needed
+    if (typeof window !== "undefined") {
+      const existing = document.querySelector(`link[data-archon-font]`);
+      if (existing) existing.remove();
+      const familyMap: Record<AppFont, string> = {
+        inter: "Inter, var(--font-inter), sans-serif",
+        geist: "Geist, sans-serif",
+        manrope: "Manrope, sans-serif",
+        "plus-jakarta": "'Plus Jakarta Sans', sans-serif",
+        "dm-sans": "'DM Sans', sans-serif",
+        "space-grotesk": "'Space Grotesk', sans-serif",
+        outfit: "Outfit, sans-serif",
+      };
+      const googleFamilies: Partial<Record<AppFont, string>> = {
+        geist: "Geist",
+        manrope: "Manrope",
+        "plus-jakarta": "Plus+Jakarta+Sans",
+        "dm-sans": "DM+Sans",
+        "space-grotesk": "Space+Grotesk",
+        outfit: "Outfit",
+      };
+      const googleFamily = googleFamilies[font];
+      if (googleFamily) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = `https://fonts.googleapis.com/css2?family=${googleFamily}:wght@300;400;500;600;700;800&display=swap`;
+        link.setAttribute("data-archon-font", font);
+        document.head.appendChild(link);
+      }
+      document.documentElement.style.setProperty("--font-app", familyMap[font] ?? "Inter, sans-serif");
+    }
+    persistFont(font);
+    setSelectedFontState(font);
+  }
 
   function set<K extends keyof SettingsInput>(key: K, value: SettingsInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -507,7 +573,7 @@ export default function SettingsForm({
         Kies een categorie — alle instellingen staan in de tabs hieronder.
       </p>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         {sections.map((t) => (
           <button
             key={t.id}
@@ -533,6 +599,34 @@ export default function SettingsForm({
               title="Bedrijfsgegevens"
               description="De basisgegevens van je bedrijf. Deze worden gebruikt op je documenten en door de AI-agent."
             />
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/40 px-3 py-2.5">
+              <span className="text-xs font-medium text-zinc-500">
+                Verificatiestatus
+              </span>
+              <span className="inline-flex items-center rounded-full bg-sky-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-sky-300">
+                {verificatiestatus === "geverifieerd"
+                  ? "Geverifieerd"
+                  : verificatiestatus === "in_behandeling"
+                    ? "In behandeling"
+                    : verificatiestatus === "verlopen"
+                      ? "Verlopen"
+                      : "Onbevestigd"}
+              </span>
+              {typeof betrouwbaarheidsscore === "number" && (
+                <>
+                  <span className="text-zinc-700">·</span>
+                  <span className="text-xs font-medium text-zinc-500">
+                    Betrouwbaarheid
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
+                    {betrouwbaarheidsscore}/100
+                  </span>
+                </>
+              )}
+              <span className="text-[11px] text-zinc-600">
+                Alleen ter informatie — nog geen actie vereist.
+              </span>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <Field label="Bedrijfsnaam">
@@ -796,12 +890,7 @@ export default function SettingsForm({
                           type="button"
                           onClick={() => {
                             setSelectedPackage(pkg);
-                            setCardHolder("");
-                            setCardNumber("");
-                            setCardExpiry("");
-                            setCardCVC("");
-                            setPaymentStatus("idle");
-                            setPaymentError(null);
+                            setCheckoutError(null);
                             setCheckoutOpen(true);
                           }}
                           className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
@@ -821,12 +910,12 @@ export default function SettingsForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label="Jouw agentnaam"
-                hint="Persoonlijk per gebruiker — standaard Lima. Bedrijfsinstructies en AI-regels blijven gedeeld voor het hele team."
+                hint="Persoonlijk per gebruiker — standaard Ela. Bedrijfsinstructies en AI-regels blijven gedeeld voor het hele team."
               >
                 <input
                   value={form.ai.agentNaam}
                   onChange={(e) => setAi("agentNaam", e.target.value)}
-                  placeholder="Lima"
+                  placeholder="Ela"
                   className={inputClass}
                 />
               </Field>
@@ -1018,9 +1107,118 @@ export default function SettingsForm({
             <ImportManager />
           </div>
         )}
+
+        {tab === "weergave" && (
+          <div className="space-y-8">
+            <SectionHeader
+              icon={<Globe size={18} />}
+              title="Weergave"
+              description="Kies je voorkeurstaal, lettertype en thema. Instellingen worden lokaal opgeslagen."
+            />
+
+            {/* Thema */}
+            <div className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+                {theme === "dark" ? <Moon size={15} className="text-sky-400" /> : <Sun size={15} className="text-amber-400" />}
+                Thema
+              </h3>
+              <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
+                {(["dark", "light"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => theme !== t && toggleTheme()}
+                    className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition-all ${
+                      theme === t
+                        ? "border-sky-500/50 bg-sky-500/10 text-sky-300"
+                        : "border-white/10 text-zinc-400 hover:border-white/20 hover:bg-white/5"
+                    }`}
+                  >
+                    {t === "dark" ? <Moon size={20} /> : <Sun size={20} />}
+                    <span className="text-xs font-medium capitalize">
+                      {t === "dark" ? "Donker" : "Licht"}
+                    </span>
+                    {theme === t && (
+                      <span className="grid h-4 w-4 place-items-center rounded-full bg-sky-500 text-[9px] text-zinc-950 font-bold">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Taal */}
+            <div className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+                <Globe size={15} className="text-sky-400" />
+                Interfacetaal
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Kies in welke taal je ArchonPro wil gebruiken.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.id}
+                    type="button"
+                    onClick={() => handleLanguageChange(lang.id)}
+                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
+                      selectedLanguage === lang.id
+                        ? "border-sky-500/50 bg-sky-500/10 text-sky-200"
+                        : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/20 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    <span className="text-xl leading-none">{lang.flag}</span>
+                    <span className="flex-1">
+                      <span className="block font-medium">{lang.nativeName}</span>
+                      <span className="block text-[11px] text-zinc-500">{lang.label}</span>
+                    </span>
+                    {selectedLanguage === lang.id && (
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sky-500 text-zinc-950 text-[10px] font-bold">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Lettertype */}
+            <div className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+                <Type size={15} className="text-sky-400" />
+                Lettertype
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Pas het lettertype van de dashboard-interface aan.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {FONTS.map((font) => (
+                  <button
+                    key={font.id}
+                    type="button"
+                    onClick={() => handleFontChange(font.id)}
+                    className={`flex flex-col items-start gap-1.5 rounded-2xl border p-4 text-left transition-all ${
+                      selectedFont === font.id
+                        ? "border-sky-500/50 bg-sky-500/[0.07] text-sky-200"
+                        : "border-white/10 bg-white/[0.02] text-zinc-300 hover:border-white/20 hover:bg-white/[0.05]"
+                    }`}
+                    style={{ fontFamily: font.id === "inter" ? "Inter, sans-serif" : undefined }}
+                  >
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <span className="text-base font-semibold leading-none">{font.label}</span>
+                      {selectedFont === font.id && (
+                        <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sky-500 text-zinc-950 text-[10px] font-bold">✓</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-zinc-500">{font.description}</span>
+                    <span className="mt-1 text-[11px] text-zinc-600 font-mono">Aa Bb Cc 1 2 3</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </GlowCard>
 
-      {tab !== "api" && tab !== "import" && tab !== "integraties" && (
+      {tab !== "api" && tab !== "import" && tab !== "integraties" && tab !== "weergave" && (
       <div className="flex items-center justify-end gap-3">
         {error && (
           <p className="mr-auto rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
@@ -1047,7 +1245,7 @@ export default function SettingsForm({
         </button>
       </div>
       )}
-      {/* Token Checkout Modal */}
+      {/* Token package checkout — Stripe wanneer geconfigureerd */}
       {checkoutOpen && selectedPackage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-900 p-6 shadow-2xl relative">
@@ -1055,182 +1253,55 @@ export default function SettingsForm({
               type="button"
               onClick={() => setCheckoutOpen(false)}
               className="absolute right-5 top-5 text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none"
-              disabled={paymentStatus === "processing"}
             >
               <X size={18} />
             </button>
 
             <h3 className="text-lg font-bold text-zinc-50">
-              AI-Tokens Afrekenen
+              {selectedPackage.name}
             </h3>
             <p className="text-xs text-zinc-400 mt-1">
-              Je staat op het punt om {selectedPackage.tokens.toLocaleString("nl-NL")} AI-tokens te kopen voor {selectedPackage.name}.
+              {selectedPackage.tokens.toLocaleString("nl-NL")} tokens voor €{" "}
+              {selectedPackage.price.toFixed(2)}.
             </p>
 
-            {paymentStatus === "success" ? (
-              <div className="py-8 text-center space-y-4">
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <Check size={32} />
+            <div className="mt-5 space-y-4">
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Je wordt doorgestuurd naar Stripe Checkout. Tokens worden pas
+                bijgeschreven na een geslaagde betaling.
+              </p>
+              {checkoutError && (
+                <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-3 text-xs text-rose-200">
+                  {checkoutError}
                 </div>
-                <div>
-                  <h4 className="text-base font-bold text-zinc-50">Betaling Geslaagd!</h4>
-                  <p className="text-xs text-zinc-400 mt-1">
-                    De tokens zijn succesvol toegevoegd aan je bedrijfsaccount.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setCheckoutOpen(false)}
-                  className="w-full rounded-full bg-emerald-500 py-2.5 text-xs font-bold text-zinc-950 hover:bg-emerald-400 transition-colors"
-                >
-                  Terug naar Instellingen
-                </button>
-              </div>
-            ) : (
-              <div className="mt-5 space-y-4">
-                {/* Invoice overview */}
-                <div className="rounded-2xl bg-zinc-950 p-4 border border-white/5 space-y-1.5 text-xs">
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Pakket:</span>
-                    <span className="font-semibold text-zinc-200">{selectedPackage.name}</span>
-                  </div>
-                  <div className="flex justify-between text-zinc-400">
-                    <span>Aantal tokens:</span>
-                    <span className="font-semibold text-zinc-200">{selectedPackage.tokens.toLocaleString("nl-NL")}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-white/5 pt-2 text-sm">
-                    <span className="font-bold text-zinc-300">Te betalen bedrag:</span>
-                    <span className="font-black text-sky-400">€ {selectedPackage.price.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* Creditcard input mock fields */}
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    setPaymentStatus("processing");
-                    setPaymentError(null);
-                    
-                    // Betaling simuleren
-                    setTimeout(async () => {
-                      const res = await buyAiTokens(selectedPackage.tokens);
-                      if ("error" in res && res.error) {
-                        setPaymentStatus("error");
-                        setPaymentError(res.error);
-                      } else {
-                        setPaymentStatus("success");
-                        // Update het lokale saldo in form.ai.tokens
-                        setAi("tokens", (form.ai.tokens ?? 15000) + selectedPackage.tokens);
-                        router.refresh();
-                      }
-                    }, 1500);
-                  }}
-                  className="space-y-3"
-                >
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-                      Kaarthouder
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={cardHolder}
-                      onChange={(e) => setCardHolder(e.target.value)}
-                      placeholder="Bijv. J. de Vries"
-                      className="w-full rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 outline-none focus:border-sky-500/55 placeholder:text-zinc-700"
-                      disabled={paymentStatus === "processing"}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-                      Kaartnummer
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim())}
-                      maxLength={19}
-                      placeholder="4111 2222 3333 4444"
-                      className="w-full rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 outline-none focus:border-sky-500/55 placeholder:text-zinc-700 font-mono"
-                      disabled={paymentStatus === "processing"}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-                        Vervaldatum
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={cardExpiry}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, "");
-                          setCardExpiry(val.length > 2 ? `${val.slice(0,2)}/${val.slice(2,4)}` : val);
-                        }}
-                        maxLength={5}
-                        placeholder="MM/JJ"
-                        className="w-full rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 outline-none focus:border-sky-500/55 placeholder:text-zinc-700 font-mono"
-                        disabled={paymentStatus === "processing"}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-                        CVC / CVC2
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        value={cardCVC}
-                        onChange={(e) => setCardCVC(e.target.value.replace(/\D/g, ""))}
-                        maxLength={3}
-                        placeholder="123"
-                        className="w-full rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 outline-none focus:border-sky-500/55 placeholder:text-zinc-700 font-mono"
-                        disabled={paymentStatus === "processing"}
-                      />
-                    </div>
-                  </div>
-
-                  {paymentError && (
-                    <p className="text-xs text-rose-400 bg-rose-500/5 border border-rose-500/10 rounded-xl px-3 py-2">
-                      {paymentError}
-                    </p>
-                  )}
-
-                  {paymentStatus === "error" && !paymentError && (
-                    <p className="text-xs text-rose-400 bg-rose-500/5 border border-rose-500/10 rounded-xl px-3 py-2">
-                      Er is een fout opgetreden bij de betaling. Probeer het opnieuw.
-                    </p>
-                  )}
-
-                  <div className="flex gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setCheckoutOpen(false)}
-                      className="flex-1 rounded-full border border-white/10 px-4 py-2.5 text-xs font-semibold text-zinc-400 hover:bg-white/5 hover:text-zinc-200 transition-colors"
-                      disabled={paymentStatus === "processing"}
-                    >
-                      Annuleren
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={paymentStatus === "processing"}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-xs font-bold text-zinc-950 hover:bg-sky-400 disabled:opacity-60 transition-colors"
-                    >
-                      {paymentStatus === "processing" ? (
-                        <>
-                          <Loader2 size={13} className="animate-spin" />
-                          Verwerken...
-                        </>
-                      ) : (
-                        "Betaling Voltooien"
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                disabled={checkoutPending}
+                onClick={async () => {
+                  setCheckoutPending(true);
+                  setCheckoutError(null);
+                  const res = await createAiTokenCheckoutSession(
+                    selectedPackage.id,
+                  );
+                  setCheckoutPending(false);
+                  if ("error" in res) {
+                    setCheckoutError(res.error);
+                    return;
+                  }
+                  window.location.href = res.url;
+                }}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 py-2.5 text-xs font-bold text-zinc-950 hover:bg-sky-400 transition-colors disabled:opacity-60"
+              >
+                {checkoutPending ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Doorsturen…
+                  </>
+                ) : (
+                  "Betaal met Stripe"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { X, Sparkles } from "lucide-react";
 import { MOBILE_MORE_LINKS } from "@/components/dashboard/nav-config";
+import { TRIAL_DAYS } from "@/components/dashboard/trial";
 
 type Props = {
   open: boolean;
@@ -99,7 +100,19 @@ export default function MobileMoreSheet({
                   >
                     <link.icon size={18} />
                   </span>
-                  <span className="text-sm font-medium text-zinc-100">{link.label}</span>
+                  <span className="text-sm font-medium text-zinc-100">
+                    {link.label}
+                    {link.tag ? (
+                      <span className="ml-1.5 rounded bg-amber-500/15 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-300">
+                        {link.tag}
+                      </span>
+                    ) : null}
+                    {!available ? (
+                      <span className="mt-0.5 block text-[10px] font-normal text-zinc-500">
+                        Binnenkort
+                      </span>
+                    ) : null}
+                  </span>
                 </Link>
               );
             })}
@@ -112,7 +125,7 @@ export default function MobileMoreSheet({
               className="mt-3 flex items-center justify-center gap-2 rounded-2xl bg-sky-500 px-4 py-3.5 text-sm font-semibold text-zinc-950"
             >
               <Sparkles size={16} />
-              Start 7 dagen gratis
+              Start {TRIAL_DAYS} dagen gratis
             </Link>
           )}
         </div>

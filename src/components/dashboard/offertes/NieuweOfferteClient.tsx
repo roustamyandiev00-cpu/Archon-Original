@@ -7,6 +7,7 @@ import OfferteForm, {
   type OfferteFormInitial,
 } from "@/components/dashboard/offertes/OfferteForm";
 import type { OfferteLijnInput } from "@/lib/offertes";
+import type { PrijslijstPickItem } from "@/components/dashboard/prijslijst/types";
 
 type Customer = {
   id: number;
@@ -23,15 +24,17 @@ type Customer = {
 type OfferteMode = "manueel" | "ai" | "beide";
 
 export default function NieuweOfferteClient({
-  agentName = "Lima",
+  agentName = "Ela",
   customers,
   documentContext,
   mode = "beide",
+  prijslijstItems = [],
 }: {
   agentName?: string;
   customers: Customer[];
   documentContext: OfferteDocumentContext;
   mode?: OfferteMode;
+  prijslijstItems?: PrijslijstPickItem[];
 }) {
   const [seed, setSeed] = useState<OfferteFormInitial | undefined>();
   const [showManualForm, setShowManualForm] = useState(mode === "manueel");
@@ -71,6 +74,7 @@ export default function NieuweOfferteClient({
           customers={customers}
           documentContext={documentContext}
           seedDraft={seed}
+          prijslijstItems={prijslijstItems}
         />
       ) : (
         <div className="text-center py-6 border border-white/5 rounded-2xl bg-zinc-950/20">

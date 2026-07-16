@@ -160,12 +160,13 @@ export default function FactuurDocumentPreview({
   }
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
       <div className="mx-auto flex w-full max-w-[820px] flex-1 flex-col overflow-hidden rounded-lg bg-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)]">
         <iframe
           title="Factuurvoorbeeld"
           srcDoc={html}
-          className="h-[min(78vh,880px)] w-full border-0 bg-white"
+          className="w-full flex-1 border-0 bg-white"
+          style={{ maxHeight: "min(76vh, 860px)", height: "100%" }}
         />
       </div>
       <p className="mt-3 text-center text-[11px] text-zinc-600">

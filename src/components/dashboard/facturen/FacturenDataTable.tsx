@@ -12,6 +12,11 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
+import {
+  DashboardMobileCard,
+  DashboardMobileEmpty,
+} from "@/components/dashboard/DashboardMobileCard";
+import { tableColumnClass } from "@/components/dashboard/table-columns";
 import MarkFactuurPaidButton from "@/components/dashboard/facturen/MarkFactuurPaidButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +49,26 @@ export type FactuurListItem = {
 
 const pageSize = 5;
 
+export type FactuurColumnKey = "type" | "date" | "dueDate" | "send";
+
+export type FactuurColumnVisibility = Record<FactuurColumnKey, boolean>;
+
+export const FACTUUR_COLUMN_OPTIONS = [
+  { id: "type", label: "Type" },
+  { id: "date", label: "Datum" },
+  { id: "dueDate", label: "Vervaldatum" },
+  { id: "send", label: "Versturen" },
+] as const;
+
+export const defaultFactuurColumnVisibility: FactuurColumnVisibility = {
+  type: true,
+  date: true,
+  dueDate: true,
+  send: true,
+};
+
+const stickyActionsClass = "text-right dashboard-table-sticky-actions";
+
 type StatusFilter = "all" | "concept" | "verzonden" | "betaald" | "vervallen";
 type TypeFilter = "all" | "factuur" | "proforma";
 
@@ -61,10 +86,12 @@ export default function FacturenDataTable({
   facturen,
   isDemo = false,
   showFilters = true,
+  columnVisibility = defaultFactuurColumnVisibility,
 }: {
   facturen: FactuurListItem[];
   isDemo?: boolean;
   showFilters?: boolean;
+  columnVisibility?: FactuurColumnVisibility;
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -181,18 +208,104 @@ export default function FacturenDataTable({
       </div>
 
         <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
+          <div className="flex h-full flex-col gap-2 overflow-y-auto p-2 lg:hidden">
+            {visible.length > 0 ? (
+              visible.map((f) => {
+                const meta = factuurStatusMeta(f.status);
+                const typeMeta = documentTypeMeta(f.document_type);
+
+                return (
+                  <DashboardMobileCard key={f.id}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        {isDemo ? (
+                          <p className="truncate font-mono text-sm font-medium text-zinc-100">
+                            {f.nummer ?? `#${f.id}`}
+                          </p>
+                        ) : (
+                          <Link
+                            href={`/dashboard/facturen/${f.id}`}
+                            className="truncate font-mono text-sm font-medium text-sky-400"
+                          >
+                            {f.nummer ?? `#${f.id}`}
+                          </Link>
+                        )}
+                        <p className="mt-0.5 truncate text-xs text-zinc-400">{f.klant}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <Badge variant="default">{typeMeta.label}</Badge>
+                        <Badge variant={statusBadgeVariant(f.status)}>
+                          {meta.label}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="mt-2 font-mono text-sm font-semibold text-zinc-100">
+                      {formatEuro(f.totaal_bedrag)}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-zinc-500">
+                      {formatDate(f.datum)}
+                      {f.vervaldatum ? ` · verval ${formatDate(f.vervaldatum)}` : ""}
+                    </p>
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2">
+                      <DocumentContactActions
+                        soort={
+                          f.document_type === "proforma" ? "proforma" : "factuur"
+                        }
+                        nummer={f.nummer ?? `#${f.id}`}
+                        klant={f.klant ?? "klant"}
+                        bedrag={f.totaal_bedrag}
+                        email={f.email}
+                        phone={f.phone}
+                        detailPath={isDemo ? undefined : `/dashboard/facturen/${f.id}`}
+                      />
+                      <FactuurRowMenu
+                        id={f.id}
+                        nummer={f.nummer ?? `#${f.id}`}
+                        isPaid={Boolean(f.paid_at) || f.status === "betaald"}
+                        isDemo={isDemo}
+                        open={openMenuId === f.id}
+                        onOpenChange={(open) => setOpenMenuId(open ? f.id : null)}
+                      />
+                    </div>
+                  </DashboardMobileCard>
+                );
+              })
+            ) : (
+              <DashboardMobileEmpty
+                icon={<Receipt size={22} />}
+                title={facturen.length === 0 ? "Nog geen facturen" : "Geen resultaten"}
+                description={
+                  facturen.length === 0
+                    ? "Maak je eerste factuur via Nieuwe factuur."
+                    : "Pas je zoekopdracht of filters aan."
+                }
+              />
+            )}
+          </div>
+
+          <div className="hidden h-full min-h-0 lg:block">
           <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="min-w-0">Nummer</TableHead>
-                <TableHead className="hidden min-w-0 lg:table-cell">Type</TableHead>
+                <TableHead className={tableColumnClass(columnVisibility.type, "lg")}>
+                  Type
+                </TableHead>
                 <TableHead className="min-w-0">Klant</TableHead>
-                <TableHead className="hidden min-w-0 xl:table-cell">Datum</TableHead>
-                <TableHead className="hidden min-w-0 2xl:table-cell">Vervaldatum</TableHead>
+                <TableHead className={tableColumnClass(columnVisibility.date, "xl")}>
+                  Datum
+                </TableHead>
+                <TableHead className={tableColumnClass(columnVisibility.dueDate, "2xl")}>
+                  Vervaldatum
+                </TableHead>
                 <TableHead className="text-right">Bedrag</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="hidden text-right 2xl:table-cell">Versturen</TableHead>
-                <TableHead className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-900 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                <TableHead
+                  className={tableColumnClass(columnVisibility.send, "2xl", "text-right")}
+                >
+                  Versturen
+                </TableHead>
+                <TableHead className={stickyActionsClass}>
                   <span className="sr-only">Acties</span>
                 </TableHead>
               </TableRow>
@@ -219,16 +332,28 @@ export default function FacturenDataTable({
                           </Link>
                         )}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 lg:table-cell">
+                      <TableCell className={tableColumnClass(columnVisibility.type, "lg")}>
                         <Badge variant="default">{typeMeta.label}</Badge>
                       </TableCell>
                       <TableCell className="min-w-0 truncate text-zinc-200">
                         {f.klant}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-500 xl:table-cell">
+                      <TableCell
+                        className={tableColumnClass(
+                          columnVisibility.date,
+                          "xl",
+                          "min-w-0 font-mono text-xs text-zinc-500",
+                        )}
+                      >
                         {formatDate(f.datum)}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-500 2xl:table-cell">
+                      <TableCell
+                        className={tableColumnClass(
+                          columnVisibility.dueDate,
+                          "2xl",
+                          "min-w-0 font-mono text-xs text-zinc-500",
+                        )}
+                      >
                         {formatDate(f.vervaldatum)}
                       </TableCell>
                       <TableCell className="text-right font-mono font-semibold text-zinc-100">
@@ -239,7 +364,13 @@ export default function FacturenDataTable({
                           {meta.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden text-right 2xl:table-cell">
+                      <TableCell
+                        className={tableColumnClass(
+                          columnVisibility.send,
+                          "2xl",
+                          "text-right",
+                        )}
+                      >
                         <DocumentContactActions
                           soort={
                             f.document_type === "proforma"
@@ -256,7 +387,7 @@ export default function FacturenDataTable({
                           }
                         />
                       </TableCell>
-                      <TableCell className="text-right lg:sticky lg:right-0 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                      <TableCell className={stickyActionsClass}>
                         <FactuurRowMenu
                           id={f.id}
                           nummer={f.nummer ?? `#${f.id}`}
@@ -294,6 +425,7 @@ export default function FacturenDataTable({
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
 
         <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">

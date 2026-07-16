@@ -219,6 +219,16 @@ export default function CompanyDetailView({
                   <Badge variant={statusBadgeVariants[company.status]}>
                     {statusLabels[company.status]}
                   </Badge>
+                  <Badge
+                    variant={
+                      detail.risicoStatus === "normaal" ? "default" : "warning"
+                    }
+                  >
+                    Risico: {detail.risicoStatus.replaceAll("_", " ")}
+                  </Badge>
+                  <Badge variant="info">
+                    Verificatie: {detail.verificatieStatus.replaceAll("_", " ")}
+                  </Badge>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
                   <span>{company.owner}</span>

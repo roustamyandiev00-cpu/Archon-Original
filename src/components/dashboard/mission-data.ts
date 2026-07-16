@@ -830,13 +830,13 @@ function proactiveForAgent(
 function agentMatchesLog(agent: CustomAgent, logName: string) {
   const n = logName.toLowerCase();
   if (n.includes(agent.name.toLowerCase())) return true;
-  if (agent.id === "nova" && (n.includes("nova") || n === agent.name.toLowerCase()))
+  if (agent.id === "nova" && (n.includes("nova") || n.includes("lara") || n === agent.name.toLowerCase()))
     return true;
-  if (agent.id === "schatter" && (n.includes("schatter") || n.includes("offerte")))
+  if (agent.id === "schatter" && (n.includes("schatter") || n.includes("viktor") || n.includes("offerte")))
     return true;
-  if (agent.id === "facturatie" && (n.includes("factuur") || n.includes("peppol")))
+  if (agent.id === "facturatie" && (n.includes("facturatie") || n.includes("nina") || n.includes("factuur") || n.includes("peppol")))
     return true;
-  if (agent.id === "opvolger" && (n.includes("opvolg") || n.includes("lead")))
+  if (agent.id === "opvolger" && (n.includes("opvolger") || n.includes("daan") || n.includes("opvolg") || n.includes("lead")))
     return true;
   return false;
 }

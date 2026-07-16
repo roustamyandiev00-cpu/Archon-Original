@@ -39,6 +39,21 @@ export default async function ProjectenPage() {
   const isDemo = showDemoData(preview, projecten.length === 0);
   if (isDemo) projecten = DEMO_PROJECTEN;
 
+  // Compacte bestandstellers per project (niet in demo)
+  const fileCounts = new Map<string, number>();
+  if (companyId && !isDemo && projecten.length > 0) {
+    const ids = projecten.map((p) => p.id);
+    const { data: counts } = await supabase
+      .from("project_bestanden")
+      .select("project_id")
+      .eq("company_id", companyId)
+      .in("project_id", ids);
+    for (const row of counts ?? []) {
+      if (!row.project_id) continue;
+      fileCounts.set(row.project_id, (fileCounts.get(row.project_id) ?? 0) + 1);
+    }
+  }
+
   const actief = projecten.filter((p) => p.status === "actief").length;
   const gepland = projecten.filter((p) => p.status === "gepland").length;
   const afgerond = projecten.filter((p) => p.status === "afgerond").length;
@@ -81,23 +96,22 @@ export default async function ProjectenPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      {/* Compacte statuschips — minimale hoogte, geen grote kaarten */}
+      <div className="flex flex-wrap gap-1.5">
         {stats.map((s) => (
           <div
             key={s.label}
-            className="rounded-2xl border border-white/10 bg-zinc-900/60 p-4 backdrop-blur"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-zinc-900/50 px-2.5 py-1.5"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] uppercase tracking-wide text-zinc-500">
-                {s.label}
-              </p>
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-violet-500/10 text-violet-400">
-                <s.icon size={15} />
-              </span>
-            </div>
-            <p className="mt-2 font-mono text-2xl font-semibold text-zinc-50">
+            <span className="grid h-5 w-5 place-items-center rounded-md bg-violet-500/10 text-violet-400">
+              <s.icon size={11} />
+            </span>
+            <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
+              {s.label}
+            </span>
+            <span className="font-mono text-sm font-semibold tabular-nums text-zinc-100">
               {s.value}
-            </p>
+            </span>
           </div>
         ))}
       </div>
@@ -120,8 +134,8 @@ export default async function ProjectenPage() {
                 Nog geen projecten
               </h3>
               <p className="text-sm text-zinc-500">
-                Maak je eerste project aan of zet een geaccepteerde offerte om
-                naar een werf.
+                Goedgekeurde offertes worden automatisch omgezet naar een werf.
+                Upload daarna foto&apos;s en documenten per klant/project.
               </p>
               {!preview && companyId && (
                 <div className="flex justify-center pt-1">
@@ -138,6 +152,7 @@ export default async function ProjectenPage() {
                   <th className="px-5 py-3 font-semibold">Project</th>
                   <th className="px-5 py-3 font-semibold">Klant</th>
                   <th className="px-5 py-3 font-semibold">Start</th>
+                  <th className="px-5 py-3 font-semibold">Bestanden</th>
                   <th className="px-5 py-3 font-semibold">Aangemaakt</th>
                   <th className="px-5 py-3 font-semibold">Status</th>
                 </tr>
@@ -169,6 +184,9 @@ export default async function ProjectenPage() {
                       </td>
                       <td className="px-5 py-3 text-zinc-400">
                         {p.start_datum_label}
+                      </td>
+                      <td className="px-5 py-3 text-zinc-400">
+                        {isDemo ? "—" : `${fileCounts.get(p.id) ?? 0}`}
                       </td>
                       <td className="px-5 py-3 text-zinc-400">
                         {formatProjectDate(p.created_at)}

@@ -13,9 +13,9 @@ export default function NieuweOfferteActions({
   onAi?: () => void;
 }) {
   const manueelClass =
-    "inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-medium text-zinc-100 transition-colors hover:border-white/25 hover:bg-white/[0.07]";
+    "dashboard-page-action-secondary inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-medium text-zinc-100 transition-colors hover:border-white/25 hover:bg-white/[0.07]";
   const aiClass =
-    "inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400";
+    "dashboard-page-action-primary inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400";
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>

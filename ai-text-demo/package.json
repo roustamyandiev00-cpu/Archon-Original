@@ -1,0 +1,21 @@
+{
+  "name": "ai-text-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.12.4",
+  "dependencies": {
+    "@ai-sdk/groq": "^4.0.8",
+    "@types/node": "^26.1.1",
+    "ai": "^7.0.22",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

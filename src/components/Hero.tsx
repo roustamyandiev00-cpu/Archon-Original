@@ -15,7 +15,7 @@ import { REFERRAL_REWARDS } from "@/components/ReferralProgram";
 
 export default function Hero() {
   return (
-    <section className="relative flex min-h-svh w-full flex-col overflow-hidden">
+    <section className="relative flex min-h-svh w-full flex-col overflow-x-hidden overflow-hidden">
       <div aria-hidden className="absolute inset-0 bg-[#04080f]" />
       <div
         aria-hidden
@@ -28,16 +28,16 @@ export default function Hero() {
       <div aria-hidden className="hero-pane-grid opacity-55" />
 
       <div className="relative z-10 flex flex-1 flex-col pt-[calc(4.75rem+env(safe-area-inset-top))] sm:pt-[calc(5.25rem+env(safe-area-inset-top))] lg:pt-[calc(6rem+env(safe-area-inset-top))]">
-        <div className="mx-auto grid w-full max-w-7xl flex-1 items-center gap-8 px-4 pb-6 sm:gap-10 sm:px-6 sm:pb-8 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:gap-6 lg:px-8 lg:pb-10 xl:max-w-[85rem] xl:gap-10">
+        <div className="mx-auto grid w-full max-w-7xl min-w-0 flex-1 items-center gap-8 overflow-x-hidden px-4 pb-6 sm:gap-10 sm:px-6 sm:pb-8 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:gap-6 lg:px-8 lg:pb-10 xl:max-w-[85rem] xl:gap-10">
           {/* Linkerkolom: copy + cards */}
           <div className="flex flex-col gap-8 lg:gap-10">
             <div className="max-w-xl text-center lg:max-w-[34rem] lg:text-left xl:max-w-[36rem]">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/[0.08] px-3.5 py-1.5 text-xs font-medium text-sky-300 sm:mb-6 sm:px-4">
-                <Sparkles size={13} className="text-sky-400" />
-                Gebouwd voor bouwbedrijven in België
+              <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/[0.08] px-3 py-1.5 text-[11px] font-medium text-sky-300 sm:mb-6 sm:px-4 sm:text-xs">
+                <Sparkles size={13} className="shrink-0 text-sky-400" />
+                <span className="truncate">Gebouwd voor bouwbedrijven in België</span>
               </div>
 
-              <h1 className="text-[1.85rem] font-bold leading-[1.1] tracking-tight text-white sm:text-[2.65rem] lg:text-[2.85rem] xl:text-[3.1rem]">
+              <h1 className="text-balance text-[1.65rem] font-bold leading-[1.12] tracking-tight text-white sm:text-[2.65rem] lg:text-[2.85rem] xl:text-[3.1rem]">
                 Eén professioneel CRM voor bouw: offertes, projecten{" "}
                 <span className="bg-gradient-to-r from-sky-300 via-sky-400 to-cyan-400 bg-clip-text text-transparent">
                   en facturen.
@@ -92,7 +92,7 @@ export default function Hero() {
           </div>
 
           {/* Dashboard */}
-          <div className="relative -mx-1 flex min-h-0 items-center justify-center sm:mx-0 lg:min-h-[500px] lg:justify-end xl:min-h-[560px]">
+          <div className="relative mx-0 flex min-h-0 max-w-full items-center justify-center overflow-hidden sm:mx-0 lg:min-h-[500px] lg:justify-end xl:min-h-[560px]">
             <HeroDashboard />
           </div>
 

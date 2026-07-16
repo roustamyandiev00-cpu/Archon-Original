@@ -125,7 +125,8 @@ export async function updateAfspraakStatus(
 export async function submitCompanyReview(
   targetCompanyId: number,
   rating: number,
-  commentaar: string
+  commentaar: string,
+  samenwerkingContractId: string,
 ) {
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
@@ -133,6 +134,47 @@ export async function submitCompanyReview(
 
   if (companyId === targetCompanyId) {
     return { error: "Je kunt je eigen bedrijf niet beoordelen." };
+  }
+
+  const contractId = samenwerkingContractId?.trim();
+  if (!contractId) {
+    return {
+      error:
+        "Beoordelen kan alleen na een ondertekend samenwerkingscontract.",
+    };
+  }
+
+  const { data: contract } = await supabase
+    .from("samenwerking_contracts")
+    .select(
+      "id, status, party_a_company_id, party_b_company_id",
+    )
+    .eq("id", contractId)
+    .maybeSingle();
+
+  if (!contract) {
+    return { error: "Samenwerkingscontract niet gevonden." };
+  }
+  if (contract.status !== "signed") {
+    return {
+      error:
+        "Het samenwerkingscontract moet eerst door beide partijen ondertekend zijn.",
+    };
+  }
+  const isParty =
+    contract.party_a_company_id === companyId ||
+    contract.party_b_company_id === companyId;
+  if (!isParty) {
+    return { error: "Je bent geen partij bij dit contract." };
+  }
+  const otherParty =
+    contract.party_a_company_id === companyId
+      ? contract.party_b_company_id
+      : contract.party_a_company_id;
+  if (otherParty !== targetCompanyId) {
+    return {
+      error: "De beoordeling moet over de contractpartner gaan.",
+    };
   }
 
   const cleanRating = Math.round(Number(rating));
@@ -147,14 +189,18 @@ export async function submitCompanyReview(
 
   const { error } = await supabase
     .from("bedrijf_reviews")
-    .upsert({
-      reviewer_company_id: companyId,
-      target_company_id: targetCompanyId,
-      rating: cleanRating,
-      commentaar: cleanCommentaar,
-    }, {
-      onConflict: "reviewer_company_id,target_company_id"
-    });
+    .upsert(
+      {
+        reviewer_company_id: companyId,
+        target_company_id: targetCompanyId,
+        rating: cleanRating,
+        commentaar: cleanCommentaar,
+        samenwerking_contract_id: contractId,
+      },
+      {
+        onConflict: "reviewer_company_id,target_company_id",
+      },
+    );
 
   if (error) return { error: error.message };
 

@@ -15,6 +15,11 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
+import {
+  DashboardMobileCard,
+  DashboardMobileEmpty,
+} from "@/components/dashboard/DashboardMobileCard";
+import { tableColumnClass } from "@/components/dashboard/table-columns";
 import type { OfferteListRow } from "@/components/dashboard/offertes/OffertesView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +36,24 @@ import {
 import { formatDate, formatEuro, statusMeta } from "@/lib/offertes";
 
 const pageSize = 5;
+
+export type OfferteColumnKey = "date" | "validUntil" | "send";
+
+export type OfferteColumnVisibility = Record<OfferteColumnKey, boolean>;
+
+export const OFFERTE_COLUMN_OPTIONS = [
+  { id: "date", label: "Datum" },
+  { id: "validUntil", label: "Geldig tot" },
+  { id: "send", label: "Versturen" },
+] as const;
+
+export const defaultOfferteColumnVisibility: OfferteColumnVisibility = {
+  date: true,
+  validUntil: true,
+  send: true,
+};
+
+const stickyActionsClass = "text-right dashboard-table-sticky-actions";
 
 type StatusFilter =
   | "all"
@@ -62,10 +85,12 @@ export default function OffertesDataTable({
   offertes,
   isDemo = false,
   showFilters = true,
+  columnVisibility = defaultOfferteColumnVisibility,
 }: {
   offertes: OfferteListRow[];
   isDemo?: boolean;
   showFilters?: boolean;
+  columnVisibility?: OfferteColumnVisibility;
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -193,6 +218,89 @@ export default function OffertesDataTable({
       </div>
 
       <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
+        <div className="flex h-full flex-col gap-2 overflow-y-auto p-2 lg:hidden">
+          {visible.length > 0 ? (
+            visible.map((o, index) => {
+              const meta = statusMeta(o.status_new);
+              const tone =
+                avatarTones[index % avatarTones.length] ?? avatarTones[0];
+
+              return (
+                <DashboardMobileCard key={o.id}>
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${tone}`}
+                      aria-hidden
+                    >
+                      <FileText size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          {isDemo ? (
+                            <p className="truncate font-mono text-sm font-medium text-zinc-100">
+                              {o.nummer ?? `#${o.id}`}
+                            </p>
+                          ) : (
+                            <Link
+                              href={`/dashboard/offertes/${o.id}`}
+                              className="truncate font-mono text-sm font-medium text-sky-400"
+                            >
+                              {o.nummer ?? `#${o.id}`}
+                            </Link>
+                          )}
+                          {o.klant ? (
+                            <p className="mt-0.5 truncate text-xs text-zinc-400">{o.klant}</p>
+                          ) : null}
+                        </div>
+                        <Badge variant={statusBadgeVariant(o.status_new)}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                          {meta.label}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 font-mono text-sm font-semibold text-zinc-100">
+                        {formatEuro(o.bedrag)}
+                      </p>
+                      <p className="mt-1 font-mono text-xs text-zinc-500">
+                        {formatDate(o.datum)}
+                        {o.geldig_tot ? ` · geldig tot ${formatDate(o.geldig_tot)}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2">
+                    <DocumentContactActions
+                      soort="offerte"
+                      nummer={o.nummer ?? `#${o.id}`}
+                      klant={o.klant ?? "klant"}
+                      bedrag={o.bedrag}
+                      email={o.email}
+                      phone={o.phone}
+                      detailPath={isDemo ? undefined : `/dashboard/offertes/${o.id}`}
+                    />
+                    <OfferteActionMenu
+                      offerte={o}
+                      isDemo={isDemo}
+                      open={openMenuId === o.id}
+                      onOpenChange={(open) => setOpenMenuId(open ? o.id : null)}
+                    />
+                  </div>
+                </DashboardMobileCard>
+              );
+            })
+          ) : (
+            <DashboardMobileEmpty
+              icon={<FileText size={22} />}
+              title={offertes.length === 0 ? "Nog geen offertes" : "Geen resultaten"}
+              description={
+                offertes.length === 0
+                  ? "Maak je eerste offerte via Nieuw manueel of Met AI-agent."
+                  : "Pas je zoekopdracht of filters aan."
+              }
+            />
+          )}
+        </div>
+
+        <div className="hidden h-full min-h-0 lg:block">
         <Table className="w-full table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -207,12 +315,18 @@ export default function OffertesDataTable({
               </TableHead>
               <TableHead className="min-w-0">Offerte</TableHead>
               <TableHead className="min-w-0">Klant</TableHead>
-              <TableHead className="hidden min-w-0 lg:table-cell">Datum</TableHead>
-              <TableHead className="hidden min-w-0 xl:table-cell">Geldig tot</TableHead>
+              <TableHead className={tableColumnClass(columnVisibility.date, "lg")}>
+                Datum
+              </TableHead>
+              <TableHead className={tableColumnClass(columnVisibility.validUntil, "xl")}>
+                Geldig tot
+              </TableHead>
               <TableHead className="text-right">Bedrag</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="hidden text-right 2xl:table-cell">Versturen</TableHead>
-              <TableHead className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+              <TableHead className={tableColumnClass(columnVisibility.send, "2xl", "text-right")}>
+                Versturen
+              </TableHead>
+              <TableHead className={stickyActionsClass}>
                 <span className="sr-only">Acties</span>
               </TableHead>
             </TableRow>
@@ -277,13 +391,19 @@ export default function OffertesDataTable({
                         <span className="text-xs text-zinc-600">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden min-w-0 lg:table-cell">
+                    <TableCell className={tableColumnClass(columnVisibility.date, "lg")}>
                       <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-400">
                         <Calendar size={11} />
                         {formatDate(o.datum)}
                       </span>
                     </TableCell>
-                    <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-400 xl:table-cell">
+                    <TableCell
+                      className={tableColumnClass(
+                        columnVisibility.validUntil,
+                        "xl",
+                        "min-w-0 font-mono text-xs text-zinc-400",
+                      )}
+                    >
                       {formatDate(o.geldig_tot)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold text-zinc-100">
@@ -295,7 +415,13 @@ export default function OffertesDataTable({
                         {meta.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden text-right 2xl:table-cell">
+                    <TableCell
+                      className={tableColumnClass(
+                        columnVisibility.send,
+                        "2xl",
+                        "text-right",
+                      )}
+                    >
                       <DocumentContactActions
                         soort="offerte"
                         nummer={o.nummer ?? `#${o.id}`}
@@ -308,7 +434,7 @@ export default function OffertesDataTable({
                         }
                       />
                     </TableCell>
-                    <TableCell className="text-right lg:sticky lg:right-0 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                    <TableCell className={stickyActionsClass}>
                       <OfferteActionMenu
                         offerte={o}
                         isDemo={isDemo}
@@ -344,6 +470,7 @@ export default function OffertesDataTable({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">

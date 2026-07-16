@@ -63,7 +63,7 @@ export default function AuthLayout({
                 </p>
               </header>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 lg:overflow-visible">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5">
                 {children}
               </div>
             </section>

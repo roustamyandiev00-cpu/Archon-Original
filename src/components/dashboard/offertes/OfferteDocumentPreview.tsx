@@ -123,9 +123,12 @@ export default function OfferteDocumentPreview({
       <iframe
         title="Offertevoorbeeld"
         srcDoc={html}
-        className={`w-full border-0 bg-white ${
-          embedded ? "h-[min(72vh,820px)]" : "h-[min(80vh,920px)]"
+        className={`w-full flex-1 border-0 bg-white ${
+          embedded
+            ? "min-h-0 h-full max-h-[min(70vh,800px)]"
+            : "min-h-0 h-full max-h-[min(78vh,900px)]"
         }`}
+        style={{ height: "100%" }}
       />
     </div>
   );

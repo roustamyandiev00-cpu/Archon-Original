@@ -10,12 +10,16 @@ import {
   saveAgentMemories,
 } from "@/components/dashboard/agents/memory";
 import { loadMergedAiConfig } from "@/lib/agents/companyAi";
-import { generateNovaOfferteDraft } from "@/lib/agents/nova";
+import {
+  parseSquareMeters,
+  suggestOfferteFromPhotosAndDimensions,
+} from "@/lib/agents/nova";
 import { DEFAULT_AGENT_NAME } from "@/lib/agents/userAi";
 import { proposeAgentAction } from "@/lib/agents/propose";
 import { executeAgentAction } from "@/lib/agents/executor";
 import { createOfferte } from "@/app/dashboard/offertes/actions";
 import type { CreateOffertePayload } from "@/lib/agents/types";
+import { loadActivePrijslijstItems } from "@/lib/prijslijst";
 
 function defaultGeldigTot() {
   const d = new Date();
@@ -23,11 +27,25 @@ function defaultGeldigTot() {
   return d.toISOString().slice(0, 10);
 }
 
+function extractDimensions(description: string): string | null {
+  const m = description.match(/Afmetingen:\s*([^\n]+)/i);
+  return m?.[1]?.trim() && m[1].trim() !== "Niet gespecificeerd"
+    ? m[1].trim()
+    : null;
+}
+
+function extractProjectNaam(description: string): string | null {
+  const m = description.match(/Project Naam:\s*([^\n]+)/i);
+  return m?.[1]?.trim() || null;
+}
+
 export async function requestNovaOfferte(input: {
   description: string;
   customerId?: number | null;
   klant?: string;
   images?: string[];
+  dimensions?: string | null;
+  projectNaam?: string | null;
 }) {
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
@@ -55,6 +73,12 @@ export async function requestNovaOfferte(input: {
     }
   }
 
+  const prijslijst = await loadActivePrijslijstItems(supabase, companyId);
+  const dimensions =
+    input.dimensions?.trim() || extractDimensions(input.description);
+  const projectNaam =
+    input.projectNaam?.trim() || extractProjectNaam(input.description);
+
   const retrievalContext = await fetchRetrievalContext(
     supabase,
     companyId,
@@ -64,12 +88,14 @@ export async function requestNovaOfferte(input: {
     ? `Relevante context (geheugen + kennisbank, gebruik waar van toepassing):\n${retrievalContext}\n\n${input.description}`
     : input.description;
 
-  const { draft, error: aiError } = await generateNovaOfferteDraft({
+  const { draft, error: aiError } = await suggestOfferteFromPhotosAndDimensions({
     description: enrichedDescription,
     klant,
     ai,
     standaardBtw: extras.standaardBtw,
     images: input.images,
+    dimensions,
+    prijslijst,
     supabase,
     companyId,
     userId: user.id,
@@ -80,6 +106,14 @@ export async function requestNovaOfferte(input: {
     return { error: aiError ?? `${name} kon geen voorstel maken.` };
   }
 
+  const m2 = parseSquareMeters(dimensions ?? "") ?? parseSquareMeters(input.description);
+  const visionNote =
+    (input.images?.length ?? 0) > 0
+      ? ` · foto-analyse${m2 != null ? ` · ${m2} m²` : ""}`
+      : m2 != null
+        ? ` · ${m2} m²`
+        : "";
+
   const payload: CreateOffertePayload = {
     customerId: input.customerId ?? null,
     klant: draft.klant || klant,
@@ -88,10 +122,12 @@ export async function requestNovaOfferte(input: {
     notes: draft.notes || input.description,
     lines: draft.lines,
     description: input.description,
+    projectNaam: projectNaam || null,
+    afmetingen: dimensions || null,
   };
 
   const agentName = ai.agentNaam.trim() || DEFAULT_AGENT_NAME;
-  const title = `${agentName}: offerte voor ${payload.klant}`;
+  const title = `${agentName}: offerte voor ${payload.klant}${visionNote}`;
 
   await saveAgentMemories(supabase, {
     companyId,
@@ -122,7 +158,11 @@ export async function requestNovaOfferte(input: {
     agentName,
     actionType: "create_offerte",
     title,
-    reason: draft.summary,
+    reason:
+      draft.summary +
+      (visionNote
+        ? ` (op basis van foto's/afmetingen${prijslijst.length ? " + prijslijst" : ""})`
+        : ""),
     payload,
     requiresApproval: true,
   });

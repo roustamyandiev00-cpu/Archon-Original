@@ -4,20 +4,28 @@ import { loadFacturenDashboardData } from "@/lib/facturen/load-facturen-data";
 export const metadata = { title: "Nieuwe factuur — ArchonPro" };
 
 export default async function NieuweFactuurPage() {
-  const { customers, documentContext, isDemo } =
-    await loadFacturenDashboardData();
+  const {
+    customers,
+    projects,
+    documentContext,
+    prijslijstItems,
+    isDemo,
+    hasCompany,
+  } = await loadFacturenDashboardData();
+
+  // Studio-demo alleen zonder bedrijf; met bedrijf altijd echte data tonen
+  const useDemo = isDemo && !hasCompany;
 
   return (
-    <div
-      className="facturen-create-shell studio-invoice-shell flex max-w-none flex-col lg:-mx-2 lg:-my-6"
-      data-theme="light"
-    >
+    <div className="facturen-create-shell studio-invoice-shell" data-theme="light">
       <FactuurForm
         customers={customers}
+        projects={projects}
         documentContext={documentContext}
+        prijslijstItems={prijslijstItems}
         embedded
         viewportFit
-        isDemo={isDemo}
+        isDemo={useDemo}
       />
     </div>
   );

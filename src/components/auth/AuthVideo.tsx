@@ -42,7 +42,7 @@ export default function AuthVideo({
     <div
       className={`relative flex h-full w-full max-w-none items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/70 p-2 shadow-2xl shadow-sky-500/10 backdrop-blur-xl ${
         isPortrait
-          ? "max-h-full max-w-[min(100%,20rem)] xl:max-w-[24rem] 2xl:max-w-[28rem]"
+          ? "max-h-full max-w-[min(100%,18rem)] xl:max-w-[21rem] 2xl:max-w-[24rem]"
           : "max-w-full"
       }`}
     >
@@ -59,8 +59,8 @@ export default function AuthVideo({
         className={`w-full rounded-xl bg-zinc-950 ${isPortrait ? "max-h-full object-contain" : "aspect-video object-cover"} ${ready ? "" : "absolute inset-1.5 opacity-0"}`}
         style={
           isPortrait
-            ? { aspectRatio: "9/16", maxHeight: "min(100%, calc(100svh - 9.5rem))" }
-            : { maxHeight: "min(100%, calc(100svh - 13rem))" }
+            ? { aspectRatio: "9/16", maxHeight: "min(100%, calc(100svh - 14rem))" }
+            : { maxHeight: "min(100%, calc(100svh - 14rem))" }
         }
         src={src}
         poster={poster}

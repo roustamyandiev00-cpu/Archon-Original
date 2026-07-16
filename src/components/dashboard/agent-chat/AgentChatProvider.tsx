@@ -392,19 +392,19 @@ export function AgentChatProvider({
 
   const agentFromName = useCallback((name: string): ChatAgent => {
     const n = name.toLowerCase();
-    if (n.includes("schatter") || n.includes("offerte")) {
+    if (n.includes("viktor") || n.includes("offerte")) {
       return {
         id: "schatter",
-        name: "Schatter",
+        name: "Viktor",
         role: "Offertes",
         gradient: "from-violet-400 to-purple-500",
         avatarUrl: DEFAULT_BUILTIN_AVATARS.schatter,
       };
     }
-    if (n.includes("factuur") || n.includes("peppol") || n.includes("facturatie")) {
+    if (n.includes("factuur") || n.includes("peppol") || n.includes("nina")) {
       return {
         id: "facturatie",
-        name: "Facturatie",
+        name: "Nina",
         role: "Peppol",
         gradient: "from-amber-400 to-orange-500",
         avatarUrl: DEFAULT_BUILTIN_AVATARS.facturatie,
@@ -747,7 +747,7 @@ export function AgentChatProvider({
               if (companyId) {
                 await supabase.from("agent_actions").insert({
                   company_id: companyId,
-                  agent_name: "Schatter",
+                  agent_name: "Viktor",
                   action_type: "send_offerte",
                   title: `Offerte verzenden naar ${email}`,
                   reason: `Gevraagd via ${DEFAULT_AGENT_NAME} AI-metgezel voor ${target}`,

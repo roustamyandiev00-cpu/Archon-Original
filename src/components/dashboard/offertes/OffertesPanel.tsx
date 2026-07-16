@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Cog, Download, EyeOff, SlidersHorizontal } from "lucide-react";
-import OffertesDataTable from "@/components/dashboard/offertes/OffertesDataTable";
+import OffertesDataTable, {
+  OFFERTE_COLUMN_OPTIONS,
+  defaultOfferteColumnVisibility,
+  type OfferteColumnVisibility,
+} from "@/components/dashboard/offertes/OffertesDataTable";
 import type { OfferteListRow } from "@/components/dashboard/offertes/OffertesView";
+import DataPanelToolbar from "@/components/dashboard/DataPanelToolbar";
+import { exportOffertesCsv } from "@/components/dashboard/table-exports";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -22,6 +26,9 @@ export default function OffertesPanel({
   isDemo: boolean;
 }) {
   const [showFilters, setShowFilters] = useState(true);
+  const [columnVisibility, setColumnVisibility] = useState<OfferteColumnVisibility>(
+    defaultOfferteColumnVisibility,
+  );
 
   const openCount = offertes.filter((o) =>
     ["concept", "verzonden", "bekeken"].includes(o.status_new ?? ""),
@@ -31,7 +38,7 @@ export default function OffertesPanel({
   ).length;
 
   return (
-    <Card className="dashboard-data-panel overflow-hidden border-white/10 bg-zinc-950/50">
+    <Card className="dashboard-data-panel flex h-full min-h-0 flex-col overflow-hidden border-white/10 bg-zinc-950/50">
       <CardHeader className="dashboard-data-panel-header gap-3 border-white/10 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-0.5">
           <CardTitle className="text-base font-semibold text-zinc-50">
@@ -43,30 +50,20 @@ export default function OffertesPanel({
           </CardDescription>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={showFilters ? "Filters verbergen" : "Filters tonen"}
-            onClick={() => setShowFilters((value) => !value)}
-          >
-            {showFilters ? <EyeOff size={15} /> : <SlidersHorizontal size={15} />}
-            <span className="hidden sm:inline">
-              {showFilters ? "Hide" : "Filters"}
-            </span>
-          </Button>
-          <Button type="button" variant="ghost" aria-label="Kolommen aanpassen">
-            <Cog size={15} />
-            <span className="hidden sm:inline">Customize</span>
-          </Button>
-          <Button type="button" variant="ghost" aria-label="Exporteer offertes">
-            <Download size={15} />
-            <span className="hidden sm:inline">Export</span>
-          </Button>
-        </div>
+        <DataPanelToolbar
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((value) => !value)}
+          columns={OFFERTE_COLUMN_OPTIONS}
+          columnVisibility={columnVisibility}
+          onColumnVisibilityChange={(id, visible) =>
+            setColumnVisibility((current) => ({ ...current, [id]: visible }))
+          }
+          onExport={() => exportOffertesCsv(offertes)}
+          exportLabel="Exporteer offertes"
+        />
       </CardHeader>
 
-      <CardContent className="dashboard-data-panel-body">
+      <CardContent className="dashboard-data-panel-body flex min-h-0 flex-1 flex-col">
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Badge variant="info">
             {offertes.length.toLocaleString("nl-BE")} offertes
@@ -85,6 +82,7 @@ export default function OffertesPanel({
             offertes={offertes}
             isDemo={isDemo}
             showFilters={showFilters}
+            columnVisibility={columnVisibility}
           />
         </div>
       </CardContent>

@@ -109,6 +109,9 @@ export type CompanyDetail = {
   company: ManagedCompany;
   stripeCustomerId: string;
   subscriptionStatus: "active" | "trialing" | "past_due" | "paused";
+  /** Intern (§4.4) — alleen platform-admin. */
+  risicoStatus: string;
+  verificatieStatus: string;
   nextInvoiceDate: string;
   requestsToday: number;
   failedRequests: number;
@@ -197,6 +200,8 @@ function buildCompanyDetail(company: ManagedCompany): CompanyDetail {
         : company.status === "suspended"
           ? "paused"
           : "active",
+    risicoStatus: company.risicoStatus ?? "normaal",
+    verificatieStatus: company.verificatieStatus ?? "onbevestigd",
     nextInvoiceDate: "2026-08-01T09:00:00Z",
     requestsToday: Math.round(company.aiTokensUsed / 920),
     failedRequests: active ? seed % 9 : 17 + (seed % 8),
@@ -378,9 +383,9 @@ function buildActivity(company: ManagedCompany): ActivityEvent[] {
       id: `${company.id}-activity-ai`,
       type: "ai",
       title: "AI follow-up drafted",
-      detail: "Lima prepared a follow-up email for two open quotes",
+      detail: "Ela prepared a follow-up email for two open quotes",
       time: "2026-07-09T10:44:00Z",
-      actor: "Lima",
+      actor: "Ela",
     },
     {
       id: `${company.id}-activity-user`,

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { FileText } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { isOfferteEditable } from "@/lib/offertes";
+import { loadActivePrijslijstItems } from "@/lib/prijslijst";
 import OfferteForm, {
   type OfferteDocumentContext,
   type OfferteFormInitial,
@@ -24,7 +25,7 @@ export default async function OfferteBewerkenPage({
   const { data: offerte } = await supabase
     .from("offertes")
     .select(
-      "id, nummer, klant, customer_id, datum, geldig_tot, notes, status_new, template_id",
+      "id, nummer, klant, customer_id, datum, geldig_tot, notes, status_new, template_id, project_naam, afmetingen",
     )
     .eq("id", offerteId)
     .eq("bedrijf_id", companyId)
@@ -55,23 +56,25 @@ export default async function OfferteBewerkenPage({
     btw: string | null;
   }[] = [];
 
-  const [{ data: klantData }, { data: bedrijf }] = await Promise.all([
-    supabase
-      .from("customers")
-      .select(
-        "id, name, company_name, first_name, last_name, address, email, phone, btw",
-      )
-      .eq("company_id", companyId)
-      .eq("is_active", true)
-      .order("name"),
-    supabase
-      .from("bedrijven")
-      .select(
-        "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_quote_template",
-      )
-      .eq("id", companyId)
-      .maybeSingle(),
-  ]);
+  const [{ data: klantData }, { data: bedrijf }, prijslijstItems] =
+    await Promise.all([
+      supabase
+        .from("customers")
+        .select(
+          "id, name, company_name, first_name, last_name, address, email, phone, btw",
+        )
+        .eq("company_id", companyId)
+        .eq("is_active", true)
+        .order("name"),
+      supabase
+        .from("bedrijven")
+        .select(
+          "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_quote_template",
+        )
+        .eq("id", companyId)
+        .maybeSingle(),
+      loadActivePrijslijstItems(supabase, companyId),
+    ]);
   customers = klantData ?? [];
 
   const documentContext: OfferteDocumentContext = {
@@ -97,6 +100,8 @@ export default async function OfferteBewerkenPage({
     datum: offerte.datum ?? new Date().toISOString().slice(0, 10),
     geldigTot: offerte.geldig_tot ?? "",
     notes: offerte.notes ?? "",
+    projectNaam: offerte.project_naam ?? "",
+    afmetingen: offerte.afmetingen ?? "",
     lines: (lijnen ?? []).map((l) => ({
       omschrijving: l.omschrijving ?? "",
       aantal: Number(l.aantal ?? 0),
@@ -128,6 +133,7 @@ export default async function OfferteBewerkenPage({
         offerteId={offerteId}
         initial={initial}
         nummer={offerte.nummer ?? undefined}
+        prijslijstItems={prijslijstItems}
       />
     </div>
   );

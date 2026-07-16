@@ -11,12 +11,17 @@ import { markOfferteSent } from "@/app/dashboard/offertes/send-actions";
 import type {
   CreateInvoiceFromOffertePayload,
   CreateOffertePayload,
+  ProposeChatSanctionPayload,
+  ProposeWerkpostMatchPayload,
+  ProposeGeschilSamenvattingPayload,
   SendOffertePayload,
   SendPaymentReminderPayload,
   SendQuoteFollowupPayload,
 } from "@/lib/agents/types";
 import { executeIncassoStep } from "@/app/dashboard/facturen/incasso-actions";
 import { executeQuoteFollowup } from "@/lib/agents/followup-actions";
+import { untyped } from "@/lib/integraties";
+import { refreshBetrouwbaarheidsscore } from "@/lib/bouwnetwerk/betrouwbaarheid";
 
 async function logActivity(
   supabase: SupabaseClient,
@@ -70,7 +75,7 @@ export async function executeAgentAction(input: {
     return { ok: true, route: action.target_route ?? undefined };
   }
 
-  const agentName = action.agent_name || "Lima";
+  const agentName = action.agent_name || "Lara";
   const payload = (action.payload_json ?? {}) as Record<string, unknown>;
 
   try {
@@ -83,6 +88,8 @@ export async function executeAgentAction(input: {
         geldigTot: p.geldigTot,
         notes: p.notes,
         lines: p.lines,
+        projectNaam: p.projectNaam ?? null,
+        afmetingen: p.afmetingen ?? null,
       };
       const result = await createOfferte(createInput);
       if ("error" in result && result.error) {
@@ -317,6 +324,209 @@ export async function executeAgentAction(input: {
         bailiffMailto:
           "bailiffMailto" in result ? result.bailiffMailto : undefined,
       };
+    }
+
+    if (action.action_type === "propose_chat_sanction") {
+      const p = payload as unknown as ProposeChatSanctionPayload;
+      const isWarning = p.sanctionType === "waarschuwing";
+      const sanctieStatus = isWarning ? "bevestigd" : "voorgesteld";
+
+      const { data: sanctie, error: sanctieError } = await untyped(supabase)
+        .from("bedrijf_sancties")
+        .insert({
+          bedrijf_id: p.bedrijfId,
+          type: p.sanctionType,
+          reden: p.reden,
+          bewijs_agent_action_id: actionId,
+          bevestigd_door: isWarning ? userId : null,
+          status: sanctieStatus,
+          channel_id: p.channelId || null,
+          message_id: p.messageId || null,
+          ingaat_op: isWarning ? new Date().toISOString() : null,
+          verloopt_op: isWarning
+            ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+            : null,
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (sanctieError) throw new Error(sanctieError.message);
+
+      if (isWarning) {
+        await supabase
+          .from("bedrijven")
+          .update({
+            risicostatus: "gewaarschuwd",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", p.bedrijfId)
+          .eq("risicostatus", "normaal");
+      }
+
+      await refreshBetrouwbaarheidsscore(supabase, p.bedrijfId);
+
+      const route =
+        action.target_route ??
+        `/dashboard/werkposts/samenwerkingen?channel=${p.channelId}`;
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_route: route,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Sanctie ${sanctieStatus}: ${p.sanctionType}`,
+        outputJson: { sanctieId: sanctie?.id, sanctionType: p.sanctionType },
+      });
+
+      revalidatePath("/dashboard/automatisaties");
+      revalidatePath("/dashboard/admin/rapportages");
+      return { ok: true, route };
+    }
+
+    if (action.action_type === "propose_werkpost_match") {
+      const p = payload as unknown as ProposeWerkpostMatchPayload;
+      const { assertCanAutoSendReactie, markAutoSendTimestamp } = await import(
+        "@/lib/bouwnetwerk/send-guardrails"
+      );
+
+      const guard = await assertCanAutoSendReactie(supabase, {
+        companyId,
+        werkpostId: p.werkpostId,
+      });
+
+      let sent = false;
+      let skipReason: string | undefined;
+      if (!guard.ok) {
+        skipReason = guard.reason;
+      } else {
+        const { error: reactieError } = await supabase
+          .from("werkpost_reacties")
+          .insert({
+            werkpost_id: p.werkpostId,
+            company_id: companyId,
+            user_id: userId,
+            bericht: p.draftMessage.trim(),
+            voorgesteld_tarief: null,
+            beschikbaarheid_vanaf: null,
+            beschikbaarheid_tot: null,
+            status: "in_afwachting",
+          });
+        if (reactieError) {
+          skipReason = reactieError.message;
+        } else {
+          sent = true;
+          await markAutoSendTimestamp(supabase, companyId);
+          const { count } = await supabase
+            .from("werkpost_reacties")
+            .select("id", { count: "exact", head: true })
+            .eq("werkpost_id", p.werkpostId);
+          await supabase
+            .from("werkposts")
+            .update({
+              aantal_reacties: count ?? 0,
+              pipeline_status: "interesse_verstuurd",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", p.werkpostId);
+        }
+      }
+
+      if (!sent) {
+        await supabase
+          .from("werkposts")
+          .update({
+            pipeline_status: "interesse_verstuurd",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", p.werkpostId);
+      }
+
+      const route = `/bouwnetwerk`;
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_route: route,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: sent
+          ? `Reactie verstuurd op «${p.werkpostTitel}» (na goedkeuring)`
+          : `Match goedgekeurd zonder auto-send: ${skipReason ?? "onbekend"}`,
+        outputJson: {
+          werkpostId: p.werkpostId,
+          draftMessage: p.draftMessage,
+          sent,
+          skipReason,
+        },
+      });
+
+      revalidatePath("/dashboard/automatisaties");
+      revalidatePath("/bouwnetwerk");
+      revalidatePath("/dashboard/werkposts");
+      return { ok: true, route };
+    }
+
+    if (action.action_type === "propose_geschil_samenvatting") {
+      const p = payload as unknown as ProposeGeschilSamenvattingPayload;
+      await untyped(supabase)
+        .from("geschillen")
+        .update({
+          ai_samenvatting: p.samenvatting,
+          status: "verklaringen",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", p.geschilId);
+
+      const route = `/dashboard/admin/geschillen`;
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_route: route,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Geschil-samenvatting goedgekeurd`,
+        outputJson: { geschilId: p.geschilId },
+      });
+
+      revalidatePath("/dashboard/admin/geschillen");
+      revalidatePath("/dashboard/geschillen");
+      return { ok: true, route };
+    }
+
+    if (action.action_type === "propose_materiaal_zoek") {
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_route: "/dashboard/bouwmaterialen",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+      return { ok: true, route: "/dashboard/bouwmaterialen" };
     }
 
     return { error: `Onbekend actietype: ${action.action_type}` };

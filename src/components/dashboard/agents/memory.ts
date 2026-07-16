@@ -259,6 +259,27 @@ export function memoriesFromOffertePayload(
     },
   ];
 
+  if (payload.projectNaam?.trim() || payload.afmetingen?.trim()) {
+    memories.push({
+      content: [
+        `Project ${payload.klant}:`,
+        payload.projectNaam?.trim() || null,
+        payload.afmetingen?.trim()
+          ? `afmetingen ${payload.afmetingen.trim()}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      memoryType: "fact",
+      importance: 7,
+      metadata: {
+        klant: payload.klant,
+        projectNaam: payload.projectNaam ?? null,
+        afmetingen: payload.afmetingen ?? null,
+      },
+    });
+  }
+
   if (payload.notes?.trim()) {
     memories.push({
       content: `Werkbeschrijving ${payload.klant}: ${payload.notes.slice(0, 400)}`,
@@ -372,7 +393,7 @@ export async function rememberFromExecution(
   const payload = (action.payload_json ?? {}) as Record<string, unknown>;
   const memories = memoriesFromExecutedAction({
     actionType: action.action_type,
-    agentName: action.agent_name || "Lima",
+    agentName: action.agent_name || "Lara",
     payload,
     targetRoute: action.target_route,
   });

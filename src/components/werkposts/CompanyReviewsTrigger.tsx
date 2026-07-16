@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { X, Loader2, MessageSquare, Calendar } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import RapporteerButton from "@/components/bouwnetwerk/RapporteerButton";
 
 interface CompanyReviewsTriggerProps {
   companyId: number;
@@ -216,10 +217,17 @@ export default function CompanyReviewsTrigger({
                               ))}
                             </div>
                           </div>
-                          <span className="text-[10px] text-zinc-500 flex items-center gap-1 mt-0.5">
-                            <Calendar size={10} className="shrink-0" />
-                            {formatDate(r.created_at)}
-                          </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-[10px] text-zinc-500 flex items-center gap-1 mt-0.5">
+                              <Calendar size={10} className="shrink-0" />
+                              {formatDate(r.created_at)}
+                            </span>
+                            <RapporteerButton
+                              targetType="review"
+                              targetId={String(r.id)}
+                              compact
+                            />
+                          </div>
                         </div>
                         <p className="text-sm text-zinc-300 mt-2 leading-relaxed whitespace-pre-line bg-zinc-950/20 rounded-xl p-3 border border-white/[0.02]">
                           {r.commentaar}

@@ -47,7 +47,7 @@ export async function updateSettings(input: SettingsInput) {
 
   const extras: Extras = {
     ai: {
-      agentNaam: "Lima",
+      agentNaam: "Ela",
       vakgebied: input.ai.vakgebied.trim(),
       toon: input.ai.toon,
       toestemming: input.ai.toestemming,
@@ -330,33 +330,13 @@ export async function clearLogo() {
   return { ok: true };
 }
 
-export async function buyAiTokens(amount: number) {
-  const access = await requireWriteAccess();
-  if ("error" in access) return { error: access.error };
-  const { supabase, companyId } = access;
-
-  const { data: bedrijf } = await supabase
-    .from("bedrijven")
-    .select("ai_assistant")
-    .eq("id", companyId)
-    .maybeSingle();
-
-  const extras = parseExtras(bedrijf?.ai_assistant ?? null);
-  const currentTokens = extras.ai.tokens ?? 15000;
-  const newTokens = currentTokens + amount;
-
-  extras.ai.tokens = newTokens;
-
-  const { error } = await supabase
-    .from("bedrijven")
-    .update({
-      ai_assistant: JSON.stringify(extras),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", companyId);
-
-  if (error) return { error: error.message };
-
-  revalidatePath("/dashboard/instellingen");
-  return { ok: true, newTokens };
+/**
+ * Legacy entrypoint — gebruik createAiTokenCheckoutSession (Stripe Checkout).
+ * Directe toekenning zonder betaling blijft geblokkeerd.
+ */
+export async function buyAiTokens(_amount: number) {
+  return {
+    error:
+      "Gebruik ‘Betaal met Stripe’ bij een tokenpakket. Tokens worden alleen na een bevestigde betaling bijgeschreven.",
+  };
 }

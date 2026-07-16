@@ -104,7 +104,7 @@ export default function BouwnetwerkHub({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-12rem)] flex-col gap-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/30 lg:flex-row">
+    <div className="dashboard-bouwnetwerk flex h-full min-h-0 flex-col gap-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/30 lg:flex-row">
       {/* Linker sidebar — gesprekken → samenwerkingen */}
       <aside className="flex w-full shrink-0 flex-col border-b border-white/10 lg:w-[280px] lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
@@ -206,6 +206,24 @@ export default function BouwnetwerkHub({
             >
               <Handshake size={13} />
               Alle samenwerkingen
+            </Link>
+            <Link
+              href="/dashboard/bouwnetwerk/partners"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+            >
+              Partners & matching
+            </Link>
+            <Link
+              href="/dashboard/bouwmaterialen"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+            >
+              Materialen zoeken
+            </Link>
+            <Link
+              href="/dashboard/geschillen"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-200"
+            >
+              Geschillen
             </Link>
           </div>
         )}

@@ -32,6 +32,7 @@ import {
   DashboardTourUi,
 } from "@/components/onboarding/DashboardTourShell";
 import AddToHomeScreenPrompt from "@/components/AddToHomeScreenPrompt";
+import OnboardingSeedClient from "@/components/dashboard/OnboardingSeedClient";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -87,6 +88,7 @@ export default async function DashboardLayout({
         enabled={!isPreviewMode && Boolean(companyId)}
       >
       <DashboardSidePanelProvider enabled={showSidePreview}>
+      {!isPreviewMode && companyId ? <OnboardingSeedClient /> : null}
       <a
         href="#dashboard-main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-sky-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-zinc-950"
@@ -110,7 +112,7 @@ export default async function DashboardLayout({
         showSidePanel={showSidePreview}
         className={`dashboard-main lg:pl-[220px] pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0 ${mainTop}`}
       >
-        <div className="dashboard-main-body mx-auto flex h-full w-full max-w-[1800px] flex-col px-4 py-3 sm:px-5 lg:px-6 lg:py-3">
+        <div className="dashboard-main-body mx-auto flex h-full w-full max-w-[1800px] flex-col px-4 py-2 sm:px-5 lg:px-6 lg:py-2">
           <MobileSwipeNav>{children}</MobileSwipeNav>
         </div>
       </DashboardMain>

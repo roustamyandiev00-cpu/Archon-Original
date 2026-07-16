@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   Gift,
+  Globe,
   Loader2,
   Lock,
   Mail,
@@ -29,6 +30,7 @@ import {
   getOnboardingProfile,
   saveOnboardingProfile,
 } from "@/lib/onboarding/storage";
+import { LANGUAGES, persistLanguage, type AppLanguage } from "@/lib/appearance/config";
 
 const VAKGEBIEDEN = [
   "Algemene bouw",
@@ -62,7 +64,7 @@ const DOELEN = [
   { id: "overzicht", label: "Alles op één plek" },
 ];
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-zinc-900/60 py-2.5 pl-10 pr-4 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60 focus:bg-zinc-900";
@@ -75,6 +77,8 @@ export default function RegisterOnboardingForm() {
   const prefillEmail = searchParams.get("email") ?? "";
 
   const { enabled: speechOn, speak, toggle: toggleSpeech } = useDutchSpeech();
+
+  const [selectedLanguage, setSelectedLanguage] = useState<AppLanguage>("nl");
 
   function handleOptionVoice(
     spoken: string,
@@ -119,12 +123,13 @@ export default function RegisterOnboardingForm() {
 
   useEffect(() => {
     const prompts: Record<number, string> = {
-      1: "Laten we elkaar leren kennen. In welk vakgebied werk je?",
-      2: "Hoe groot is je team?",
-      3: "Wat is je grootste uitdaging op dit moment?",
-      4: "Wat wil je vooral met ArchonPro bereiken?",
-      5: "Hoe heet je en wat is je bedrijfsnaam?",
-      6: "Bijna klaar. Vul je e-mail en wachtwoord in om je account aan te maken.",
+      1: "Welke taal spreek je het liefst? Kies je voorkeurstaal.",
+      2: "Laten we elkaar leren kennen. In welk vakgebied werk je?",
+      3: "Hoe groot is je team?",
+      4: "Wat is je grootste uitdaging op dit moment?",
+      5: "Wat wil je vooral met ArchonPro bereiken?",
+      6: "Hoe heet je en wat is je bedrijfsnaam?",
+      7: "Bijna klaar. Vul je e-mail en wachtwoord in om je account aan te maken.",
     };
     const text = prompts[step];
     if (text) speak(text);
@@ -137,16 +142,18 @@ export default function RegisterOnboardingForm() {
   function canAdvance(): boolean {
     switch (step) {
       case 1:
-        return vakgebied.length > 0;
+        return selectedLanguage.length > 0;
       case 2:
-        return teamSize.length > 0;
+        return vakgebied.length > 0;
       case 3:
-        return uitdaging.length > 0;
+        return teamSize.length > 0;
       case 4:
-        return doel.length > 0;
+        return uitdaging.length > 0;
       case 5:
-        return name.trim().length > 0 && bedrijf.trim().length > 0;
+        return doel.length > 0;
       case 6:
+        return name.trim().length > 0 && bedrijf.trim().length > 0;
+      case 7:
         return email.trim().length > 0 && password.length >= 6 && agreed;
       default:
         return false;
@@ -154,6 +161,9 @@ export default function RegisterOnboardingForm() {
   }
 
   function next() {
+    if (step === 1) {
+      persistLanguage(selectedLanguage);
+    }
     persistProfile();
     if (step < TOTAL_STEPS) setStep((s) => s + 1);
   }
@@ -165,6 +175,7 @@ export default function RegisterOnboardingForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canAdvance()) return;
+    persistLanguage(selectedLanguage);
     setError(null);
     setNotice(null);
     setLoading(true);
@@ -230,14 +241,14 @@ export default function RegisterOnboardingForm() {
 
   return (
     <div>
-      {/* Lima coach header */}
+      {/* Ela coach header */}
       <div className="mb-5 flex items-start gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-4">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 text-sm font-bold text-white">
           N
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-zinc-100">Lima helpt je opstarten</p>
+            <p className="text-sm font-semibold text-zinc-100">Ela helpt je opstarten</p>
             <button
               type="button"
               onClick={toggleSpeech}
@@ -265,7 +276,7 @@ export default function RegisterOnboardingForm() {
 
       <NovaVoiceAsk />
 
-      {step === 6 && (
+      {step === 7 && (
         <>
           <div className="mb-4 grid grid-cols-2 gap-3">
             <SocialButton
@@ -287,8 +298,37 @@ export default function RegisterOnboardingForm() {
         </>
       )}
 
-      <form onSubmit={step === 6 ? handleSubmit : (e) => e.preventDefault()}>
+      <form onSubmit={step === 7 ? handleSubmit : (e) => e.preventDefault()}>
         {step === 1 && (
+          <div>
+            <p className="mb-3 text-sm font-medium text-zinc-200">Kies je voorkeurstaal</p>
+            <div className="grid gap-2">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang.id}
+                  type="button"
+                  onClick={() => setSelectedLanguage(lang.id)}
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors ${
+                    selectedLanguage === lang.id
+                      ? "border-sky-500/50 bg-sky-500/15 text-sky-200"
+                      : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-white/20 hover:bg-white/[0.05]"
+                  }`}
+                >
+                  <span className="text-xl leading-none">{lang.flag}</span>
+                  <span className="flex-1 font-medium">{lang.nativeName}</span>
+                  <span className="text-xs text-zinc-500">{lang.label}</span>
+                  {selectedLanguage === lang.id && (
+                    <span className="ml-auto grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sky-500 text-zinc-950">
+                      <Globe size={11} />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
           <OptionGrid
             label="In welk vakgebied werk je?"
             options={VAKGEBIEDEN}
@@ -300,7 +340,7 @@ export default function RegisterOnboardingForm() {
           />
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <OptionGrid
             label="Hoe groot is je team?"
             options={TEAM_SIZES.map((t) => t.label)}
@@ -322,7 +362,7 @@ export default function RegisterOnboardingForm() {
           />
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <OptionGrid
             label="Wat is je grootste uitdaging?"
             options={UITDAGINGEN}
@@ -334,7 +374,7 @@ export default function RegisterOnboardingForm() {
           />
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <OptionGrid
             label="Wat wil je vooral bereiken?"
             options={DOELEN.map((d) => d.label)}
@@ -356,7 +396,7 @@ export default function RegisterOnboardingForm() {
           />
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div className="space-y-3">
             <Field label="Je naam">
               <InputIcon icon={<User size={16} />} />
@@ -401,7 +441,7 @@ export default function RegisterOnboardingForm() {
           </div>
         )}
 
-        {step === 6 && (
+        {step === 7 && (
           <div className="space-y-3">
             {referralCode.trim() && (
               <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">

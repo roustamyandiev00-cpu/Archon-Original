@@ -49,5 +49,6 @@ export type BouwmateriaalWinkelRow = {
   toegevoegd_door: string | null;
   lat: number | null;
   lng: number | null;
+  verificatiestatus?: string | null;
   created_at: string | null;
 };

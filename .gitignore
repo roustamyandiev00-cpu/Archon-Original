@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -65,3 +65,13 @@ thomas-dashboard-test.png
 
 # python exports (peppol bundles, ubl)
 /exports/
+
+# Local Netlify folder
+.netlify
+
+# Temporary files
+_tmp_*
+
+# Python virtual environments
+.venv*/
+venv/

@@ -93,8 +93,8 @@ export default function OffertesView({
   }
 
   return (
-    <div className="dashboard-page space-y-3 lg:space-y-0">
-      <header className="dashboard-page-header flex flex-col gap-2 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between lg:gap-3">
+    <div className="dashboard-page flex h-full min-h-0 flex-col gap-2 lg:gap-0">
+      <header className="dashboard-page-header flex shrink-0 flex-col gap-2 border-b border-white/10 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
             Operatie / Offertes

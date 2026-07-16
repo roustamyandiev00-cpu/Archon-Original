@@ -21,7 +21,7 @@ export default function ProjectenView({
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 overflow-y-auto pb-4">
       <DashboardPanel
         title="Project Gezondheid"
         icon={FolderKanban}
@@ -87,7 +87,7 @@ export default function ProjectenView({
           </div>
         )}
 
-        <PrimaryButton href="/dashboard/offertes/projecten">
+        <PrimaryButton href="/dashboard/offertes/projecten" className="w-auto px-6">
           <span className="inline-flex items-center gap-2">
             Alle projecten bekijken
             <ArrowRight size={14} />

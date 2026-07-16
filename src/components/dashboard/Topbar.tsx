@@ -138,7 +138,7 @@ export default function Topbar({
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center border-b border-white/10 bg-zinc-900/85 backdrop-blur-xl lg:left-[220px]">
+      <header className="dashboard-topbar fixed inset-x-0 top-0 z-30 flex h-14 items-center border-b border-white/10 bg-zinc-900/85 backdrop-blur-xl lg:left-[220px]">
         <div className="flex w-full items-center gap-4 px-4 sm:px-6">
           <Link
             href="/dashboard/command-center"
@@ -161,7 +161,7 @@ export default function Topbar({
               type="button"
               onClick={() => setSearchOpen(true)}
               aria-label="Zoeken"
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-100"
+              className="dashboard-topbar-action flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-100"
             >
               <Search size={14} aria-hidden />
               <span className="hidden sm:inline">Zoeken</span>
@@ -181,7 +181,7 @@ export default function Topbar({
                 }}
                 aria-expanded={observeOpen}
                 aria-haspopup="menu"
-                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-100"
+                className="dashboard-topbar-action flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:text-zinc-100"
               >
                 Observeer
                 <ChevronDown
@@ -206,15 +206,14 @@ export default function Topbar({
                         key={item.href}
                         type="button"
                         role="menuitem"
-                        disabled
-                        title="Binnenkort beschikbaar"
-                        className="flex w-full cursor-not-allowed items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-500"
+                        onClick={() => {
+                          setObserveOpen(false);
+                          router.push(item.href);
+                        }}
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
                       >
                         <Icon size={14} aria-hidden />
                         {item.label}
-                        <span className="ml-auto rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-zinc-600">
-                          Soon
-                        </span>
                       </button>
                     );
                   })}
@@ -222,10 +221,9 @@ export default function Topbar({
               )}
             </div>
 
-            <ThemeToggle />
-
             <IconButton
               label="Meldingen"
+              className="dashboard-topbar-icon-btn"
               onClick={() => {
                 setNotifyOpen((v) => {
                   const next = !v;
@@ -249,14 +247,14 @@ export default function Topbar({
 
             <Link
               href="/dashboard/deploy"
-              className="relative grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
+              className="dashboard-topbar-icon-btn relative hidden h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100 md:grid"
               aria-label="Live status"
             >
               <Radio size={16} aria-hidden />
             </Link>
 
             <div
-              className="ml-1 hidden items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 sm:flex"
+              className="dashboard-topbar-sync ml-1 hidden items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 sm:flex"
               role="status"
               aria-label="Synchronisatiestatus"
             >
@@ -376,11 +374,11 @@ function ArrowHint() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-[11px] uppercase tracking-wide text-zinc-500">
+    <div className="dashboard-topbar-stat flex items-baseline gap-1.5">
+      <span className="dashboard-topbar-stat-label text-[11px] uppercase tracking-wide text-zinc-500">
         {label}
       </span>
-      <span className="font-mono text-sm font-semibold text-zinc-100">
+      <span className="dashboard-topbar-stat-value font-mono text-sm font-semibold text-zinc-100">
         {value}
       </span>
     </div>
@@ -392,11 +390,13 @@ function IconButton({
   children,
   onClick,
   active,
+  className = "",
 }: {
   label: string;
   children: React.ReactNode;
   onClick?: () => void;
   active?: boolean;
+  className?: string;
 }) {
   return (
     <button
@@ -406,7 +406,7 @@ function IconButton({
       onClick={onClick}
       className={`relative grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100 ${
         active ? "bg-white/5 text-zinc-100" : ""
-      }`}
+      } ${className}`}
     >
       {children}
     </button>

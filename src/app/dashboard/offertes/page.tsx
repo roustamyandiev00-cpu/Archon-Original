@@ -91,7 +91,7 @@ export default async function OffertesPage() {
       footer_tekst: null,
     },
   };
-  let agentName = "Lima";
+  let agentName = "Ela";
 
   if (companyId) {
     const [{ data: klanten }, { data: bedrijf }] = await Promise.all([

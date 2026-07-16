@@ -1,0 +1,44 @@
+{
+  // === Mobiel data besparen ===
+
+  // Geen automatische extension updates
+  "extensions.autoUpdate": false,
+  "extensions.autoCheckUpdates": false,
+
+  // Telemetry volledig uit
+  "telemetry.telemetryLevel": "off",
+
+  // Geen crash reports
+  "telemetry.enableCrashReporter": false,
+
+  // Editor suggesties van online bronnen uit
+  "editor.suggest.showSnippets": true,
+
+  // Geen auto-fetch in git (haalt remote branches op op de achtergrond)
+  "git.autofetch": false,
+
+  // Geen automatische fetch interval
+  "git.autofetchPeriod": 0,
+
+  // Geen decorations ophalen van remote
+  "git.decorations.enabled": true,
+
+  // IntelliSense type acquisitie uit (downloadt @types packages automatisch)
+  "typescript.disableAutomaticTypeAcquisition": true,
+
+  // Geen npm script detectie bij elke folder open
+  "npm.autoDetect": "off",
+
+  // Workspace trust prompts verminderen
+  "security.workspace.trust.banner": "never",
+
+  // Geen search in remote bestanden
+  "search.useIgnoreFiles": true,
+
+  // Experimentele features uit die extra calls maken
+  "workbench.enableExperiments": false,
+
+  // Geen product nieuws/tips
+  "workbench.startupEditor": "none",
+  "workbench.tips.enabled": false
+}

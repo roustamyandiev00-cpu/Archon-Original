@@ -9,11 +9,8 @@ import {
   type OfferteLijnInput,
   type OfferteStatus,
 } from "@/lib/offertes";
-import {
-  projectNameFromOfferte,
-  startLabelFromDate,
-} from "@/components/dashboard/projecten/fromOfferte";
 import { loadCompanyDefaultTemplate } from "@/components/dashboard/documenten/documentTemplate";
+import { ensureProjectFromOfferte } from "@/lib/projecten/ensureFromOfferte";
 
 export type CreateOfferteInput = {
   customerId: number | null;
@@ -22,6 +19,8 @@ export type CreateOfferteInput = {
   geldigTot: string | null;
   notes: string;
   lines: OfferteLijnInput[];
+  projectNaam?: string | null;
+  afmetingen?: string | null;
 };
 
 export type UpdateOfferteInput = CreateOfferteInput & { id: number };
@@ -79,6 +78,8 @@ export async function createOfferte(input: CreateOfferteInput) {
         datum: input.datum,
         geldig_tot: input.geldigTot,
         notes: input.notes || null,
+        project_naam: input.projectNaam?.trim() || null,
+        afmetingen: input.afmetingen?.trim() || null,
         status: "Concept",
         status_new: "concept",
         template_id: templateId,
@@ -122,44 +123,12 @@ export async function createOfferte(input: CreateOfferteInput) {
     return { error: lineError.message };
   }
 
-  const projectNaam = projectNameFromOfferte({
-    klant: input.klant || "Onbekende klant",
-    notes: input.notes || "",
-    lines: cleanLines,
-  });
-
-  const { data: project, error: projectError } = await supabase
-    .from("projecten")
-    .insert({
-      bedrijf_id: companyId,
-      naam: projectNaam,
-      klant_naam: input.klant || "Onbekende klant",
-      start_datum_label: startLabelFromDate(input.datum),
-      status: "gepland",
-    })
-    .select("id")
-    .single();
-
-  if (!projectError && project) {
-    const now = new Date().toISOString();
-    await supabase
-      .from("offertes")
-      .update({
-        converted_to_type: `project:${project.id}`,
-        converted_at: now,
-        converted_by: user.id,
-        updated_at: now,
-      })
-      .eq("id", offerte.id)
-      .eq("bedrijf_id", companyId);
-  }
-
+  // Project wordt automatisch aangemaakt bij goedkeuring (geaccepteerd),
+  // niet bij het aanmaken van de offerte.
   revalidatePath("/dashboard/offertes");
   revalidatePath("/dashboard/offertes/projecten");
   return {
     id: offerte.id as number,
-    projectId: project?.id as string | undefined,
-    projectError: projectError?.message,
   };
 }
 
@@ -203,6 +172,8 @@ export async function updateOfferte(input: UpdateOfferteInput) {
       datum: input.datum,
       geldig_tot: input.geldigTot,
       notes: input.notes || null,
+      project_naam: input.projectNaam?.trim() || null,
+      afmetingen: input.afmetingen?.trim() || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.id)
@@ -242,7 +213,7 @@ export async function updateOfferte(input: UpdateOfferteInput) {
 export async function updateOfferteStatus(id: number, status: OfferteStatus) {
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
-  const { supabase, companyId } = access;
+  const { supabase, companyId, user } = access;
   const patch: {
     status_new: OfferteStatus;
     status: string;
@@ -270,9 +241,35 @@ export async function updateOfferteStatus(id: number, status: OfferteStatus) {
 
   if (error) return { error: error.message };
 
+  let projectId: string | undefined;
+  if (status === "geaccepteerd") {
+    const { data: offerte } = await supabase
+      .from("offertes")
+      .select(
+        "id, klant, notes, datum, customer_id, converted_to_type, nummer, project_naam, afmetingen",
+      )
+      .eq("id", id)
+      .eq("bedrijf_id", companyId)
+      .maybeSingle();
+
+    if (offerte) {
+      const ensured = await ensureProjectFromOfferte({
+        supabase,
+        companyId,
+        userId: user.id,
+        offerte,
+      });
+      if (ensured.projectId) projectId = ensured.projectId;
+    }
+  }
+
   revalidatePath("/dashboard/offertes");
   revalidatePath(`/dashboard/offertes/${id}`);
-  return { ok: true };
+  revalidatePath("/dashboard/offertes/projecten");
+  if (projectId) {
+    revalidatePath(`/dashboard/offertes/projecten/${projectId}`);
+  }
+  return { ok: true, projectId };
 }
 
 export async function deleteOfferte(id: number) {

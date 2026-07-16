@@ -1,8 +1,11 @@
 import {
   Bot,
   Building2,
+  Coins,
+  Flag,
   LayoutDashboard,
   Radar,
+  Scale,
   Users,
 } from "lucide-react";
 
@@ -24,9 +27,24 @@ export const adminNavItems = [
     icon: Users,
   },
   {
+    href: "/dashboard/admin/rapportages",
+    label: "Rapportages",
+    icon: Flag,
+  },
+  {
+    href: "/dashboard/admin/geschillen",
+    label: "Geschillen",
+    icon: Scale,
+  },
+  {
     href: "/dashboard/admin/ai-agents",
     label: "AI Agents",
     icon: Bot,
+  },
+  {
+    href: "/dashboard/admin/ai-tokens",
+    label: "AI Tokens",
+    icon: Coins,
   },
   {
     href: "/dashboard/admin/proactive",

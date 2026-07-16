@@ -493,7 +493,7 @@ const AgentsManager = forwardRef<AgentsManagerHandle, Props>(function AgentsMana
                       className={inputClass}
                       value={editing.name}
                       onChange={(e) => updateDraft("name", e.target.value)}
-                      placeholder="bv. Lima, Schatter…"
+                      placeholder="bv. Ela, Schatter…"
                     />
                   </div>
 

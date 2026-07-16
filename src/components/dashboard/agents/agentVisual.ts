@@ -32,7 +32,7 @@ export function resolveAgentVisual(agentName: string): AgentVisual {
 
   return {
     id: "custom",
-    name: agentName.trim() || "Lima",
+    name: agentName.trim() || "Ela",
     gradient: "from-zinc-400 to-zinc-600",
   };
 }
@@ -63,6 +63,10 @@ export function routeForActivityLog(input: {
       return "/dashboard/facturen";
     case "lead_follow_up":
       return "/dashboard/leads";
+    case "propose_chat_sanction":
+      return "/dashboard/automatisaties";
+    case "propose_werkpost_match":
+      return "/bouwnetwerk";
     default:
       return "/dashboard/activiteit";
   }

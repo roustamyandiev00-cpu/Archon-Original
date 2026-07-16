@@ -17,7 +17,7 @@ import {
 
 const agents = [
   {
-    name: "Lima",
+    name: "Ela",
     role: "Offerte-agent",
     gradient: "from-sky-400 to-indigo-500",
     avatarUrl: DEFAULT_BUILTIN_AVATARS.schatter,

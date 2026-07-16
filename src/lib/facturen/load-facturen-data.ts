@@ -1,8 +1,12 @@
 import { getCompanyContext } from "@/lib/company";
+import { isActivePreviewMode } from "@/components/dashboard/context";
 import { DEMO_FACTUREN } from "@/lib/demo";
+import { showDemoData } from "@/lib/demo-mode";
 import type { FactuurListItem } from "@/components/dashboard/facturen/FacturenDataTable";
 import type { FactuurDocumentContext } from "@/components/dashboard/facturen/FactuurForm";
+import type { PrijslijstPickItem } from "@/components/dashboard/prijslijst/types";
 import { DEFAULT_TEMPLATE } from "@/app/dashboard/instellingen/settings";
+import { loadActivePrijslijstItems } from "@/lib/prijslijst";
 
 export type FacturenCustomer = {
   id: number;
@@ -16,10 +20,20 @@ export type FacturenCustomer = {
   btw: string | null;
 };
 
+export type FacturenProjectOption = {
+  id: string;
+  naam: string;
+  klant_naam: string;
+  customer_id: number | null;
+  status: string;
+};
+
 export type FacturenDashboardData = {
   facturen: FactuurListItem[];
   customers: FacturenCustomer[];
+  projects: FacturenProjectOption[];
   documentContext: FactuurDocumentContext;
+  prijslijstItems: PrijslijstPickItem[];
   isDemo: boolean;
   hasCompany: boolean;
   stats: {
@@ -40,6 +54,8 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
 
   let facturen: FactuurListItem[] = [];
   let customers: FacturenCustomer[] = [];
+  let projects: FacturenProjectOption[] = [];
+  let prijslijstItems: PrijslijstPickItem[] = [];
 
   let documentContext: FactuurDocumentContext = {
     defaultTemplate: DEFAULT_TEMPLATE,
@@ -58,7 +74,13 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
   };
 
   if (companyId) {
-    const [{ data }, { data: klanten }, { data: bedrijf }] = await Promise.all([
+    const [
+      { data },
+      { data: klanten },
+      { data: bedrijf },
+      prijslijst,
+      { data: projectRows },
+    ] = await Promise.all([
       supabase
         .from("facturen")
         .select(
@@ -81,10 +103,20 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
         )
         .eq("id", companyId)
         .maybeSingle(),
+      loadActivePrijslijstItems(supabase, companyId),
+      supabase
+        .from("projecten")
+        .select("id, naam, klant_naam, customer_id, status")
+        .eq("bedrijf_id", companyId)
+        .in("status", ["gepland", "actief", "gepauzeerd"])
+        .order("created_at", { ascending: false })
+        .limit(100),
     ]);
 
     const rows = data ?? [];
     customers = klanten ?? [];
+    projects = (projectRows ?? []) as FacturenProjectOption[];
+    prijslijstItems = prijslijst;
     documentContext = {
       defaultTemplate: bedrijf?.default_invoice_template || DEFAULT_TEMPLATE,
       bedrijf: bedrijf ?? documentContext.bedrijf,
@@ -129,7 +161,8 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
     });
   }
 
-  const isDemo = facturen.length === 0;
+  const preview = await isActivePreviewMode();
+  const isDemo = showDemoData(preview, facturen.length === 0);
   if (isDemo) facturen = DEMO_FACTUREN;
 
   const maandOmzet = facturen
@@ -150,7 +183,9 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
   return {
     facturen,
     customers,
+    projects,
     documentContext,
+    prijslijstItems,
     isDemo,
     hasCompany: Boolean(companyId),
     stats: { maandOmzet, verzonden, betaald, openstaand },

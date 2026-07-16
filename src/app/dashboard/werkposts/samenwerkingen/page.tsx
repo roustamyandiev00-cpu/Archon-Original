@@ -10,6 +10,8 @@ import SamenwerkingenClient, {
   type AfspraakRow,
   type PendingReactie,
 } from "@/components/dashboard/werkposts/SamenwerkingenClient";
+import { BouwnetwerkComingSoonBanner } from "@/components/dashboard/werkposts/BouwnetwerkComingSoonBanner";
+import { hasAcceptedCurrentChatTerms } from "@/lib/bouwnetwerk/chat-terms";
 
 export const metadata = { title: "Samenwerkingen — ArchonPro" };
 
@@ -52,7 +54,7 @@ export default async function SamenwerkingenPage({
   searchParams: Promise<{ channel?: string }>;
 }) {
   const { channel: initialChannelId } = await searchParams;
-  const { supabase, companyId } = await getCompanyContext();
+  const { supabase, companyId, user } = await getCompanyContext();
 
   let samenwerkingen: Samenwerking[] = [];
   let afspraken: AfspraakRow[] = [];
@@ -61,8 +63,23 @@ export default async function SamenwerkingenPage({
   let pendingReacties: PendingReactie[] = [];
   const contractsByChannel: Record<string, SamenwerkingContractRow> = {};
   const companyNames: Record<number, string> = {};
+  let chatTermsAccepted = false;
 
   if (companyId) {
+    if (user) {
+      const { data: membership } = await supabase
+        .from("company_memberships")
+        .select("chat_terms_accepted_at, chat_terms_version")
+        .eq("company_id", companyId)
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      chatTermsAccepted = hasAcceptedCurrentChatTerms({
+        acceptedAt: membership?.chat_terms_accepted_at,
+        version: membership?.chat_terms_version,
+      });
+    }
+
     const { data: myBedrijf } = await supabase
       .from("bedrijven_directory")
       .select("id, naam")
@@ -316,6 +333,8 @@ export default async function SamenwerkingenPage({
         </p>
       </div>
 
+      <BouwnetwerkComingSoonBanner />
+
       {!companyId ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
           Je account is nog niet aan een bedrijf gekoppeld. Rond eerst je
@@ -339,6 +358,7 @@ export default async function SamenwerkingenPage({
           initialChannelId={initialChannelId ?? null}
           contractsByChannel={contractsByChannel}
           companyNames={companyNames}
+          chatTermsAccepted={chatTermsAccepted}
         />
       )}
     </div>

@@ -117,7 +117,7 @@ export default function AiCrewView({
           className="shrink-0"
         >
           <p className="text-sm text-zinc-400">
-            Je agents staan klaar. Stuur één vraag en Lima coördineert de crew.
+            Je agents staan klaar. Stuur één vraag en Ela coördineert de crew.
           </p>
           <AgentChatOpenButton
             agent={{
@@ -139,7 +139,7 @@ export default function AiCrewView({
         <DashboardPanel
           title="Kennis & geheugen"
           icon={BrainCircuit}
-          className="shrink-0 max-h-[min(52vh,28rem)] overflow-y-auto lg:max-h-[min(46vh,24rem)]"
+          className="shrink-0 max-h-[min(46vh,22rem)] overflow-y-auto lg:max-h-[min(40vh,20rem)]"
         >
           <AgentKnowledgeForm
             companyAgents={companyAgents}
@@ -160,12 +160,14 @@ export default function AiCrewView({
         icon={Bot}
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
-        <AgentsManager
-          ref={agentsRef}
-          initialAgents={companyAgents}
-          embedded
-          onAddDocument={openDocumentForAgent}
-        />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <AgentsManager
+            ref={agentsRef}
+            initialAgents={companyAgents}
+            embedded
+            onAddDocument={openDocumentForAgent}
+          />
+        </div>
       </DashboardPanel>
     </div>
   );

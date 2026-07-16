@@ -20,7 +20,7 @@ export function DashboardPanel({
 } & HTMLAttributes<HTMLElement>) {
   return (
     <section
-      className={`rounded-2xl border border-white/[0.08] bg-zinc-900/80 ${className}`}
+      className={`dashboard-panel rounded-2xl border border-white/[0.08] bg-zinc-900/80 ${className}`}
       {...rest}
     >
       <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-3.5">
@@ -162,7 +162,7 @@ export function PrimaryButton({
   return (
     <Link
       href={href}
-      className={`inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400 ${className}`}
+      className={`inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400 ${className.includes("w-") ? "" : "w-full"} ${className}`}
     >
       {children}
     </Link>

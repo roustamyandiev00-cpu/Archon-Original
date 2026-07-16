@@ -138,7 +138,7 @@ export async function fetchManagedCompanies(
       supabase
         .from("bedrijven")
         .select(
-          "id, naam, email, plan, status, subscription_status, is_active, created_at, last_activity_at, owner_user_id",
+          "id, naam, email, plan, status, subscription_status, is_active, created_at, last_activity_at, owner_user_id, risicostatus, verificatiestatus",
         )
         .order("created_at", { ascending: false }),
       supabase
@@ -193,6 +193,8 @@ export async function fetchManagedCompanies(
         company.subscription_status,
         company.is_active,
       ),
+      risicoStatus: company.risicostatus ?? "normaal",
+      verificatieStatus: company.verificatiestatus ?? "onbevestigd",
       createdAt: company.created_at ?? new Date().toISOString(),
       logoInitials: initials(company.naam),
       logoTone: LOGO_TONES[index % LOGO_TONES.length],
@@ -675,7 +677,7 @@ export async function fetchCompanyDetail(
       .limit(12),
     supabase
       .from("bedrijven")
-      .select("ai_assistant, subscription_status")
+      .select("ai_assistant, subscription_status, risicostatus, verificatiestatus")
       .eq("id", companyId)
       .maybeSingle(),
   ]);
@@ -752,6 +754,9 @@ export async function fetchCompanyDetail(
     subscriptionStatus:
       (bedrijf?.subscription_status as CompanyDetail["subscriptionStatus"]) ??
       "active",
+    risicoStatus: bedrijf?.risicostatus ?? company.risicoStatus ?? "normaal",
+    verificatieStatus:
+      bedrijf?.verificatiestatus ?? company.verificatieStatus ?? "onbevestigd",
     nextInvoiceDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     requestsToday: activity?.length ?? 0,
     failedRequests: activity?.filter((row) => row.error_message).length ?? 0,

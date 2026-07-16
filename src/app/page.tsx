@@ -7,6 +7,7 @@ import Realtime from "@/components/Realtime";
 import Genius from "@/components/Genius";
 import Footer from "@/components/Footer";
 import JsonLd from "@/components/seo/JsonLd";
+import { createClient } from "@/lib/supabase/server";
 import {
   buildPageMetadata,
   organizationJsonLd,
@@ -29,7 +30,12 @@ export const metadata: Metadata = buildPageMetadata({
   ],
 });
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <>
       <JsonLd
@@ -40,7 +46,7 @@ export default function Home() {
         ]}
       />
       <PrefetchRoutes />
-      <IntroOverlay />
+      <IntroOverlay skipIntro={!!user} />
       <Navbar />
       <main>
         <Hero />

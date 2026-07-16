@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
 import { GMAIL_SMTP } from "@/components/dashboard/email/smtp-constants";
+import { decryptSecret } from "@/lib/crypto/secrets";
 
 export type { SmtpPreset } from "@/components/dashboard/email/smtp-constants";
 export { GMAIL_SMTP } from "@/components/dashboard/email/smtp-constants";
@@ -42,11 +43,18 @@ export async function loadCompanySmtpSettings(
 
   if (!data?.smtp_user || !data.smtp_pass || !data.from_email) return null;
 
+  let smtpPass: string;
+  try {
+    smtpPass = decryptSecret(data.smtp_pass);
+  } catch {
+    return null;
+  }
+
   return {
     smtp_host: data.smtp_host || GMAIL_SMTP.smtp_host,
     smtp_port: data.smtp_port || GMAIL_SMTP.smtp_port,
     smtp_user: data.smtp_user,
-    smtp_pass: data.smtp_pass,
+    smtp_pass: smtpPass,
     from_email: data.from_email,
     from_name: data.from_name || "",
   };

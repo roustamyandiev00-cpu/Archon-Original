@@ -5,11 +5,9 @@ import { Download, Printer } from "lucide-react";
 import StudioInvoicePaper from "@/components/dashboard/facturen/studio/StudioInvoicePaper";
 import {
   STUDIO_INVOICE_PAPER_HEIGHT,
-  STUDIO_INVOICE_PAPER_SCALE,
   STUDIO_INVOICE_PAPER_WIDTH,
   type StudioInvoiceFormValues,
 } from "@/components/dashboard/facturen/studio/studio-invoice-data";
-import { useVisibleCenterPosition } from "@/components/dashboard/facturen/useVisibleCenterPosition";
 import { Button } from "@/components/ui/button";
 
 export default function StudioInvoicePreview({
@@ -17,71 +15,77 @@ export default function StudioInvoicePreview({
 }: {
   invoice: StudioInvoiceFormValues;
 }) {
-  const previewBodyRef = React.useRef<HTMLDivElement>(null);
-  const paperLayout = useVisibleCenterPosition(previewBodyRef, {
-    height: STUDIO_INVOICE_PAPER_HEIGHT,
-    maxScale: STUDIO_INVOICE_PAPER_SCALE,
-    width: STUDIO_INVOICE_PAPER_WIDTH,
-  });
+  const bodyRef = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState(0.42);
+
+  React.useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const pad = 20;
+      const w = Math.max(0, el.clientWidth - pad * 2);
+      const h = Math.max(0, el.clientHeight - pad * 2);
+      if (w < 4 || h < 4) return;
+      const next = Math.min(w / STUDIO_INVOICE_PAPER_WIDTH, h / STUDIO_INVOICE_PAPER_HEIGHT);
+      setScale(Number.isFinite(next) ? Math.max(0.15, Math.min(next, 0.85)) : 0.42);
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   return (
-    <div className="studio-invoice-preview flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white">
-      <div className="flex shrink-0 items-center justify-between px-4 py-4">
-        <h2 className="text-lg font-medium text-zinc-900">Preview</h2>
-        <div className="flex items-center gap-2">
+    <div className="studio-invoice-preview flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-zinc-100 px-3">
+        <h2 className="text-sm font-medium text-zinc-900">Voorbeeld</h2>
+        <div className="flex items-center gap-1.5">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-9 border border-zinc-200 bg-white px-3 text-zinc-900 hover:bg-zinc-50"
+            className="h-7 border border-zinc-200 bg-white px-2 text-xs text-zinc-900 hover:bg-zinc-50"
             onClick={() => window.print()}
           >
-            <Printer size={16} />
-            Print
+            <Printer size={14} />
+            Afdrukken
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-9 border border-zinc-200 bg-white px-3 text-zinc-900 hover:bg-zinc-50"
+            className="h-7 border border-zinc-200 bg-white px-2 text-xs text-zinc-900 hover:bg-zinc-50"
           >
-            <Download size={16} />
-            Download PDF
+            <Download size={14} />
+            PDF
           </Button>
         </div>
       </div>
 
       <div
-        ref={previewBodyRef}
-        className="@container/preview relative min-h-0 flex-1 overflow-hidden rounded-b-xl bg-stone-200 p-4"
+        ref={bodyRef}
+        className="relative min-h-0 flex-1 overflow-hidden bg-stone-200"
       >
-        {paperLayout === null ? (
-          <div className="absolute inset-0 grid place-items-center text-sm text-zinc-500">
-            Loading Preview
-          </div>
-        ) : null}
-        <div
-          style={{
-            height: paperLayout
-              ? STUDIO_INVOICE_PAPER_HEIGHT * paperLayout.scale
-              : STUDIO_INVOICE_PAPER_HEIGHT * STUDIO_INVOICE_PAPER_SCALE,
-            top: paperLayout?.top ?? "50%",
-            transform:
-              paperLayout === null ? "translate(-50%, -50%)" : "translateX(-50%)",
-            width: paperLayout
-              ? STUDIO_INVOICE_PAPER_WIDTH * paperLayout.scale
-              : STUDIO_INVOICE_PAPER_WIDTH * STUDIO_INVOICE_PAPER_SCALE,
-          }}
-          className="absolute left-1/2 opacity-0 data-[ready=true]:opacity-100"
-          data-ready={paperLayout !== null}
-        >
+        <div className="absolute inset-0 grid place-items-center p-3">
           <div
             style={{
-              transform: `scale(${paperLayout?.scale ?? STUDIO_INVOICE_PAPER_SCALE})`,
+              width: STUDIO_INVOICE_PAPER_WIDTH * scale,
+              height: STUDIO_INVOICE_PAPER_HEIGHT * scale,
             }}
-            className="origin-top-left"
+            className="overflow-hidden bg-white shadow-md"
           >
-            <StudioInvoicePaper invoice={invoice} />
+            <div
+              style={{
+                width: STUDIO_INVOICE_PAPER_WIDTH,
+                height: STUDIO_INVOICE_PAPER_HEIGHT,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+            >
+              <StudioInvoicePaper invoice={invoice} />
+            </div>
           </div>
         </div>
       </div>

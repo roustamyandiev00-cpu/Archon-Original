@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Eye, Sparkles } from "lucide-react";
-import type { TrialStatus } from "@/components/dashboard/trial";
+import { TRIAL_DAYS, type TrialStatus } from "@/components/dashboard/trial";
 import { stopImpersonationAction } from "@/app/dashboard/admin/impersonation-actions";
 
 const shell =
-  "fixed inset-x-0 top-14 z-20 border-b bg-zinc-950/95 backdrop-blur-xl lg:left-[220px]";
+  "dashboard-access-banner fixed inset-x-0 top-14 z-20 border-b bg-zinc-950/95 backdrop-blur-xl lg:left-[220px]";
 
 export function PreviewBanner() {
   return (
@@ -20,7 +20,7 @@ export function PreviewBanner() {
             className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-4 py-1.5 text-xs font-semibold text-zinc-950 transition-colors hover:bg-sky-400"
           >
             <Sparkles size={13} />
-            Start 7 dagen gratis
+            Start {TRIAL_DAYS} dagen gratis
           </Link>
         </div>
       </div>

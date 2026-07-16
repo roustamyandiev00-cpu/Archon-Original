@@ -1,8 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Mail, MessageCircle, X } from "lucide-react";
-import { sendOfferteShare } from "@/app/dashboard/offertes/send-actions";
+import {
+  Check,
+  Copy,
+  Download,
+  Link2,
+  Loader2,
+  Mail,
+  MessageCircle,
+  Send,
+  X,
+} from "lucide-react";
+import {
+  prepareOfferteShare,
+  sendOfferteByEmail,
+} from "@/app/dashboard/offertes/send-actions";
 
 export default function SendOfferteModal({
   offerteId,
@@ -17,6 +30,8 @@ export default function SendOfferteModal({
 }) {
   const [loading, setLoading] = useState(false);
   const [share, setShare] = useState<{
+    shareUrl: string;
+    sharePath: string;
     pdfUrl: string;
     mailtoUrl: string | null;
     whatsappUrl: string | null;
@@ -24,6 +39,10 @@ export default function SendOfferteModal({
     klant: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState<string | null>(null);
+  const [recipientEmail, setRecipientEmail] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -32,13 +51,16 @@ export default function SendOfferteModal({
       if (!open) {
         setShare(null);
         setError(null);
+        setCopied(false);
+        setEmailSent(null);
+        setRecipientEmail("");
         return;
       }
 
       void (async () => {
         setLoading(true);
         setError(null);
-        const result = await sendOfferteShare(offerteId);
+        const result = await prepareOfferteShare(offerteId);
         if (cancelled) return;
         setLoading(false);
         if ("error" in result && result.error) {
@@ -47,13 +69,17 @@ export default function SendOfferteModal({
         }
         if ("ok" in result && result.ok) {
           setShare({
+            shareUrl: result.shareUrl!,
+            sharePath: result.sharePath!,
             pdfUrl: result.pdfUrl!,
             mailtoUrl: result.mailtoUrl ?? null,
             whatsappUrl: result.whatsappUrl ?? null,
             nummer: result.nummer!,
             klant: result.klant!,
           });
-          onSent?.();
+          if ("customerEmail" in result && result.customerEmail) {
+            setRecipientEmail(result.customerEmail);
+          }
         }
       })();
     }, 0);
@@ -62,7 +88,41 @@ export default function SendOfferteModal({
       cancelled = true;
       window.clearTimeout(id);
     };
-  }, [open, offerteId, onSent]);
+  }, [open, offerteId]);
+
+  async function copyLink() {
+    if (!share) return;
+    try {
+      await navigator.clipboard.writeText(share.shareUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Kopiëren mislukt. Selecteer de link handmatig.");
+    }
+  }
+
+  async function sendByEmail() {
+    setError(null);
+    setEmailSent(null);
+    setEmailSending(true);
+    const result = await sendOfferteByEmail(offerteId, recipientEmail);
+    setEmailSending(false);
+
+    if ("error" in result) {
+      const smtpMissing = "smtpMissing" in result && result.smtpMissing;
+      setError(
+        smtpMissing
+          ? `${result.error} Je kunt de link hieronder wel handmatig delen.`
+          : result.error ?? "E-mail verzenden mislukt.",
+      );
+      return;
+    }
+
+    if ("ok" in result && result.ok && "recipientEmail" in result) {
+      setEmailSent(`Offerte verstuurd naar ${result.recipientEmail}.`);
+      onSent?.();
+    }
+  }
 
   if (!open) return null;
 
@@ -73,7 +133,7 @@ export default function SendOfferteModal({
           <div>
             <h3 className="text-lg font-semibold text-zinc-50">Offerte delen</h3>
             <p className="mt-1 text-sm text-zinc-400">
-              Download de PDF en stuur via e-mail of WhatsApp.
+              Deel een publieke link. De klant hoeft niet in te loggen.
             </p>
           </div>
           <button
@@ -99,6 +159,76 @@ export default function SendOfferteModal({
             <p className="text-sm text-zinc-300">
               {share.nummer} — {share.klant}
             </p>
+
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+              <p className="truncate text-xs text-zinc-400">{share.shareUrl}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void copyLink()}
+              className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-100 transition-colors hover:bg-white/10"
+            >
+              {copied ? (
+                <Check size={16} className="text-emerald-400" />
+              ) : (
+                <Copy size={16} className="text-sky-400" />
+              )}
+              {copied ? "Link gekopieerd" : "Link kopiëren"}
+            </button>
+
+            <div>
+              <label
+                htmlFor="offerte-recipient-email"
+                className="mb-1.5 block text-xs font-medium text-zinc-400"
+              >
+                Ontvanger e-mail
+              </label>
+              <input
+                id="offerte-recipient-email"
+                type="email"
+                value={recipientEmail}
+                onChange={(event) => setRecipientEmail(event.target.value)}
+                placeholder="klant@bedrijf.be"
+                disabled={emailSending || Boolean(emailSent)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-sky-500/60 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                Laat leeg om het e-mailadres van de klant te gebruiken.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={emailSending || Boolean(emailSent)}
+              onClick={() => void sendByEmail()}
+              className="flex w-full items-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {emailSending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
+              {emailSending ? "Versturen…" : "Via ArchonPro e-mail versturen"}
+            </button>
+
+            {emailSent && (
+              <p className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+                <Check size={16} />
+                {emailSent}
+              </p>
+            )}
+
+            <a
+              href={share.sharePath}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-100 transition-colors hover:bg-white/10"
+            >
+              <Link2 size={16} className="text-sky-400" />
+              Publieke pagina openen
+            </a>
+
             <a
               href={share.pdfUrl}
               target="_blank"
@@ -108,6 +238,7 @@ export default function SendOfferteModal({
               <Download size={16} className="text-sky-400" />
               PDF downloaden
             </a>
+
             {share.mailtoUrl ? (
               <a
                 href={share.mailtoUrl}

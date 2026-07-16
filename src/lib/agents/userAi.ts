@@ -6,12 +6,12 @@ export type UserAiPreferences = {
   agentNaam: string;
 };
 
-export const DEFAULT_AGENT_NAME = "Lima";
+export const DEFAULT_AGENT_NAME = "Lara";
 
-/** Migreer oude standaardnaam naar Lima. */
+/** Migreer oude standaardnamen naar Lara. */
 export function normalizeAgentName(name: string | null | undefined): string {
   const trimmed = String(name ?? "").trim();
-  if (!trimmed || trimmed === "Nova") return DEFAULT_AGENT_NAME;
+  if (!trimmed || trimmed === "Nova" || trimmed === "Lima" || trimmed === "Ela") return DEFAULT_AGENT_NAME;
   return trimmed;
 }
 

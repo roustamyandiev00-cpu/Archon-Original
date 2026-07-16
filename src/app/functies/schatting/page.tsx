@@ -18,23 +18,23 @@ import Faq from "@/components/Faq";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Schatting — Lima maakt je offertes | ArchonPro",
+  title: "Schatting — Ela maakt je offertes | ArchonPro",
   description:
-    "Lima calculeert, structureert en bereidt je bouwofferte in enkele momenten voor. Prijzenbibliotheek, automatische btw, klanten-CRM en volledige personalisatie.",
+    "Ela calculeert, structureert en bereidt je bouwofferte in enkele momenten voor. Prijzenbibliotheek, automatische btw, klanten-CRM en volledige personalisatie.",
 };
 
 const faqItems = [
   {
-    q: "Kan Lima echt een offerte maken vanuit een spraaknotitie?",
-    a: "Ja. Praat over je werken zoals tegen een collega — bouwjargon inbegrepen. Lima transcribeert, begrijpt en genereert in seconden een gestructureerde offerte. Ze past automatisch je werken en prijzen toe.",
+    q: "Kan Ela echt een offerte maken vanuit een spraaknotitie?",
+    a: "Ja. Praat over je werken zoals tegen een collega — bouwjargon inbegrepen. Ela transcribeert, begrijpt en genereert in seconden een gestructureerde offerte. Ze past automatisch je werken en prijzen toe.",
   },
   {
     q: "Hoe werkt het importeren van een foto of meetstaat?",
-    a: "Voor een foto neem je die in de app of importeer je ze. Lima leest je handgeschreven notities en haalt de werken eruit. Voor een meetstaat importeer je het bestand en neemt Lima de beschrijving post per post over.",
+    a: "Voor een foto neem je die in de app of importeer je ze. Ela leest je handgeschreven notities en haalt de werken eruit. Voor een meetstaat importeer je het bestand en neemt Ela de beschrijving post per post over.",
   },
   {
     q: "Worden mijn werken en prijzen automatisch gebruikt?",
-    a: "Ja. Je stelt je prijzenbibliotheek één keer in. Lima past ze toe op elke offerte. Je kunt een lijn na generatie altijd nog aanpassen.",
+    a: "Ja. Je stelt je prijzenbibliotheek één keer in. Ela past ze toe op elke offerte. Je kunt een lijn na generatie altijd nog aanpassen.",
   },
   {
     q: "Is de gegenereerde offerte wettelijk conform?",
@@ -130,9 +130,9 @@ function Hero() {
           <Sparkles size={13} className="text-amber-300" /> Offertes · ArchonPro
         </>
       }
-      title="Lima maakt je offertes"
+      title="Ela maakt je offertes"
       accent="in jouw plaats"
-      subtitle="Onze AI-agent Lima calculeert, structureert en bereidt je bouwofferte in enkele momenten voor. Jij hoeft alleen nog te valideren."
+      subtitle="Onze AI-agent Ela calculeert, structureert en bereidt je bouwofferte in enkele momenten voor. Jij hoeft alleen nog te valideren."
       primary={{ label: "Gratis offerte maken", href: "/register" }}
       secondary={{ label: "Bekijk demo", href: "#demo" }}
       visual={
@@ -140,7 +140,7 @@ function Hero() {
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 text-sm text-zinc-400">
               <Sparkles size={16} className="text-sky-400" /> Offerte gegenereerd
-              door Lima
+              door Ela
             </span>
             <span className="rounded-full bg-white/5 px-2.5 py-1 text-xs text-zinc-400">
               Concept ✓
@@ -197,11 +197,11 @@ function AutoQuote() {
               kicker="AI-metgezel voor bouwoffertes"
               title={
                 <>
-                  Spraak, foto of meetstaat: Lima genereert je offerte{" "}
+                  Spraak, foto of meetstaat: Ela genereert je offerte{" "}
                   <span className="text-gradient">automatisch</span>
                 </>
               }
-              desc="Gedaan met handmatig invoeren. Stuur je instructies naar Lima, die ze analyseert en in seconden een gestructureerde offerte genereert."
+              desc="Gedaan met handmatig invoeren. Stuur je instructies naar Ela, die ze analyseert en in seconden een gestructureerde offerte genereert."
             />
             <ul className="mt-8 space-y-3">
               <Bullet>Spraaknotitie → gestructureerde offerte in minder dan een minuut</Bullet>
@@ -215,7 +215,7 @@ function AutoQuote() {
           <Card>
             <div className="flex items-center gap-2 text-zinc-400">
               <Sparkles size={16} className="text-sky-400" />
-              <span className="text-sm">Lima stelt je offerte samen</span>
+              <span className="text-sm">Ela stelt je offerte samen</span>
             </div>
             <div className="mt-5 space-y-2 text-sm">
               <QuoteLine desc="Uitbraak bestaande tegels" qty="35 m²" price="€ 490" />
@@ -298,13 +298,13 @@ function PriceLibrary() {
                   <span className="text-gradient">binnen handbereik</span>
                 </>
               }
-              desc="Integreer je prijzenbibliotheek in ArchonPro en Lima past ze automatisch toe op elke offerte die ze voor je genereert."
+              desc="Integreer je prijzenbibliotheek in ArchonPro en Ela past ze automatisch toe op elke offerte die ze voor je genereert."
             />
             <ul className="mt-8 space-y-3">
               <Bullet>AI-import van je prijzen uit oude offertes</Bullet>
               <Bullet>Onmiddellijk zoeken in al je werken</Bullet>
               <Bullet>Prijzen aanpasbaar per lijn, ter plekke</Bullet>
-              <Bullet>Ontbreekt een prijs? Lima stelt een calculatie voor die je valideert</Bullet>
+              <Bullet>Ontbreekt een prijs? Ela stelt een calculatie voor die je valideert</Bullet>
             </ul>
           </div>
         </div>
@@ -324,14 +324,14 @@ function VatSection() {
               kicker="Btw & berekeningen automatisch"
               title={
                 <>
-                  Lima berekent de btw en totalen{" "}
+                  Ela berekent de btw en totalen{" "}
                   <span className="text-gradient">voor jou</span>
                 </>
               }
-              desc="Kies je btw-tarief volgens het type werken — 6%, 12% of 21% — en Lima doet de rest. Bedragen excl. btw, btw en incl. btw worden automatisch berekend."
+              desc="Kies je btw-tarief volgens het type werken — 6%, 12% of 21% — en Ela doet de rest. Bedragen excl. btw, btw en incl. btw worden automatisch berekend."
             />
             <p className="mt-6 text-sm text-zinc-400">
-              Geen rekenfouten meer. Lima past het juiste btw-tarief toe volgens
+              Geen rekenfouten meer. Ela past het juiste btw-tarief toe volgens
               de configuratie van je account.
             </p>
           </div>
@@ -339,7 +339,7 @@ function VatSection() {
           <Card>
             <div className="flex items-center gap-2 text-zinc-400">
               <Calculator size={16} className="text-sky-400" />
-              <span className="text-sm">Btw & totalen — berekend door Lima</span>
+              <span className="text-sm">Btw & totalen — berekend door Ela</span>
             </div>
             <div className="mt-5">
               <p className="text-sm text-zinc-500">Wat is je standaard btw?</p>
@@ -728,8 +728,8 @@ function Testimonials() {
       <div className="mx-auto max-w-6xl px-6">
         <SectionHeading
           kicker="Getuigenissen van vakmensen"
-          title="Wat Lima voor hen doet"
-          desc="Vakmensen uit alle beroepen winnen elke week uren dankzij Lima, de AI van ArchonPro."
+          title="Wat Ela voor hen doet"
+          desc="Vakmensen uit alle beroepen winnen elke week uren dankzij Ela, de AI van ArchonPro."
         />
         <div className="mt-14 grid gap-5 md:grid-cols-3">
           {reviews.map((rv) => (
@@ -767,7 +767,7 @@ function FinalCta() {
           <div className="aurora-glow opacity-80" />
           <div className="relative z-10">
             <h2 className="text-balance text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-              Lima maakt je eerste offerte in minder dan 2 minuten
+              Ela maakt je eerste offerte in minder dan 2 minuten
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
               14 dagen gratis proberen. Zonder creditcard. Zonder verplichting.

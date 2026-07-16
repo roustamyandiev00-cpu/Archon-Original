@@ -7,6 +7,7 @@ import {
   statusMeta,
   urgentieMeta,
   reactieStatusMeta,
+  pipelineStatusMeta,
   formatDate,
   formatTarief,
   type WerkpostRow,
@@ -17,6 +18,7 @@ import ReactieActions from "@/components/werkposts/ReactieActions";
 import LikeButton from "@/components/werkposts/LikeButton";
 import { sluitWerkpost } from "@/app/dashboard/werkposts/actions";
 import CompanyReviewsTrigger from "@/components/werkposts/CompanyReviewsTrigger";
+import RapporteerButton from "@/components/bouwnetwerk/RapporteerButton";
 
 export const metadata = { title: "Werkpost beheer — ArchonPro" };
 
@@ -33,7 +35,7 @@ export default async function WerkpostDetailPage({
   const { data: post } = await supabase
     .from("werkposts")
     .select(
-      "id, titel, beschrijving, aard_van_werk, type, status, urgentie, regio, stad, postcode, adres, aantal_personen, startdatum, einddatum, geschatte_duur_dagen, budget_min, budget_max, tarief_per_uur, tarief_type, vereiste_vaardigheden, fotos, company_id, company_naam, created_by_user_id, aantal_reacties, aantal_views, created_at",
+      "id, titel, beschrijving, aard_van_werk, type, status, pipeline_status, urgentie, regio, stad, postcode, adres, aantal_personen, startdatum, einddatum, geschatte_duur_dagen, budget_min, budget_max, tarief_per_uur, tarief_type, vereiste_vaardigheden, fotos, company_id, company_naam, created_by_user_id, aantal_reacties, aantal_views, created_at",
     )
     .eq("id", id)
     .eq("company_id", companyId)
@@ -98,6 +100,7 @@ export default async function WerkpostDetailPage({
   const tMeta = typeMeta(werkpost.type);
   const sMeta = statusMeta(werkpost.status);
   const uMeta = urgentieMeta(werkpost.urgentie);
+  const pMeta = pipelineStatusMeta(werkpost.pipeline_status);
 
   async function sluiten() {
     "use server";
@@ -137,6 +140,14 @@ export default async function WerkpostDetailPage({
                 <span className={`h-1 w-1 rounded-full ${sMeta.dot}`} />
                 {sMeta.label}
               </span>
+              {pMeta && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${pMeta.tone}`}
+                >
+                  <span className={`h-1 w-1 rounded-full ${pMeta.dot}`} />
+                  Pipeline: {pMeta.label}
+                </span>
+              )}
               {werkpost.urgentie !== "normaal" && (
                 <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${uMeta.tone}`}>
                   {uMeta.label}
@@ -149,16 +160,19 @@ export default async function WerkpostDetailPage({
             </h1>
           </div>
 
-          {werkpost.status !== "gesloten" && (
-            <form action={sluiten}>
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/20 px-4 py-2 text-xs font-semibold text-zinc-400 transition-all hover:border-rose-500/30 hover:bg-rose-500/5 hover:text-rose-400"
-              >
-                <XCircle size={14} /> Werkpost sluiten
-              </button>
-            </form>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {werkpost.status !== "gesloten" && (
+              <form action={sluiten}>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/20 px-4 py-2 text-xs font-semibold text-zinc-400 transition-all hover:border-rose-500/30 hover:bg-rose-500/5 hover:text-rose-400"
+                >
+                  <XCircle size={14} /> Werkpost sluiten
+                </button>
+              </form>
+            )}
+            <RapporteerButton targetType="werkpost" targetId={werkpost.id} />
+          </div>
         </div>
 
         {/* Description */}

@@ -240,14 +240,14 @@ export default function NovaDashboardTour() {
       <div
         className="fixed bottom-6 right-6 z-[85] w-[min(100vw-2rem,24rem)] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl backdrop-blur-xl"
         role="dialog"
-        aria-label="Lima rondleiding"
+        aria-label="Ela rondleiding"
       >
         <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-500 text-sm font-bold text-white">
             N
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-zinc-50">Lima</p>
+            <p className="text-sm font-semibold text-zinc-50">Ela</p>
             <p className="text-xs text-zinc-500">Rondleiding Command Center</p>
           </div>
           <button

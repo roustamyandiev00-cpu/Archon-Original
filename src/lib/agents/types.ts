@@ -8,7 +8,49 @@ export type AgentActionType =
   | "create_invoice_from_offerte"
   | "send_payment_reminder"
   | "send_formal_notice"
-  | "forward_to_bailiff";
+  | "forward_to_bailiff"
+  | "propose_chat_sanction"
+  | "propose_werkpost_match"
+  | "propose_materiaal_zoek"
+  | "propose_geschil_samenvatting";
+
+export type ProposeMateriaalvoorraadPayload = {
+  query: string;
+  regio?: string | null;
+  hits: Array<{
+    prijsId: string;
+    winkelNaam: string;
+    productnaam: string;
+    prijs: number;
+    eenheid: string;
+    gecontroleerdOp: string;
+    btwStatus: string;
+    isStale: boolean;
+  }>;
+};
+
+export type ProposeGeschilSamenvattingPayload = {
+  geschilId: string;
+  samenvatting: string;
+};
+
+export type ProposeChatSanctionPayload = {
+  bedrijfId: number;
+  sanctionType: "waarschuwing" | "schorsing_tijdelijk" | "schorsing_lang" | "blokkade";
+  reden: string;
+  channelId: string;
+  messageId?: string | null;
+  findings?: Array<{ category: string; severity: string; detail: string }>;
+};
+
+export type ProposeWerkpostMatchPayload = {
+  companyId: number;
+  werkpostId: string;
+  werkpostTitel: string;
+  regio: string;
+  aardVanWerk: string;
+  draftMessage: string;
+};
 
 export type SendQuoteFollowupPayload = {
   offerteId: number;

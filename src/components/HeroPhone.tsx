@@ -12,7 +12,7 @@ export default function HeroPhone() {
       >
         <Image
           src="/hero-iphone-mockup.png"
-          alt="ArchonPro app op iPhone — Lima AI, action items en KPI's"
+          alt="ArchonPro app op iPhone — Ela AI, action items en KPI's"
           width={768}
           height={1376}
           className="h-auto w-full [filter:drop-shadow(0_22px_44px_rgba(0,0,0,0.42))_drop-shadow(0_0_36px_rgba(56,189,248,0.14))]"

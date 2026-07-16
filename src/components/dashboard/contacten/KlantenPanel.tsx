@@ -2,16 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  Cog,
-  Download,
-  EyeOff,
-  Plus,
-  SlidersHorizontal,
-} from "lucide-react";
-import ContactenDataTable from "@/components/dashboard/contacten/ContactenDataTable";
+import { Plus } from "lucide-react";
+import ContactenDataTable, {
+  CONTACT_COLUMN_OPTIONS,
+  defaultContactColumnVisibility,
+  type ContactColumnVisibility,
+} from "@/components/dashboard/contacten/ContactenDataTable";
 import KlantForm, { type KlantRecord } from "@/components/dashboard/contacten/KlantForm";
 import { deleteKlant } from "@/app/dashboard/contacten/actions";
+import DataPanelToolbar from "@/components/dashboard/DataPanelToolbar";
+import { exportKlantenCsv } from "@/components/dashboard/table-exports";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +33,9 @@ export default function KlantenPanel({
   const [editing, setEditing] = useState<KlantRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
+  const [columnVisibility, setColumnVisibility] = useState<ContactColumnVisibility>(
+    defaultContactColumnVisibility,
+  );
 
   const peppolReadyCount = klanten.filter(
     (k) => k.peppol_participant_id || k.btw || k.ondernemingsnummer,
@@ -62,7 +65,7 @@ export default function KlantenPanel({
         </header>
       )}
 
-      <Card className="dashboard-data-panel overflow-hidden border-white/10 bg-zinc-950/50">
+      <Card className="dashboard-data-panel flex h-full min-h-0 flex-col overflow-hidden border-white/10 bg-zinc-950/50">
         <CardHeader className="dashboard-data-panel-header gap-3 border-white/10 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-0.5">
             <CardTitle className="text-base font-semibold text-zinc-50">
@@ -74,26 +77,17 @@ export default function KlantenPanel({
             </CardDescription>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              aria-label={showFilters ? "Filters verbergen" : "Filters tonen"}
-              onClick={() => setShowFilters((value) => !value)}
-            >
-              {showFilters ? <EyeOff size={15} /> : <SlidersHorizontal size={15} />}
-              <span className="hidden sm:inline">
-                {showFilters ? "Hide" : "Filters"}
-              </span>
-            </Button>
-            <Button type="button" variant="ghost" aria-label="Kolommen aanpassen">
-              <Cog size={15} />
-              <span className="hidden sm:inline">Customize</span>
-            </Button>
-            <Button type="button" variant="ghost" aria-label="Exporteer contacten">
-              <Download size={15} />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
+          <DataPanelToolbar
+            showFilters={showFilters}
+            onToggleFilters={() => setShowFilters((value) => !value)}
+            columns={CONTACT_COLUMN_OPTIONS}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={(id, visible) =>
+              setColumnVisibility((current) => ({ ...current, [id]: visible }))
+            }
+            onExport={() => exportKlantenCsv(klanten)}
+            exportLabel="Exporteer contacten"
+          >
             <Button
               type="button"
               variant="default"
@@ -102,10 +96,10 @@ export default function KlantenPanel({
               <Plus size={15} />
               Nieuwe klant
             </Button>
-          </div>
+          </DataPanelToolbar>
         </CardHeader>
 
-        <CardContent className="dashboard-data-panel-body">
+        <CardContent className="dashboard-data-panel-body flex min-h-0 flex-1 flex-col">
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Badge variant="info">
               {klanten.length.toLocaleString("nl-BE")} contacten
@@ -121,6 +115,7 @@ export default function KlantenPanel({
               onEdit={setEditing}
               onDelete={remove}
               showFilters={showFilters}
+              columnVisibility={columnVisibility}
             />
           </div>
         </CardContent>

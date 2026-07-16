@@ -3,35 +3,80 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Volume2, VolumeX } from "lucide-react";
 import { fastButtonClass } from "@/components/FastLink";
+import { createClient } from "@/lib/supabase/client";
 
 const STORAGE_KEY = "archonpro-intro-seen-v5";
-const INTRO_VIDEO = "/ArchonPro_CRM_logo_intro_premium_16x9.mp4";
+const INTRO_VIDEO_DESKTOP = "/ArchonPro_CRM_logo_intro_premium_16x9.mp4";
+const INTRO_VIDEO_MOBILE = "/ArchonPro_CRM_logo_intro_202607080214.mp4";
 
-function isMobileViewport() {
+function markIntroSeen() {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEY, "1");
+}
+
+function getIsMobileViewport() {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(max-width: 768px)").matches;
 }
 
-export default function IntroOverlay() {
+export default function IntroOverlay({ skipIntro = false }: { skipIntro?: boolean }) {
   const [show, setShow] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const seen = sessionStorage.getItem(STORAGE_KEY);
-    if (seen || isMobileViewport()) {
-      if (!seen && isMobileViewport()) {
-        sessionStorage.setItem(STORAGE_KEY, "1");
-      }
-      return;
-    }
-    requestAnimationFrame(() => {
-      setShow(true);
-      document.body.style.overflow = "hidden";
-    });
+    const mq = window.matchMedia("(max-width: 768px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
+
+  useEffect(() => {
+    if (skipIntro || typeof window === "undefined") return;
+
+    const supabase = createClient();
+
+    const hideIntro = () => {
+      markIntroSeen();
+      setLeaving(true);
+      document.body.style.overflow = "";
+      window.setTimeout(() => setShow(false), 180);
+    };
+
+    const maybeShowIntro = async () => {
+      if (localStorage.getItem(STORAGE_KEY)) return;
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        markIntroSeen();
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        setIsMobile(getIsMobileViewport());
+        setShow(true);
+        document.body.style.overflow = "hidden";
+      });
+    };
+
+    void maybeShowIntro();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        hideIntro();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [skipIntro]);
 
   useEffect(() => {
     if (!show) return;
@@ -53,7 +98,9 @@ export default function IntroOverlay() {
     };
 
     void playWithSound();
-  }, [show]);
+  }, [show, isMobile]);
+
+  const videoSrc = isMobile ? INTRO_VIDEO_MOBILE : INTRO_VIDEO_DESKTOP;
 
   const toggleMute = () => {
     const video = videoRef.current;
@@ -65,8 +112,8 @@ export default function IntroOverlay() {
 
   const dismiss = () => {
     setLeaving(true);
+    markIntroSeen();
     if (typeof window !== "undefined") {
-      sessionStorage.setItem(STORAGE_KEY, "1");
       window.dispatchEvent(new CustomEvent("archonpro-intro-dismissed"));
     }
     document.body.style.overflow = "";
@@ -89,13 +136,22 @@ export default function IntroOverlay() {
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute left-1/2 top-1/2 h-[50vh] w-[50vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.1),transparent_72%)] blur-3xl" />
+        <div
+          className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.1),transparent_72%)] blur-3xl ${
+            isMobile ? "h-[42vh] w-[72vw]" : "h-[50vh] w-[50vw] max-w-2xl"
+          }`}
+        />
       </div>
 
       <video
+        key={videoSrc}
         ref={videoRef}
-        className="pointer-events-none absolute left-1/2 top-1/2 aspect-video w-[min(100vw-2rem,72rem)] max-h-[min(100dvh-8rem,80vh)] -translate-x-1/2 -translate-y-1/2 object-contain"
-        src={INTRO_VIDEO}
+        className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain ${
+          isMobile
+            ? "aspect-[9/16] w-[min(100vw-1.5rem,22rem)] max-h-[min(100dvh-9rem,82svh)]"
+            : "aspect-video w-[min(100vw-2rem,72rem)] max-h-[min(100dvh-8rem,80vh)]"
+        }`}
+        src={videoSrc}
         autoPlay
         playsInline
         onEnded={dismiss}

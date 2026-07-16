@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { rootMetadata } from "@/lib/seo";
+import AppearanceProvider from "@/lib/appearance/AppearanceProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -53,7 +54,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full antialiased" suppressHydrationWarning>
-        {children}
+        <AppearanceProvider>
+          {children}
+        </AppearanceProvider>
       </body>
     </html>
   );

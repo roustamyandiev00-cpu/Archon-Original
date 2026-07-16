@@ -142,7 +142,7 @@ export default function CommandCenterView({
   const attentionCount = mission.important.length + mission.actionItems.length;
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden lg:gap-2">
+    <div className="flex min-h-0 flex-col gap-2 lg:h-full lg:gap-2 lg:overflow-hidden">
       <section
         data-tour="dash-status"
         className="shrink-0 rounded-xl border border-white/[0.08] bg-zinc-900/80 p-3 sm:p-3.5"
@@ -236,7 +236,7 @@ export default function CommandCenterView({
         />
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden">
+      <div className="grid grid-cols-1 gap-2 pb-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-0">
         <DashboardPanel title="AI Command Center" icon={Bot} data-tour="dash-agents">
           <p className="mb-2 text-xs text-zinc-500">
             {DOMAIN_AGENT_COUNT} agents – klik om te activeren

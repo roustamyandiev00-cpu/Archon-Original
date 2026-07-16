@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
 import { statusMeta, formatEuro } from "@/lib/offertes";
 import { emitDomainEvent } from "@/lib/agents/events/emit";
+import { SITE_URL } from "@/lib/seo";
+import { sendEmailViaCompanySmtp } from "@/app/dashboard/instellingen/smtp-actions";
+import { getPublicOffertePdf } from "@/lib/offertes/publicOfferte";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function toWhatsappNumber(phone: string): string {
   const digits = phone.replace(/[^\d+]/g, "");
@@ -15,6 +20,22 @@ function toWhatsappNumber(phone: string): string {
 
 function randomToken() {
   return crypto.randomUUID().replace(/-/g, "");
+}
+
+function appOrigin(): string {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+    SITE_URL
+  );
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 export async function markOfferteSent(
@@ -74,7 +95,12 @@ export async function markOfferteSent(
     offerte_id: offerteId,
     recipient_email: recipient,
     sent_by: user.id,
-    status: opts?.channel === "agent" ? "agent_marked" : "shared",
+    status:
+      opts?.channel === "agent"
+        ? "agent_marked"
+        : opts?.channel === "smtp"
+          ? "smtp_sent"
+          : "shared",
   });
 
   await supabase.rpc("log_offerte_activity", {
@@ -105,17 +131,136 @@ export async function markOfferteSent(
 
   revalidatePath("/dashboard/offertes");
   revalidatePath(`/dashboard/offertes/${offerteId}`);
-  return { ok: true };
+  return { ok: true as const, token };
 }
 
-export async function sendOfferteShare(offerteId: number) {
+export async function sendOfferteByEmail(
+  offerteId: number,
+  recipientEmail?: string,
+) {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  const { data: offerte } = await supabase
+    .from("offertes")
+    .select("id, nummer, klant, bedrag, customer_id, public_token")
+    .eq("id", offerteId)
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  if (!offerte) return { error: "Offerte niet gevonden." };
+
+  let email = recipientEmail?.trim().toLowerCase() || null;
+  if (!email && offerte.customer_id) {
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("email")
+      .eq("id", offerte.customer_id)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    email = customer?.email?.trim().toLowerCase() || null;
+  }
+
+  if (!email || !EMAIL_RE.test(email)) {
+    return { error: "Vul eerst een geldig e-mailadres van de klant in." };
+  }
+
+  const token = offerte.public_token || randomToken();
+  const { error: tokenError } = await supabase
+    .from("offertes")
+    .update({
+      public_token: token,
+      token_expires_at: new Date(
+        Date.now() + 90 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", offerteId)
+    .eq("bedrijf_id", companyId);
+
+  if (tokenError) return { error: tokenError.message };
+
+  const nummer = offerte.nummer ?? `#${offerte.id}`;
+  const klant = offerte.klant ?? "klant";
+  const bedragTekst =
+    offerte.bedrag != null
+      ? ` ter waarde van ${formatEuro(offerte.bedrag)}`
+      : "";
+  const shareUrl = `${appOrigin()}/o/${token}`;
+  const body = `Beste ${klant},
+
+Hierbij ontvangt u offerte ${nummer}${bedragTekst}.
+
+Bekijk de offerte via deze beveiligde link:
+${shareUrl}
+
+Heeft u nog vragen, laat het gerust weten.
+
+Met vriendelijke groet`;
+
+  const html = `<p>Beste ${escapeHtml(klant)},</p>
+<p>Hierbij ontvangt u offerte <strong>${escapeHtml(nummer)}</strong>${escapeHtml(bedragTekst)}.</p>
+<p><a href="${shareUrl}">Bekijk de offerte</a> (of open de bijgevoegde PDF).</p>
+<p>Heeft u nog vragen, laat het gerust weten.</p>
+<p>Met vriendelijke groet</p>`;
+
+  let attachments:
+    | { filename: string; content: Buffer; contentType?: string }[]
+    | undefined;
+  const pdf = await getPublicOffertePdf(token);
+  if (pdf.ok) {
+    attachments = [
+      {
+        filename: `Offerte-${pdf.nummer || nummer}.pdf`,
+        content: pdf.pdf,
+        contentType: "application/pdf",
+      },
+    ];
+  }
+
+  const delivered = await sendEmailViaCompanySmtp(supabase, companyId, {
+    to: email,
+    subject: `Offerte ${nummer}`,
+    text: body,
+    html,
+    attachments,
+  });
+
+  if (!("ok" in delivered) || !delivered.ok) {
+    const message =
+      "error" in delivered ? delivered.error : "E-mail verzenden mislukt.";
+    await supabase.from("offerte_email_log").insert({
+      bedrijf_id: companyId,
+      offerte_id: offerteId,
+      recipient_email: email,
+      sent_by: user.id,
+      status: "smtp_failed",
+      error_message: message,
+    });
+    return {
+      error: message,
+      smtpMissing: "smtpMissing" in delivered && Boolean(delivered.smtpMissing),
+    };
+  }
+
+  const marked = await markOfferteSent(offerteId, {
+    recipientEmail: email,
+    channel: "smtp",
+  });
+  if ("error" in marked) return { error: marked.error };
+
+  return { ok: true as const, recipientEmail: email };
+}
+
+export async function prepareOfferteShare(offerteId: number) {
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 
   const { data: offerte } = await supabase
     .from("offertes")
-    .select("id, nummer, klant, bedrag, customer_id")
+    .select("id, nummer, klant, bedrag, customer_id, public_token")
     .eq("id", offerteId)
     .eq("bedrijf_id", companyId)
     .maybeSingle();
@@ -135,11 +280,20 @@ export async function sendOfferteShare(offerteId: number) {
     phone = customer?.phone ?? null;
   }
 
-  const mark = await markOfferteSent(offerteId, {
-    recipientEmail: email,
-    channel: "share",
-  });
-  if ("error" in mark && mark.error) return { error: mark.error };
+  const token = offerte.public_token || randomToken();
+  const { error: tokenError } = await supabase
+    .from("offertes")
+    .update({
+      public_token: token,
+      token_expires_at: new Date(
+        Date.now() + 90 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", offerteId)
+    .eq("bedrijf_id", companyId);
+
+  if (tokenError) return { error: tokenError.message };
 
   const nummer = offerte.nummer ?? `#${offerte.id}`;
   const klant = offerte.klant ?? "klant";
@@ -147,9 +301,10 @@ export async function sendOfferteShare(offerteId: number) {
     offerte.bedrag != null
       ? ` ter waarde van ${formatEuro(offerte.bedrag)}`
       : "";
-  const bericht = `Beste ${klant},\n\nHierbij offerte ${nummer}${bedragTekst}. Heeft u nog vragen, laat het gerust weten.\n\nMet vriendelijke groet`;
+  const sharePath = `/o/${token}`;
+  const shareUrl = `${appOrigin()}${sharePath}`;
+  const bericht = `Beste ${klant},\n\nHierbij offerte ${nummer}${bedragTekst}.\n\nBekijk de offerte via deze link:\n${shareUrl}\n\nHeeft u nog vragen, laat het gerust weten.\n\nMet vriendelijke groet`;
 
-  const pdfUrl = `/dashboard/offertes/${offerteId}/pdf`;
   const mailtoUrl = email
     ? `mailto:${email}?subject=${encodeURIComponent(`Offerte ${nummer}`)}&body=${encodeURIComponent(bericht)}`
     : null;
@@ -158,11 +313,25 @@ export async function sendOfferteShare(offerteId: number) {
     : null;
 
   return {
-    ok: true,
-    pdfUrl,
+    ok: true as const,
+    shareUrl,
+    sharePath,
+    pdfUrl: `${sharePath}/pdf`,
     mailtoUrl,
     whatsappUrl,
     nummer,
     klant,
+    customerEmail: email,
   };
+}
+
+/** Bereidt de link voor en registreert daarna een bewuste manuele deelactie. */
+export async function sendOfferteShare(offerteId: number) {
+  const prepared = await prepareOfferteShare(offerteId);
+  if ("error" in prepared) return prepared;
+
+  const marked = await markOfferteSent(offerteId, { channel: "share" });
+  if ("error" in marked) return { error: marked.error };
+
+  return prepared;
 }
