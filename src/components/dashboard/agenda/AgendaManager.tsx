@@ -66,8 +66,11 @@ function todayLocal() {
 
 export default function AgendaManager({
   afspraken,
+  nowMs,
 }: {
   afspraken: AgendaAfspraak[];
+  /** Stabiele "nu"-timestamp van de serverrender (ms). Vermijdt impure Date.now in render. */
+  nowMs: number;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -85,16 +88,15 @@ export default function AgendaManager({
   });
 
   const { upcoming, past } = useMemo(() => {
-    const now = Date.now();
     const up: AgendaAfspraak[] = [];
     const pa: AgendaAfspraak[] = [];
     for (const a of afspraken) {
       const t = new Date(a.startTijd).getTime();
-      if (!Number.isNaN(t) && t >= now - 60 * 60 * 1000) up.push(a);
+      if (!Number.isNaN(t) && t >= nowMs - 60 * 60 * 1000) up.push(a);
       else pa.push(a);
     }
     return { upcoming: up, past: pa };
-  }, [afspraken]);
+  }, [afspraken, nowMs]);
 
   function close() {
     setOpen(false);

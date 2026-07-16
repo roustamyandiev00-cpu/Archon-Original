@@ -8,17 +8,15 @@ import AgendaManager, {
 
 export const metadata = { title: "Agenda — ArchonPro" };
 
-export default async function AgendaPage() {
-  const { supabase, companyId } = await getCompanyContext();
-
-  if (!companyId) {
-    return (
-      <div className="mx-auto max-w-6xl">
-        <NoCompanyNotice />
-      </div>
-    );
-  }
-
+async function loadAgendaAfspraken(
+  supabase: Awaited<ReturnType<typeof getCompanyContext>>["supabase"],
+  companyId: number,
+): Promise<{
+  afspraken: AgendaAfspraak[];
+  error: { message: string } | null;
+  nowMs: number;
+}> {
+  const nowMs = Date.now();
   const { data, error } = await supabase
     .from("afspraken")
     .select(
@@ -39,6 +37,25 @@ export default async function AgendaPage() {
     type: row.type,
   }));
 
+  return { afspraken, error: error ? { message: error.message } : null, nowMs };
+}
+
+export default async function AgendaPage() {
+  const { supabase, companyId } = await getCompanyContext();
+
+  if (!companyId) {
+    return (
+      <div className="mx-auto max-w-6xl">
+        <NoCompanyNotice />
+      </div>
+    );
+  }
+
+  const { afspraken, error, nowMs } = await loadAgendaAfspraken(
+    supabase,
+    companyId,
+  );
+
   return (
     <div className="mx-auto max-w-[1100px] space-y-5">
       <ModuleWipBanner
@@ -56,7 +73,7 @@ export default async function AgendaPage() {
           Agenda kon niet worden geladen: {error.message}
         </p>
       ) : (
-        <AgendaManager afspraken={afspraken} />
+        <AgendaManager afspraken={afspraken} nowMs={nowMs} />
       )}
     </div>
   );
