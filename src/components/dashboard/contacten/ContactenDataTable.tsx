@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Building2,
   ChevronLeft,
   ChevronRight,
   Mail,
   MapPin,
-  MoreHorizontal,
   Pencil,
   Phone,
   Radio,
@@ -18,6 +17,7 @@ import {
   User,
 } from "lucide-react";
 import type { KlantRecord } from "@/components/dashboard/contacten/KlantForm";
+import TableRowActionMenu from "@/components/dashboard/TableRowActionMenu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -554,100 +554,24 @@ function ContactActionMenu({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handlePointerDown(event: PointerEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        onOpenChange(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [open, onOpenChange]);
-
-  function closeMenu() {
-    onOpenChange(false);
-  }
-
   return (
-    <div ref={menuRef} className="relative inline-flex justify-end">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenChange(!open);
-        }}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Acties voor ${klant.name}`}
-      >
-        <MoreHorizontal size={16} />
-      </Button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-9 z-40 w-44 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 py-1 text-left shadow-2xl"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <MenuItem
-            icon={<Pencil size={14} />}
-            onClick={() => {
-              closeMenu();
-              onEdit();
-            }}
-          >
-            Bewerken
-          </MenuItem>
-          <div className="my-1 h-px bg-white/10" />
-          <MenuItem
-            icon={<Trash2 size={14} />}
-            onClick={() => {
-              closeMenu();
-              onDelete();
-            }}
-            destructive
-          >
-            Deactiveren
-          </MenuItem>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MenuItem({
-  children,
-  icon,
-  onClick,
-  destructive = false,
-}: {
-  children: React.ReactNode;
-  icon: React.ReactNode;
-  onClick: () => void;
-  destructive?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-white/5 ${
-        destructive
-          ? "text-rose-300 hover:text-rose-200"
-          : "text-zinc-300 hover:text-zinc-100"
-      }`}
-    >
-      <span className={destructive ? "text-rose-400" : "text-zinc-500"}>
-        {icon}
-      </span>
-      {children}
-    </button>
+    <TableRowActionMenu
+      label={`Acties voor ${klant.name}`}
+      open={open}
+      onOpenChange={onOpenChange}
+      items={[
+        {
+          label: "Bewerken",
+          icon: <Pencil size={14} />,
+          onClick: onEdit,
+        },
+        {
+          label: "Deactiveren",
+          icon: <Trash2 size={14} />,
+          onClick: onDelete,
+          destructive: true,
+        },
+      ]}
+    />
   );
 }
