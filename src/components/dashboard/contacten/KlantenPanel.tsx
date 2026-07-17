@@ -94,7 +94,7 @@ export default function KlantenPanel({
               onClick={() => setCreating(true)}
             >
               <Plus size={15} />
-              Nieuwe klant
+              Nieuw contact
             </Button>
           </DataPanelToolbar>
         </CardHeader>

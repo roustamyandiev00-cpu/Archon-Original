@@ -9,7 +9,10 @@ import {
   peppolEndpointFromParty,
 } from "@/lib/peppol/be";
 
+export type ContactType = "individual" | "company";
+
 export type KlantInput = {
+  contact_type?: ContactType;
   name: string;
   company_name?: string;
   first_name?: string;
@@ -29,20 +32,28 @@ export type KlantInput = {
 };
 
 function clean(input: KlantInput) {
+  const contactType: ContactType =
+    input.contact_type === "individual" ? "individual" : "company";
+  const isCompany = contactType === "company";
+
   const name =
     input.name.trim() ||
     [input.first_name, input.last_name].filter(Boolean).join(" ").trim() ||
     input.company_name?.trim() ||
     "";
 
-  const kbo =
-    normalizeKbo(input.ondernemingsnummer) ??
-    (input.ondernemingsnummer?.trim() || null);
-  const vat =
-    normalizeBelgianVat(input.btw) ?? (input.btw?.trim() || null);
+  const kbo = isCompany
+    ? normalizeKbo(input.ondernemingsnummer) ??
+      (input.ondernemingsnummer?.trim() || null)
+    : null;
+  const vat = isCompany
+    ? normalizeBelgianVat(input.btw) ?? (input.btw?.trim() || null)
+    : null;
 
-  let peppolId = input.peppol_participant_id?.trim() || null;
-  if (!peppolId) {
+  let peppolId = isCompany
+    ? input.peppol_participant_id?.trim() || null
+    : null;
+  if (isCompany && !peppolId) {
     const ep = peppolEndpointFromParty({
       peppolParticipantId: null,
       kbo,
@@ -52,8 +63,9 @@ function clean(input: KlantInput) {
   }
 
   return {
+    contact_type: contactType,
     name,
-    company_name: input.company_name?.trim() || null,
+    company_name: isCompany ? input.company_name?.trim() || null : null,
     first_name: input.first_name?.trim() || null,
     last_name: input.last_name?.trim() || null,
     email: input.email?.trim() || null,
@@ -66,8 +78,10 @@ function clean(input: KlantInput) {
     kvk: kbo,
     btw: vat,
     peppol_participant_id: peppolId,
-    is_overheid: Boolean(input.is_overheid),
-    mercurius_entiteit_id: input.mercurius_entiteit_id?.trim() || null,
+    is_overheid: isCompany ? Boolean(input.is_overheid) : false,
+    mercurius_entiteit_id: isCompany
+      ? input.mercurius_entiteit_id?.trim() || null
+      : null,
     notes: input.notes?.trim() || null,
     is_active: true,
   };

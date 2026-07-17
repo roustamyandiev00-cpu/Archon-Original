@@ -62,7 +62,7 @@ function ProfileAvatar({
 
   if (profile.avatarUrl) {
     return (
-      <span className={`relative ${dim} shrink-0 overflow-hidden rounded-full ring-2 ring-white/15`}>
+      <span className={`relative inline-block ${dim} shrink-0 overflow-hidden rounded-full ring-2 ring-white/15`}>
         <Image
           src={profile.avatarUrl}
           alt=""

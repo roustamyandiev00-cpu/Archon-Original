@@ -19,7 +19,7 @@ export default async function ContactenPage() {
   const { data } = await supabase
     .from("customers")
     .select(
-      "id, name, company_name, first_name, last_name, email, phone, address, postcode, city, country, ondernemingsnummer, kvk, btw, peppol_participant_id, notes",
+      "id, contact_type, name, company_name, first_name, last_name, email, phone, address, postcode, city, country, ondernemingsnummer, kvk, btw, peppol_participant_id, notes",
     )
     .eq("company_id", companyId)
     .eq("is_active", true)
