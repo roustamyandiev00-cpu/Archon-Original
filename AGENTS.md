@@ -10,6 +10,9 @@ Veiligheid en een werkende kernflow hebben voorrang op nieuwe modules, grote ref
 
 ## 2. Projectcontext
 
+Vóór productwerk: lees ook `docs/MVP_SCOPE.md` voor de vaste MVP-scope,
+actieve modules en bevroren onderdelen.
+
 ArchonPro is een multi-tenant SaaS-platform voor Belgische bouwbedrijven met onder andere:
 
 - klanten en contacten;
