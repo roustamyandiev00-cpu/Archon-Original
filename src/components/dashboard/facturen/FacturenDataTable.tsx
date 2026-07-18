@@ -545,6 +545,7 @@ function FactuurRowMenu({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const items: TableRowMenuItem[] = isDemo
     ? [
@@ -575,12 +576,16 @@ function FactuurRowMenu({
                 icon: <CheckCircle2 size={14} />,
                 onClick: () => {
                   void (async () => {
+                    setActionError(null);
                     const confirmed = window.confirm(
                       `Betaling registreren voor ${nummer}?`,
                     );
                     if (!confirmed) return;
                     const result = await markFactuurAsPaid(id);
-                    if ("error" in result && result.error) return;
+                    if ("error" in result && result.error) {
+                      setActionError(result.error);
+                      return;
+                    }
                     router.refresh();
                   })();
                 },
@@ -590,11 +595,18 @@ function FactuurRowMenu({
       ];
 
   return (
-    <TableRowActionMenu
-      label={`Acties voor ${nummer}`}
-      open={open}
-      onOpenChange={onOpenChange}
-      items={items}
-    />
+    <div>
+      <TableRowActionMenu
+        label={`Acties voor ${nummer}`}
+        open={open}
+        onOpenChange={onOpenChange}
+        items={items}
+      />
+      {actionError ? (
+        <p className="mt-1 max-w-48 text-xs text-rose-400" role="alert">
+          {actionError}
+        </p>
+      ) : null}
+    </div>
   );
 }

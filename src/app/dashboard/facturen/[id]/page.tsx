@@ -56,7 +56,7 @@ export default async function FactuurDetailPage({
 
   if (!companyId || Number.isNaN(factuurId)) notFound();
 
-  const { data: factuur } = await supabase
+  const { data: factuur, error: factuurError } = await supabase
     .from("facturen")
     .select(
       "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, updated_at, sent_at, paid_at, customer_id, template_id, offerte_id, buyer_reference, structured_communication, peppol_status, peppol_last_error, peppol_sent_at",
@@ -65,13 +65,17 @@ export default async function FactuurDetailPage({
     .eq("bedrijf_id", companyId)
     .maybeSingle();
 
+  if (factuurError) {
+    throw new Error("De factuur kon niet worden opgehaald. Probeer het opnieuw.");
+  }
   if (!factuur) notFound();
 
-  const [{ data: lijnen }, { data: betalingen }] = await Promise.all([
+  const [lijnenResult, betalingenResult] = await Promise.all([
     supabase
       .from("factuur_lijnen")
       .select("id, omschrijving, aantal, eenheid, prijs_per_eenheid, btw_percentage")
       .eq("factuur_id", factuurId)
+      .eq("company_id", companyId)
       .order("sort_order"),
     supabase
       .from("betalingen")
@@ -80,6 +84,16 @@ export default async function FactuurDetailPage({
       .eq("bedrijf_id", companyId)
       .order("datum", { ascending: false }),
   ]);
+
+  if (lijnenResult.error) {
+    throw new Error("De factuurregels konden niet worden opgehaald.");
+  }
+  if (betalingenResult.error) {
+    throw new Error("De betalingen konden niet worden opgehaald.");
+  }
+
+  const lijnen = lijnenResult.data;
+  const betalingen = betalingenResult.data;
 
   const lines = (lijnen ?? []).map((l) => ({
     omschrijving: l.omschrijving ?? "",
@@ -109,7 +123,7 @@ export default async function FactuurDetailPage({
     Number(factuur.totaal_bedrag ?? totals.totaal) - paidAmount,
   );
 
-  const { data: bedrijf } = await supabase
+  const { data: bedrijf, error: bedrijfError } = await supabase
     .from("bedrijven")
     .select(
       "naam, adres, postcode, stad, telefoon, email, btw, iban, algemene_voorwaarden, footer_tekst, default_invoice_template",
@@ -117,9 +131,13 @@ export default async function FactuurDetailPage({
     .eq("id", companyId)
     .maybeSingle();
 
+  if (bedrijfError) {
+    throw new Error("De bedrijfsgegevens konden niet worden opgehaald.");
+  }
+
   let customer: CustomerLite = null;
   if (factuur.customer_id) {
-    const { data } = await supabase
+    const { data, error: customerError } = await supabase
       .from("customers")
       .select(
         "name, company_name, first_name, last_name, address, email, phone, btw",
@@ -127,6 +145,9 @@ export default async function FactuurDetailPage({
       .eq("id", factuur.customer_id)
       .eq("company_id", companyId)
       .maybeSingle();
+    if (customerError) {
+      throw new Error("De klantgegevens konden niet worden opgehaald.");
+    }
     customer = data;
   }
 

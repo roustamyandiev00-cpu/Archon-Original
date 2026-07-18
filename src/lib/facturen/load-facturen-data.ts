@@ -37,6 +37,7 @@ export type FacturenDashboardData = {
   prijslijstItems: PrijslijstPickItem[];
   isDemo: boolean;
   hasCompany: boolean;
+  accessIssue: FacturenAccessIssue;
   stats: {
     maandOmzet: number;
     verzonden: number;
@@ -45,8 +46,28 @@ export type FacturenDashboardData = {
   };
 };
 
+export type FacturenAccessIssue =
+  | "unauthenticated"
+  | "missing-company"
+  | null;
+
+export function resolveFacturenAccessIssue({
+  hasUser,
+  hasCompany,
+  isPreview,
+}: {
+  hasUser: boolean;
+  hasCompany: boolean;
+  isPreview: boolean;
+}): FacturenAccessIssue {
+  if (isPreview) return null;
+  if (!hasUser) return "unauthenticated";
+  if (!hasCompany) return "missing-company";
+  return null;
+}
+
 export async function loadFacturenDashboardData(): Promise<FacturenDashboardData> {
-  const { supabase, companyId } = await getCompanyContext();
+  const { supabase, companyId, user } = await getCompanyContext();
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -149,6 +170,7 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
       const { data: contactRows } = await supabase
         .from("customers")
         .select("id, email, phone")
+        .eq("company_id", companyId)
         .in("id", customerIds);
       for (const k of contactRows ?? []) {
         contactMap.set(k.id, { email: k.email, phone: k.phone });
@@ -174,6 +196,11 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
   }
 
   const preview = await isActivePreviewMode();
+  const accessIssue = resolveFacturenAccessIssue({
+    hasUser: Boolean(user),
+    hasCompany: Boolean(companyId),
+    isPreview: preview,
+  });
   const isDemo =
     !facturenError && showDemoData(preview, facturen.length === 0);
   if (isDemo) facturen = DEMO_FACTUREN;
@@ -202,6 +229,7 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
     prijslijstItems,
     isDemo,
     hasCompany: Boolean(companyId),
+    accessIssue,
     stats: { maandOmzet, verzonden, betaald, openstaand },
   };
 }

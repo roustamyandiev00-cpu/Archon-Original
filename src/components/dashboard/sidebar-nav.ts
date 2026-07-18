@@ -64,8 +64,6 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         label: "Facturen",
         href: "/dashboard/facturen",
         icon: Receipt,
-        badge: 3,
-        badgeTone: "warning",
       },
       {
         label: "Leads / CRM",

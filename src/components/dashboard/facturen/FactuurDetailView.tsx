@@ -33,6 +33,18 @@ function Meta({ label, value }: { label: string; value: string }) {
   );
 }
 
+export function displayedFactuurAmount({
+  isPaid,
+  paidAmount,
+  openAmount,
+}: {
+  isPaid: boolean;
+  paidAmount: number;
+  openAmount: number;
+}) {
+  return isPaid ? paidAmount : openAmount;
+}
+
 export default function FactuurDetailView({
   factuur,
   lines,
@@ -101,6 +113,11 @@ export default function FactuurDetailView({
   docRows: DocumentRow[];
 }) {
   const nummer = factuur.nummer ?? `#${factuur.id}`;
+  const displayedAmount = displayedFactuurAmount({
+    isPaid,
+    paidAmount,
+    openAmount,
+  });
 
   return (
     <div className="mx-auto w-full max-w-[1200px] space-y-5 pb-10">
@@ -177,11 +194,7 @@ export default function FactuurDetailView({
                   {isProforma ? "Totaal" : isPaid ? "Betaald" : "Te betalen"}
                 </p>
                 <p className="mt-1 font-mono text-2xl font-semibold text-zinc-50">
-                  {formatEuro(
-                    isPaid
-                      ? paidAmount || factuur.totaal_bedrag
-                      : openAmount || factuur.totaal_bedrag,
-                  )}
+                  {formatEuro(displayedAmount)}
                 </p>
               </div>
             </div>
@@ -320,7 +333,13 @@ export default function FactuurDetailView({
                         : "Nog te betalen"}
                   </span>
                   <span className="font-mono">
-                    {formatEuro(isProforma ? totals.totaal : openAmount)}
+                    {formatEuro(
+                      isProforma
+                        ? totals.totaal
+                        : isPaid
+                          ? paidAmount
+                          : openAmount,
+                    )}
                   </span>
                 </div>
               </div>

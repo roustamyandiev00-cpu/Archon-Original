@@ -4,7 +4,7 @@ import { loadFacturenDashboardData } from "@/lib/facturen/load-facturen-data";
 export const metadata = { title: "Facturen — ArchonPro" };
 
 export default async function FacturenPage() {
-  const { facturen, facturenError, isDemo, hasCompany } =
+  const { facturen, facturenError, isDemo, hasCompany, accessIssue } =
     await loadFacturenDashboardData();
 
   return (
@@ -13,6 +13,7 @@ export default async function FacturenPage() {
       loadError={facturenError}
       isDemo={isDemo}
       hasCompany={hasCompany}
+      accessIssue={accessIssue}
     />
   );
 }
