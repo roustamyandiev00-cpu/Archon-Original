@@ -38,15 +38,15 @@ export default function StudioInvoicePreview({
   }, []);
 
   return (
-    <div className="studio-invoice-preview flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-zinc-100 px-3">
-        <h2 className="text-sm font-medium text-zinc-900">Voorbeeld</h2>
+    <div className="studio-invoice-preview flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950/50">
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3">
+        <h2 className="text-sm font-medium text-zinc-100">Voorbeeld</h2>
         <div className="flex items-center gap-1.5">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 border border-zinc-200 bg-white px-2 text-xs text-zinc-900 hover:bg-zinc-50"
+            className="h-7 border border-white/10 bg-white/[0.04] px-2 text-xs text-zinc-200 hover:bg-white/[0.08]"
             onClick={() => window.print()}
           >
             <Printer size={14} />
@@ -56,7 +56,7 @@ export default function StudioInvoicePreview({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 border border-zinc-200 bg-white px-2 text-xs text-zinc-900 hover:bg-zinc-50"
+            className="h-7 border border-white/10 bg-white/[0.04] px-2 text-xs text-zinc-200 hover:bg-white/[0.08]"
           >
             <Download size={14} />
             PDF
@@ -66,7 +66,7 @@ export default function StudioInvoicePreview({
 
       <div
         ref={bodyRef}
-        className="relative min-h-0 flex-1 overflow-hidden bg-stone-200"
+        className="relative min-h-0 flex-1 overflow-hidden bg-zinc-900/80"
       >
         <div className="absolute inset-0 grid place-items-center p-3">
           <div
@@ -74,7 +74,7 @@ export default function StudioInvoicePreview({
               width: STUDIO_INVOICE_PAPER_WIDTH * scale,
               height: STUDIO_INVOICE_PAPER_HEIGHT * scale,
             }}
-            className="overflow-hidden bg-white shadow-md"
+            className="overflow-hidden bg-white shadow-xl shadow-black/40"
           >
             <div
               style={{

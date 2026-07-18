@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { updateProjectStatus } from "@/app/dashboard/offertes/projecten/actions";
 import {
   PROJECT_STATUS_META,
+  toUiProjectStatus,
   type ProjectStatus,
 } from "@/components/dashboard/projecten/projecten";
 
@@ -20,9 +21,10 @@ export default function ProjectStatusSelect({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const uiStatus = toUiProjectStatus(status);
 
   if (readOnly) {
-    const meta = PROJECT_STATUS_META[status as ProjectStatus];
+    const meta = PROJECT_STATUS_META[uiStatus];
     return (
       <span className="text-sm text-zinc-400">
         {meta?.label ?? status}
@@ -35,7 +37,7 @@ export default function ProjectStatusSelect({
       {pending && <Loader2 size={14} className="animate-spin text-zinc-500" />}
       <select
         className="rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-sky-500/60"
-        value={status}
+        value={uiStatus}
         disabled={pending}
         onChange={(e) => {
           const next = e.target.value as ProjectStatus;

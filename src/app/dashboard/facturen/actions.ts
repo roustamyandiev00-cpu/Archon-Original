@@ -138,6 +138,60 @@ export async function createFactuur(input: CreateFactuurInput) {
   return { id: factuur.id as number };
 }
 
+const PAYABLE_STATUSES = new Set([
+  "verzonden",
+  "herinnerd",
+  "vervallen",
+  "deels_betaald",
+]);
+
+export async function markFactuurAsVerzonden(factuurId: number) {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const { data: factuur } = await supabase
+    .from("facturen")
+    .select("id, nummer, status, sent_at, document_type")
+    .eq("id", factuurId)
+    .eq("bedrijf_id", companyId)
+    .maybeSingle();
+
+  if (!factuur) return { error: "Factuur niet gevonden." };
+  if (factuur.document_type === "proforma") {
+    return { error: "Een proforma kan niet als verzonden worden gemarkeerd." };
+  }
+  if (factuur.status === "verzonden" || factuur.sent_at) {
+    return { ok: true, alreadySent: true, nummer: factuur.nummer };
+  }
+  if (factuur.status !== "concept") {
+    return {
+      error: "Alleen conceptfacturen kunnen als verzonden worden gemarkeerd.",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from("facturen")
+    .update({
+      status: "verzonden",
+      sent_at: now,
+      updated_at: now,
+    })
+    .eq("id", factuurId)
+    .eq("bedrijf_id", companyId)
+    .eq("status", "concept");
+
+  if (updateError) return { error: updateError.message };
+
+  revalidatePath("/dashboard/facturen");
+  revalidatePath("/dashboard/facturen/lijst");
+  revalidatePath(`/dashboard/facturen/${factuurId}`);
+  revalidatePath("/dashboard/overzicht");
+
+  return { ok: true, nummer: factuur.nummer };
+}
+
 export async function markFactuurAsPaid(factuurId: number) {
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
@@ -145,14 +199,23 @@ export async function markFactuurAsPaid(factuurId: number) {
 
   const { data: factuur } = await supabase
     .from("facturen")
-    .select("id, nummer, klant, totaal_bedrag, status, paid_at")
+    .select("id, nummer, klant, totaal_bedrag, status, paid_at, document_type")
     .eq("id", factuurId)
     .eq("bedrijf_id", companyId)
     .maybeSingle();
 
   if (!factuur) return { error: "Factuur niet gevonden." };
+  if (factuur.document_type === "proforma") {
+    return { error: "Een proforma kan niet als betaald worden gemarkeerd." };
+  }
   if (factuur.paid_at || factuur.status === "betaald") {
     return { ok: true, alreadyPaid: true };
+  }
+  if (factuur.status === "concept" || !PAYABLE_STATUSES.has(factuur.status ?? "")) {
+    return {
+      error:
+        "Markeer de factuur eerst als verzonden voordat je een betaling registreert.",
+    };
   }
 
   const now = new Date().toISOString();

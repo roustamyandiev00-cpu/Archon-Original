@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRef } from "react";
 import {
+  AlertTriangle,
   CalendarIcon,
+  CheckCircle2,
+  ExternalLink,
   FileText,
   FolderKanban,
   GripVertical,
@@ -14,6 +17,7 @@ import {
   Save,
   Send,
   Settings,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -39,6 +43,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select } from "@/components/ui/select";
 import type { BedrijfLite } from "@/lib/documentData";
 import type { OfferteLijnInput } from "@/lib/offertes";
+import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 
 type Customer = {
   id: number;
@@ -101,7 +106,7 @@ type Props = {
 };
 
 function Separator() {
-  return <hr className="border-zinc-200" />;
+  return <hr className="border-white/10" />;
 }
 
 function StudioTabs({
@@ -118,7 +123,7 @@ function StudioTabs({
   ];
 
   return (
-    <div className="grid h-8 w-full grid-cols-3 rounded-lg bg-zinc-100 p-0.5">
+    <div className="grid h-8 w-full grid-cols-3 rounded-lg border border-white/10 bg-zinc-950/60 p-0.5">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -126,8 +131,8 @@ function StudioTabs({
           onClick={() => onTabChange(tab.id)}
           className={`inline-flex items-center justify-center rounded-md px-2 text-xs font-medium transition-colors ${
             activeTab === tab.id
-              ? "bg-white text-zinc-900 shadow-sm"
-              : "text-zinc-500 hover:text-zinc-700"
+              ? "bg-sky-500/15 text-sky-100 shadow-sm ring-1 ring-sky-500/30"
+              : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200"
           }`}
         >
           {tab.label}
@@ -158,10 +163,10 @@ function DatePickerField({
           <button
             id={id}
             type="button"
-            className="flex h-8 w-full items-center justify-between rounded-lg border border-zinc-200 bg-white px-2.5 text-left text-xs font-normal text-zinc-900 hover:bg-zinc-50"
+            className="flex h-8 w-full items-center justify-between rounded-lg border border-white/10 bg-zinc-950/55 px-2.5 text-left text-xs font-normal text-zinc-100 hover:bg-white/[0.04]"
           >
             <span>{formatStudioDisplayDate(value)}</span>
-            <CalendarIcon size={16} className="text-zinc-400" />
+            <CalendarIcon size={16} className="text-zinc-500" />
           </button>
         </PopoverTrigger>
         <PopoverContent>
@@ -223,6 +228,8 @@ export default function InvoiceCreateView(props: Props) {
   } = props;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { activeAgent, isTyping: aiIsTyping, open: openAgentChat, sendMessage } =
+    useAgentChat();
 
   const studioInvoice = buildStudioInvoiceValues({
     reference,
@@ -247,6 +254,48 @@ export default function InvoiceCreateView(props: Props) {
       : klantVrij
         ? "custom"
         : "";
+
+  const paymentMissing = [
+    !studioInvoice.from.paymentAccountName ? "rekeninghouder" : null,
+    !studioInvoice.from.routingNumber ? "IBAN" : null,
+    !vervaldatum ? "vervaldatum" : null,
+  ].filter((item): item is string => Boolean(item));
+
+  const businessMissing = [
+    !studioInvoice.from.name ? "bedrijfsnaam" : null,
+    !studioInvoice.from.taxId ? "BTW-nummer" : null,
+    !studioInvoice.from.email ? "e-mailadres" : null,
+    studioInvoice.from.addressLines.length === 0 ? "adres" : null,
+  ].filter((item): item is string => Boolean(item));
+
+  function handleAskAiForTips() {
+    const lineSummary = lines
+      .filter(
+        (line) =>
+          line.omschrijving.trim() || Number(line.prijs_per_eenheid) > 0,
+      )
+      .map(
+        (line, index) =>
+          `${index + 1}. ${line.omschrijving || "Zonder omschrijving"} — ${Number(line.aantal) || 0} ${line.eenheid || "stuks"} × €${Number(line.prijs_per_eenheid || 0).toFixed(2)} (${Number(line.btw_percentage || 0)}% btw)`,
+      )
+      .join("\n");
+
+    openAgentChat();
+    sendMessage(
+      [
+        "Ik ben bezig met een nieuwe factuur. Controleer de huidige invoer en geef maximaal vijf concrete tips over ontbrekende gegevens, duidelijke regelomschrijvingen, btw en betaalvoorwaarden.",
+        "Maak niets aan, wijzig niets en verstuur niets; geef alleen advies dat ik zelf kan toepassen.",
+        `Klant: ${klantNaam || "nog niet gekozen"}`,
+        `Project: ${projects.find((project) => project.id === projectId)?.naam || "geen project gekozen"}`,
+        `Factuurdatum: ${datum || "ontbreekt"}`,
+        `Vervaldatum: ${vervaldatum || "ontbreekt"}`,
+        `Betalingsgegevens ontbreken: ${paymentMissing.join(", ") || "niets"}`,
+        `Bedrijfsgegevens ontbreken: ${businessMissing.join(", ") || "niets"}`,
+        `Korting: ${discountValue || 0} (${discountType === "percent" ? "procent" : "vast bedrag"})`,
+        `Factuurlijnen:\n${lineSummary || "nog geen ingevulde factuurlijnen"}`,
+      ].join("\n"),
+    );
+  }
 
   const invoiceTab = (
     <>
@@ -289,12 +338,12 @@ export default function InvoiceCreateView(props: Props) {
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-medium tracking-tight text-zinc-900">
+          <h2 className="text-sm font-medium tracking-tight text-zinc-100">
             Gefactureerd aan
           </h2>
           <Link
             href="/dashboard/contacten"
-            className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+            className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
           >
             <Plus size={14} />
             Nieuwe klant
@@ -369,12 +418,12 @@ export default function InvoiceCreateView(props: Props) {
               />
             </div>
           ) : (
-            <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-zinc-900 text-[10px] font-semibold text-white">
+            <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-zinc-950/50 px-2.5 py-1.5">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sky-500/20 text-[10px] font-semibold text-sky-200 ring-1 ring-sky-500/30">
                 {getInitials(klantNaam).slice(0, 2) || "—"}
               </span>
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-zinc-900">
+                <p className="truncate text-xs font-medium text-zinc-100">
                   {klantNaam}
                 </p>
                 <p className="truncate text-[11px] text-zinc-500">{klantEmail}</p>
@@ -415,14 +464,14 @@ export default function InvoiceCreateView(props: Props) {
 
       <section className="flex min-h-0 flex-1 flex-col gap-2">
         <div className="flex shrink-0 items-center justify-between gap-2">
-          <h2 className="text-sm font-medium tracking-tight text-zinc-900">
+          <h2 className="text-sm font-medium tracking-tight text-zinc-100">
             Factuurlijnen
           </h2>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 border-transparent px-1.5 text-xs text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+            className="h-7 border-transparent px-1.5 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
             onClick={onAddLine}
           >
             <Plus size={14} />
@@ -435,7 +484,7 @@ export default function InvoiceCreateView(props: Props) {
             <PrijslijstPicker
               items={prijslijstItems}
               onPick={onPickPrijslijst}
-              variant="light"
+              variant="dark"
             />
           </div>
         ) : null}
@@ -503,7 +552,7 @@ export default function InvoiceCreateView(props: Props) {
                     aria-label={`Regel ${index + 1} eenheidsprijs`}
                     className="h-8 text-xs"
                   />
-                  <div className="min-w-0 text-right text-xs font-medium text-zinc-900">
+                  <div className="min-w-0 text-right text-xs font-medium text-zinc-100">
                     {formatStudioCurrency(getStudioLineAmount(item))}
                   </div>
                   <Button
@@ -583,14 +632,14 @@ export default function InvoiceCreateView(props: Props) {
           <Separator />
           <section className="flex shrink-0 flex-col gap-1.5">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-medium tracking-tight text-zinc-900">
+              <h2 className="text-sm font-medium tracking-tight text-zinc-100">
                 Bijlagen
               </h2>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 border-transparent px-1.5 text-xs text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                className="h-7 border-transparent px-1.5 text-xs text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Paperclip size={13} />
@@ -616,7 +665,7 @@ export default function InvoiceCreateView(props: Props) {
                 {pendingFiles.map((f, i) => (
                   <li
                     key={`${f.name}-${i}`}
-                    className="inline-flex max-w-full items-center gap-1 rounded-md border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[11px] text-zinc-700"
+                    className="inline-flex max-w-full items-center gap-1 rounded-md border border-white/10 bg-zinc-950/50 px-1.5 py-0.5 text-[11px] text-zinc-300"
                   >
                     <FileText size={11} className="shrink-0 text-zinc-400" />
                     <span className="truncate">{f.name}</span>
@@ -644,54 +693,127 @@ export default function InvoiceCreateView(props: Props) {
 
   const paymentTab = (
     <div className="space-y-4">
-      <p className="text-xs text-zinc-500">
-        Betalingsgegevens uit je bedrijfsinstellingen.{" "}
-        <Link
-          href="/dashboard/instellingen"
-          className="inline-flex items-center gap-1 font-medium text-zinc-800 underline-offset-2 hover:underline"
+      <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-zinc-950/40 p-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-zinc-100">
+            Betalingsgegevens controleren
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+            De vervaldatum geldt voor deze factuur. Rekeninghouder en IBAN
+            komen uit je bedrijfsinstellingen.
+          </p>
+        </div>
+        <span
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold ${
+            paymentMissing.length === 0
+              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+              : "border-amber-500/25 bg-amber-500/10 text-amber-300"
+          }`}
         >
-          <Settings size={12} />
-          Bewerken
-        </Link>
-      </p>
+          {paymentMissing.length === 0 ? (
+            <CheckCircle2 size={12} />
+          ) : (
+            <AlertTriangle size={12} />
+          )}
+          {paymentMissing.length === 0
+            ? "Klaar"
+            : `${paymentMissing.length} ontbrekend`}
+        </span>
+      </div>
+
       <section className="grid gap-3 sm:grid-cols-2">
-        {[
-          { label: "Rekeninghouder", value: studioInvoice.from.paymentAccountName },
-          { label: "IBAN", value: studioInvoice.from.routingNumber },
-          { label: "Referentie", value: reference },
-          {
-            label: "Vervaldatum",
-            value: formatStudioDisplayDate(vervaldatum),
-          },
-        ].map((field) => (
-          <div
-            key={field.label}
-            className="rounded-lg border border-zinc-200 px-3.5 py-2.5"
-          >
-            <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
-              {field.label}
-            </p>
-            <p className="mt-0.5 truncate font-mono text-sm text-zinc-800">
-              {field.value || "—"}
-            </p>
+        <div className="rounded-lg border border-white/10 bg-zinc-950/40 px-3.5 py-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
+            Rekeninghouder
+          </p>
+          <p className="mt-0.5 truncate text-sm text-zinc-200">
+            {studioInvoice.from.paymentAccountName || "Niet ingesteld"}
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-zinc-950/40 px-3.5 py-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
+            IBAN
+          </p>
+          <p className="mt-0.5 truncate font-mono text-sm text-zinc-200">
+            {studioInvoice.from.routingNumber || "Niet ingesteld"}
+          </p>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[11px] text-zinc-500">
+            Voorbeeldreferentie
+          </label>
+          <div className="flex h-8 items-center rounded-lg border border-white/10 bg-zinc-950/40 px-2.5 font-mono text-xs text-zinc-300">
+            {reference || "Wordt toegekend bij opslaan"}
           </div>
-        ))}
+        </div>
+        <DatePickerField
+          id="payment-tab-due-date"
+          label="Vervaldatum"
+          value={vervaldatum}
+          onChange={onVervaldatumChange}
+        />
       </section>
+
+      {paymentMissing.length > 0 ? (
+        <p className="rounded-lg border border-amber-500/20 bg-amber-500/[0.07] px-3 py-2 text-xs text-amber-200">
+          Nog instellen: {paymentMissing.join(", ")}.
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href="/dashboard/instellingen?tab=bedrijf"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-zinc-200 hover:bg-white/[0.08]"
+        >
+          <Settings size={13} />
+          IBAN aanpassen
+          <ExternalLink size={11} />
+        </Link>
+        <Link
+          href="/dashboard/instellingen?tab=documenten"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-zinc-200 hover:bg-white/[0.08]"
+        >
+          <Settings size={13} />
+          Betaalvoorwaarden
+          <ExternalLink size={11} />
+        </Link>
+      </div>
     </div>
   );
 
   const businessTab = (
     <div className="space-y-4">
-      <p className="text-xs text-zinc-500">
-        Jouw bedrijfsgegevens op de factuur.{" "}
-        <Link
-          href="/dashboard/instellingen"
-          className="inline-flex items-center gap-1 font-medium text-zinc-800 underline-offset-2 hover:underline"
+      <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-zinc-950/40 p-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-zinc-100">
+            Bedrijfsgegevens op de factuur
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+            Controleer je wettelijke afzendergegevens. Aanpassingen gelden voor
+            alle toekomstige documenten.
+          </p>
+        </div>
+        <span
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold ${
+            businessMissing.length === 0
+              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+              : "border-amber-500/25 bg-amber-500/10 text-amber-300"
+          }`}
         >
-          <Settings size={12} />
-          Instellingen
-        </Link>
-      </p>
+          {businessMissing.length === 0 ? (
+            <CheckCircle2 size={12} />
+          ) : (
+            <AlertTriangle size={12} />
+          )}
+          {businessMissing.length === 0
+            ? "Volledig"
+            : `${businessMissing.length} ontbrekend`}
+        </span>
+      </div>
       <section className="grid gap-3 sm:grid-cols-2">
         {[
           { label: "Bedrijfsnaam", value: studioInvoice.from.name },
@@ -706,17 +828,32 @@ export default function InvoiceCreateView(props: Props) {
         ].map((field) => (
           <div
             key={field.label}
-            className="rounded-lg border border-zinc-200 px-3.5 py-2.5"
+            className="rounded-lg border border-white/10 bg-zinc-950/40 px-3.5 py-2.5"
           >
             <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
               {field.label}
             </p>
-            <p className="mt-0.5 truncate text-sm text-zinc-800">
+            <p className="mt-0.5 truncate text-sm text-zinc-200">
               {field.value || "—"}
             </p>
           </div>
         ))}
       </section>
+      {businessMissing.length > 0 ? (
+        <p className="rounded-lg border border-amber-500/20 bg-amber-500/[0.07] px-3 py-2 text-xs text-amber-200">
+          Nog aanvullen: {businessMissing.join(", ")}.
+        </p>
+      ) : null}
+      <Link
+        href="/dashboard/instellingen?tab=bedrijf"
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-zinc-200 hover:bg-white/[0.08]"
+      >
+        <Settings size={13} />
+        Bedrijfsgegevens aanpassen
+        <ExternalLink size={11} />
+      </Link>
     </div>
   );
 
@@ -724,7 +861,7 @@ export default function InvoiceCreateView(props: Props) {
     <div className="studio-invoice-create flex h-full min-h-0 flex-col gap-2 overflow-hidden">
       <div className="flex shrink-0 items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="truncate text-lg font-medium leading-none tracking-tight text-zinc-900">
+          <h1 className="truncate text-lg font-medium leading-none tracking-tight text-zinc-50">
             Nieuwe factuur
           </h1>
           <p className="mt-0.5 truncate text-xs text-zinc-500">
@@ -737,8 +874,25 @@ export default function InvoiceCreateView(props: Props) {
             type="button"
             variant="ghost"
             size="sm"
+            disabled={loading || aiIsTyping}
+            className="h-8 border border-violet-500/20 bg-violet-500/[0.07] px-2.5 text-xs text-violet-200 hover:bg-violet-500/15"
+            onClick={handleAskAiForTips}
+            title={`Vraag ${activeAgent.name} om de huidige factuur te controleren`}
+          >
+            {aiIsTyping ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Sparkles size={14} />
+            )}
+            <span className="hidden sm:inline">Vraag AI om tips</span>
+            <span className="sm:hidden">AI-tips</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             disabled={loading}
-            className="h-8 border border-zinc-200 bg-white px-2.5 text-xs text-zinc-900 hover:bg-zinc-50"
+            className="h-8 border border-white/10 bg-white/[0.04] px-2.5 text-xs text-zinc-200 hover:bg-white/[0.08]"
             onClick={onSaveDraft}
           >
             <Save size={14} />
@@ -749,7 +903,7 @@ export default function InvoiceCreateView(props: Props) {
             variant="primary"
             size="sm"
             disabled={loading}
-            className="h-8 border-zinc-900 bg-zinc-900 px-2.5 text-xs text-white hover:bg-zinc-800"
+            className="h-8 border-sky-500/40 bg-sky-500/15 px-2.5 text-xs text-sky-100 hover:bg-sky-500/25"
             onClick={onSend}
           >
             {loading ? (
@@ -763,13 +917,19 @@ export default function InvoiceCreateView(props: Props) {
       </div>
 
       {error ? (
-        <p className="shrink-0 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-600">
+        <p className="shrink-0 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-300">
           {error}
         </p>
       ) : null}
 
+      <p className="sr-only" aria-live="polite">
+        {aiIsTyping
+          ? `${activeAgent.name} controleert de huidige factuur.`
+          : ""}
+      </p>
+
       <div className="grid min-h-0 flex-1 gap-2.5 overflow-hidden xl:grid-cols-2 xl:items-stretch">
-        <div className="studio-invoice-form flex h-full min-h-0 flex-col gap-2 overflow-hidden rounded-xl border border-zinc-200/80 bg-white p-2.5 shadow-sm sm:p-3">
+        <div className="studio-invoice-form flex h-full min-h-0 flex-col gap-2 overflow-hidden rounded-xl border border-white/10 bg-zinc-950/50 p-2.5 shadow-none sm:p-3">
           <StudioTabs activeTab={activeTab} onTabChange={onTabChange} />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {activeTab === "invoice" ? (

@@ -4,6 +4,7 @@ import {
   projectNameFromOfferte,
   startLabelFromDate,
 } from "@/components/dashboard/projecten/fromOfferte";
+import { toDbProjectStatus } from "@/components/dashboard/projecten/projecten";
 import type { OfferteLijnInput } from "@/lib/offertes";
 
 type EnsureInput = {
@@ -41,7 +42,7 @@ export async function ensureProjectFromOfferte(input: EnsureInput): Promise<{
     await supabase
       .from("projecten")
       .update({
-        status: "actief",
+        status: toDbProjectStatus("actief"),
         customer_id: offerte.customer_id,
         offerte_id: offerte.id,
       })
@@ -76,7 +77,7 @@ export async function ensureProjectFromOfferte(input: EnsureInput): Promise<{
       naam,
       klant_naam: offerte.klant || "Onbekende klant",
       start_datum_label: startLabelFromDate(offerte.datum),
-      status: "actief",
+      status: toDbProjectStatus("actief"),
       customer_id: offerte.customer_id,
       offerte_id: offerte.id,
     })

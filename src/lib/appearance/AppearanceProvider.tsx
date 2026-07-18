@@ -6,7 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import {
@@ -28,6 +28,19 @@ type AppearanceContextValue = {
 };
 
 const AppearanceContext = createContext<AppearanceContextValue | null>(null);
+const appearanceListeners = new Set<() => void>();
+
+function subscribeToAppearance(listener: () => void) {
+  appearanceListeners.add(listener);
+  return () => appearanceListeners.delete(listener);
+}
+
+function notifyAppearanceChange() {
+  appearanceListeners.forEach((listener) => listener());
+}
+
+const serverLanguageSnapshot = (): AppLanguage => "nl";
+const serverFontSnapshot = (): AppFont => "inter";
 
 export function useAppearance() {
   const ctx = useContext(AppearanceContext);
@@ -76,26 +89,32 @@ function applyFontToDocument(font: AppFont) {
 }
 
 export default function AppearanceProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<AppLanguage>("nl");
-  const [font, setFontState] = useState<AppFont>("inter");
+  const language = useSyncExternalStore(
+    subscribeToAppearance,
+    readLanguage,
+    serverLanguageSnapshot,
+  );
+  const font = useSyncExternalStore(
+    subscribeToAppearance,
+    readFont,
+    serverFontSnapshot,
+  );
 
   // Hydrate from localStorage after mount
   useEffect(() => {
-    setLanguageState(readLanguage());
     const storedFont = readFont();
-    setFontState(storedFont);
     loadGoogleFont(storedFont);
     applyFontToDocument(storedFont);
   }, []);
 
   const setLanguage = useCallback((lang: AppLanguage) => {
     persistLanguage(lang);
-    setLanguageState(lang);
+    notifyAppearanceChange();
   }, []);
 
   const setFont = useCallback((f: AppFont) => {
     persistFont(f);
-    setFontState(f);
+    notifyAppearanceChange();
     loadGoogleFont(f);
     applyFontToDocument(f);
   }, []);

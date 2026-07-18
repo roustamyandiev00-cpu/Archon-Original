@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { FileText } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { isOfferteEditable } from "@/lib/offertes";
 import { loadActivePrijslijstItems } from "@/lib/prijslijst";
@@ -112,29 +111,14 @@ export default async function OfferteBewerkenPage({
   };
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-6">
-      <header className="flex items-start gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
-          <FileText size={20} />
-        </span>
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-50">
-            Offerte bewerken
-          </h1>
-          <p className="mt-0.5 text-sm text-zinc-500">
-            Pas de gegevens aan via Gegevens invullen en bekijk direct het sjabloon.
-          </p>
-        </div>
-      </header>
-
-      <OfferteForm
-        customers={customers}
-        documentContext={documentContext}
-        offerteId={offerteId}
-        initial={initial}
-        nummer={offerte.nummer ?? undefined}
-        prijslijstItems={prijslijstItems}
-      />
-    </div>
+    <OfferteForm
+      customers={customers}
+      documentContext={documentContext}
+      offerteId={offerteId}
+      initial={initial}
+      nummer={offerte.nummer ?? undefined}
+      prijslijstItems={prijslijstItems}
+      status={offerte.status_new ?? "concept"}
+    />
   );
 }

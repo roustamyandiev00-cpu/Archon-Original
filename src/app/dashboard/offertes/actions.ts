@@ -62,7 +62,7 @@ export async function createOfferte(input: CreateOfferteInput) {
 
   // Insert met retry: bij een uniek-conflict op het nummer schuiven we op
   // naar het volgende vrije nummer (bv. als de unique constraint globaal is).
-  let offerte: { id: number } | null = null;
+  let offerte: { id: number; nummer: string } | null = null;
   let lastError: { message: string; code?: string } | null = null;
   for (let attempt = 0; attempt < 25; attempt++) {
     const nummer = `OFF-${year}-${String(seq).padStart(4, "0")}`;
@@ -84,11 +84,11 @@ export async function createOfferte(input: CreateOfferteInput) {
         status_new: "concept",
         template_id: templateId,
       })
-      .select("id")
+      .select("id, nummer")
       .single();
 
     if (!res.error && res.data) {
-      offerte = res.data as { id: number };
+      offerte = res.data as { id: number; nummer: string };
       lastError = null;
       break;
     }
@@ -129,6 +129,7 @@ export async function createOfferte(input: CreateOfferteInput) {
   revalidatePath("/dashboard/offertes/projecten");
   return {
     id: offerte.id as number,
+    nummer: offerte.nummer,
   };
 }
 

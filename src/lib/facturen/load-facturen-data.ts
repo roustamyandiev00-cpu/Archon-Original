@@ -30,6 +30,7 @@ export type FacturenProjectOption = {
 
 export type FacturenDashboardData = {
   facturen: FactuurListItem[];
+  facturenError: string | null;
   customers: FacturenCustomer[];
   projects: FacturenProjectOption[];
   documentContext: FactuurDocumentContext;
@@ -56,6 +57,7 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
   let customers: FacturenCustomer[] = [];
   let projects: FacturenProjectOption[] = [];
   let prijslijstItems: PrijslijstPickItem[] = [];
+  let facturenError: string | null = null;
 
   let documentContext: FactuurDocumentContext = {
     defaultTemplate: DEFAULT_TEMPLATE,
@@ -75,7 +77,7 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
 
   if (companyId) {
     const [
-      { data },
+      facturenResult,
       { data: klanten },
       { data: bedrijf },
       prijslijst,
@@ -113,7 +115,17 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
         .limit(100),
     ]);
 
-    const rows = data ?? [];
+    if (facturenResult.error) {
+      console.error("[facturen] Ophalen facturen mislukt", {
+        companyId,
+        code: facturenResult.error.code,
+        message: facturenResult.error.message,
+      });
+      facturenError =
+        "Je facturen konden niet worden opgehaald. Probeer het opnieuw.";
+    }
+
+    const rows = facturenResult.data ?? [];
     customers = klanten ?? [];
     projects = (projectRows ?? []) as FacturenProjectOption[];
     prijslijstItems = prijslijst;
@@ -162,7 +174,8 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
   }
 
   const preview = await isActivePreviewMode();
-  const isDemo = showDemoData(preview, facturen.length === 0);
+  const isDemo =
+    !facturenError && showDemoData(preview, facturen.length === 0);
   if (isDemo) facturen = DEMO_FACTUREN;
 
   const maandOmzet = facturen
@@ -182,6 +195,7 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
 
   return {
     facturen,
+    facturenError,
     customers,
     projects,
     documentContext,

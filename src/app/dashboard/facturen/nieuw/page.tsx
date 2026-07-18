@@ -17,7 +17,7 @@ export default async function NieuweFactuurPage() {
   const useDemo = isDemo && !hasCompany;
 
   return (
-    <div className="facturen-create-shell studio-invoice-shell" data-theme="light">
+    <div className="facturen-create-shell studio-invoice-shell">
       <FactuurForm
         customers={customers}
         projects={projects}

@@ -913,11 +913,11 @@
 }
 
 /*
- * Nieuwe-factuur: vult het dashboard-contentvlak volledig (geen zwarte gutters,
- * geen page-scroll). Shell is absolute t.o.v. main-body.
+ * Nieuwe-factuur: full-bleed in dashboard-contentvlak, ArchonPro dark tokens.
+ * PDF-papier blijft wit; chrome (form/preview shell) volgt dashboard.
  */
 .dashboard-main:has(.facturen-create-shell) {
-  background-color: #f4f4f5 !important;
+  background-color: var(--dash-bg, #0b0e14) !important;
 }
 
 .dashboard-main-body:has(.facturen-create-shell) {
@@ -925,7 +925,7 @@
   max-width: none;
   margin: 0;
   padding: 0 !important;
-  background: #f4f4f5;
+  background: var(--dash-bg, #0b0e14);
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
@@ -954,8 +954,8 @@
   height: auto;
   min-height: 0;
   overflow: hidden;
-  color: #18181b;
-  background: #f4f4f5;
+  color: #e4e4e7;
+  background: var(--dash-bg, #0b0e14);
   padding: 0.75rem 0.875rem;
 }
 
@@ -981,23 +981,27 @@
 .studio-invoice-shell .studio-invoice-create,
 .studio-invoice-shell .studio-invoice-form,
 .studio-invoice-shell .studio-invoice-preview {
-  color: #18181b;
+  color: #e4e4e7;
 }
 
 .studio-invoice-shell .studio-invoice-form input:not([type="checkbox"]):not([type="radio"]),
 .studio-invoice-shell .studio-invoice-form select {
-  border: 1px solid rgba(24, 24, 27, 0.12);
-  background-color: #ffffff;
-  color: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(9, 9, 11, 0.55);
+  color: #f4f4f5;
   border-radius: 0.5rem;
   height: 2rem;
   font-size: 0.8125rem;
 }
 
+.studio-invoice-shell .studio-invoice-form input::placeholder {
+  color: #71717a;
+}
+
 .studio-invoice-shell .studio-invoice-form input:focus,
 .studio-invoice-shell .studio-invoice-form select:focus {
-  border-color: rgba(24, 24, 27, 0.28);
-  box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.06);
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   outline: none;
 }
 
@@ -1044,11 +1048,43 @@
   border-color: var(--dash-border) !important;
 }
 
+/* Sidebar nav — scroll, actieve rij, geen glow */
+.dashboard-sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.dashboard-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-sidebar-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.dashboard-sidebar-link--active {
+  box-shadow: none;
+}
+
+.dashboard-sidebar-badge {
+  letter-spacing: 0.02em;
+}
+
 /* Sidebar blijft donker in light mode — iets lichter dan puur zwart */
 .dashboard-root[data-theme="light"] .dashboard-sidebar {
   background-color: #151921 !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
   color-scheme: dark;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-sidebar .dashboard-sidebar-link--active {
+  background-color: #0c2836 !important;
+  color: #bae6fd !important;
+}
+
+.dashboard-root[data-theme="light"] .dashboard-sidebar .dashboard-sidebar-link--active .text-cyan-400 {
+  color: #22d3ee !important;
 }
 
 .dashboard-root[data-theme="light"] .dashboard-sidebar .text-zinc-50,

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import NieuweOfferteActions from "@/components/dashboard/offertes/NieuweOfferteActions";
 import NieuweOfferteClient from "@/components/dashboard/offertes/NieuweOfferteClient";
 import OffertesPanel from "@/components/dashboard/offertes/OffertesPanel";
 import type { OfferteDocumentContext } from "@/components/dashboard/offertes/OfferteForm";
+import type { PrijslijstPickItem } from "@/components/dashboard/prijslijst/types";
 import { Button } from "@/components/ui/button";
 
 export type OfferteListRow = {
@@ -41,6 +42,7 @@ type Props = {
   agentName: string;
   customers: Customer[];
   documentContext: OfferteDocumentContext;
+  prijslijstItems?: PrijslijstPickItem[];
 };
 
 export default function OffertesView({
@@ -50,43 +52,32 @@ export default function OffertesView({
   agentName,
   customers,
   documentContext,
+  prijslijstItems = [],
 }: Props) {
   const [createMode, setCreateMode] = useState<CreateMode | null>(null);
 
   if (createMode) {
     return (
-      <div className="space-y-6">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setCreateMode(null)}
-          className="gap-2 text-zinc-400 hover:text-zinc-100"
-        >
-          <ArrowLeft size={16} />
-          Terug naar offertes
-        </Button>
-
-        <header className="flex items-start gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
-            <FileText size={20} />
-          </span>
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-50">
-              {createMode === "manueel"
-                ? "Nieuwe offerte — manueel"
-                : "Nieuwe offerte — met AI-agent"}
-            </h1>
-            <p className="mt-0.5 text-sm text-zinc-500">
-              Bekijk je offertesjabloon en vul via Gegevens invullen de details in.
-            </p>
-          </div>
-        </header>
-
+      <div className="space-y-4">
+        {createMode === "ai" && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setCreateMode(null)}
+            className="gap-2 text-zinc-400 hover:text-zinc-100"
+          >
+            <ArrowLeft size={16} />
+            Terug naar offertes
+          </Button>
+        )}
         <NieuweOfferteClient
           agentName={agentName}
           customers={customers}
           documentContext={documentContext}
           mode={createMode}
+          prijslijstItems={prijslijstItems}
+          hideFormBackLink={createMode === "manueel"}
+          onBack={() => setCreateMode(null)}
         />
       </div>
     );

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertCircle, Plus, Receipt, RefreshCw } from "lucide-react";
 import FacturenDataTable, {
   FACTUUR_COLUMN_OPTIONS,
   defaultFactuurColumnVisibility,
@@ -12,7 +13,7 @@ import FacturenDataTable, {
 import DataPanelToolbar from "@/components/dashboard/DataPanelToolbar";
 import { exportFacturenCsv } from "@/components/dashboard/table-exports";
 import { Badge } from "@/components/ui/badge";
-import { Button, primaryActionClass } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,78 +24,136 @@ import {
 
 export default function FacturenPanel({
   facturen,
+  loadError,
   isDemo,
 }: {
   facturen: FactuurListItem[];
+  loadError: string | null;
   isDemo: boolean;
 }) {
+  const router = useRouter();
   const [showFilters, setShowFilters] = useState(true);
   const [columnVisibility, setColumnVisibility] = useState<FactuurColumnVisibility>(
     defaultFactuurColumnVisibility,
   );
 
+  const conceptCount = facturen.filter((f) => f.status === "concept").length;
   const openCount = facturen.filter(
     (f) =>
       f.document_type === "factuur" &&
       !f.paid_at &&
-      f.status !== "betaald",
+      !["concept", "betaald", "vervallen"].includes(f.status ?? ""),
   ).length;
   const paidCount = facturen.filter(
     (f) => f.paid_at || f.status === "betaald",
   ).length;
+  const expiredCount = facturen.filter((f) => f.status === "vervallen").length;
 
   return (
-    <Card className="dashboard-data-panel overflow-hidden border-white/10 bg-zinc-950/50">
+    <Card className="dashboard-data-panel flex h-auto min-h-0 flex-col overflow-visible border-white/10 bg-zinc-950/50 lg:h-full lg:overflow-hidden">
       <CardHeader className="dashboard-data-panel-header gap-3 border-white/10 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-0.5">
           <CardTitle className="text-base font-semibold text-zinc-50">
             Facturen
           </CardTitle>
           <CardDescription className="dashboard-data-panel-desc max-w-xl text-sm leading-relaxed text-zinc-400">
-            Beheer facturen en proforma&apos;s, volg betalingen en verstuur
-            via Peppol of e-mail.
+            Beheer facturen, bewaak vervaldata en volg betalingen op.
           </CardDescription>
         </div>
 
-        <DataPanelToolbar
-          showFilters={showFilters}
-          onToggleFilters={() => setShowFilters((value) => !value)}
-          columns={FACTUUR_COLUMN_OPTIONS}
-          columnVisibility={columnVisibility}
-          onColumnVisibilityChange={(id, visible) =>
-            setColumnVisibility((current) => ({ ...current, [id]: visible }))
-          }
-          onExport={() => exportFacturenCsv(facturen)}
-          exportLabel="Exporteer facturen"
-        >
-          <Link href="/dashboard/facturen/nieuw" className={primaryActionClass}>
-            <Plus size={15} />
-            Nieuwe factuur
-          </Link>
-        </DataPanelToolbar>
+        {!loadError && facturen.length > 0 ? (
+          <DataPanelToolbar
+            showFilters={showFilters}
+            onToggleFilters={() => setShowFilters((value) => !value)}
+            columns={FACTUUR_COLUMN_OPTIONS}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={(id, visible) =>
+              setColumnVisibility((current) => ({ ...current, [id]: visible }))
+            }
+            onExport={() => exportFacturenCsv(facturen)}
+            exportLabel="Exporteer facturen"
+          />
+        ) : null}
       </CardHeader>
 
-      <CardContent className="dashboard-data-panel-body">
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Badge variant="info">
-            {facturen.length.toLocaleString("nl-BE")} documenten
-          </Badge>
-          <Badge variant={openCount > 0 ? "warning" : "default"}>
-            {openCount} openstaand
-          </Badge>
-          <Badge variant={paidCount > 0 ? "success" : "default"}>
-            {paidCount} betaald
-          </Badge>
-          {isDemo && <Badge variant="warning">Demo</Badge>}
-        </div>
+      <CardContent className="dashboard-data-panel-body flex min-h-0 flex-1 flex-col overflow-visible lg:overflow-hidden">
+        {!loadError ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Badge variant="info">Alle {facturen.length}</Badge>
+            <Badge variant={conceptCount > 0 ? "warning" : "default"}>
+              Concept {conceptCount}
+            </Badge>
+            <Badge variant={openCount > 0 ? "warning" : "default"}>
+              Openstaand {openCount}
+            </Badge>
+            <Badge variant={paidCount > 0 ? "success" : "default"}>
+              Betaald {paidCount}
+            </Badge>
+            <Badge variant={expiredCount > 0 ? "danger" : "default"}>
+              Vervallen {expiredCount}
+            </Badge>
+            {isDemo ? <Badge variant="warning">Demo</Badge> : null}
+          </div>
+        ) : null}
 
         <div className="dashboard-table-area">
-          <FacturenDataTable
-            facturen={facturen}
-            isDemo={isDemo}
-            showFilters={showFilters}
-            columnVisibility={columnVisibility}
-          />
+          {loadError ? (
+            <div
+              role="alert"
+              className="grid min-h-64 flex-1 place-items-center rounded-xl border border-rose-500/20 bg-rose-500/[0.04] px-6 py-12 text-center"
+            >
+              <div className="max-w-sm">
+                <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
+                  <AlertCircle size={22} />
+                </span>
+                <h3 className="mt-3 text-base font-semibold text-zinc-50">
+                  Facturen konden niet laden
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-zinc-400">
+                  {loadError}
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => router.refresh()}
+                  className="mt-4 gap-2"
+                >
+                  <RefreshCw size={15} />
+                  Opnieuw proberen
+                </Button>
+              </div>
+            </div>
+          ) : facturen.length === 0 ? (
+            <div className="grid min-h-64 flex-1 place-items-center rounded-xl border border-white/10 bg-zinc-950/25 px-6 py-12 text-center">
+              <div className="max-w-sm">
+                <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-white/[0.08] bg-zinc-900 text-sky-400">
+                  <Receipt size={22} />
+                </span>
+                <h3 className="mt-3 text-base font-semibold text-zinc-50">
+                  Nog geen facturen
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-zinc-400">
+                  Maak je eerste factuur of proforma aan en volg betalingen
+                  vanuit één overzicht.
+                </p>
+                {!isDemo ? (
+                  <Link
+                    href="/dashboard/facturen/nieuw"
+                    className="mx-auto mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400"
+                  >
+                    <Plus size={16} />
+                    Eerste factuur aanmaken
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <FacturenDataTable
+              facturen={facturen}
+              isDemo={isDemo}
+              showFilters={showFilters}
+              columnVisibility={columnVisibility}
+            />
+          )}
         </div>
       </CardContent>
     </Card>

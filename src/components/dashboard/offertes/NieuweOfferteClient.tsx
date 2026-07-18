@@ -29,12 +29,16 @@ export default function NieuweOfferteClient({
   documentContext,
   mode = "beide",
   prijslijstItems = [],
+  hideFormBackLink = false,
+  onBack,
 }: {
   agentName?: string;
   customers: Customer[];
   documentContext: OfferteDocumentContext;
   mode?: OfferteMode;
   prijslijstItems?: PrijslijstPickItem[];
+  hideFormBackLink?: boolean;
+  onBack?: () => void;
 }) {
   const [seed, setSeed] = useState<OfferteFormInitial | undefined>();
   const [showManualForm, setShowManualForm] = useState(mode === "manueel");
@@ -44,6 +48,8 @@ export default function NieuweOfferteClient({
     klant: string;
     notes: string;
     lines: OfferteLijnInput[];
+    projectNaam?: string;
+    afmetingen?: string;
   }) {
     setSeed({
       customerId: draft.customerId ? String(draft.customerId) : "",
@@ -55,6 +61,8 @@ export default function NieuweOfferteClient({
         return d.toISOString().slice(0, 10);
       })(),
       notes: draft.notes,
+      projectNaam: draft.projectNaam ?? "",
+      afmetingen: draft.afmetingen ?? "",
       lines: draft.lines,
     });
     setShowManualForm(true);
@@ -75,6 +83,8 @@ export default function NieuweOfferteClient({
           documentContext={documentContext}
           seedDraft={seed}
           prijslijstItems={prijslijstItems}
+          hideBackLink={hideFormBackLink}
+          onBack={onBack}
         />
       ) : (
         <div className="text-center py-6 border border-white/5 rounded-2xl bg-zinc-950/20">

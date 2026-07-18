@@ -61,6 +61,8 @@ export default function NovaOffertePanel({
     klant: string;
     notes: string;
     lines: OfferteLijnInput[];
+    projectNaam?: string;
+    afmetingen?: string;
   }) => void;
 }) {
   const router = useRouter();
@@ -337,6 +339,8 @@ Beschrijving werkzaamheden: ${description}
         klant: selectedKlant() || "Klant",
         notes: buildNotes(),
         lines: preview,
+        projectNaam: projectName.trim() || undefined,
+        afmetingen: dimensions.trim() || undefined,
       });
     }
   }
