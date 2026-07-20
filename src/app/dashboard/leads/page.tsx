@@ -1,3 +1,4 @@
+import RelatedTasksPanel from "@/components/dashboard/taken/RelatedTasksPanel";
 import { getCompanyContext } from "@/lib/company";
 import { isActivePreviewMode } from "@/components/dashboard/context";
 import { DemoBadge } from "@/components/dashboard/mission";
@@ -82,6 +83,16 @@ export default async function LeadsPage() {
         </div>
       )}
       <LeadsBoard initialDeals={deals} klanten={klanten} />
+      {companyId ? (
+        <RelatedTasksPanel
+          supabase={supabase}
+          companyId={companyId}
+          canWrite={!preview}
+          title="CRM-taken"
+          presetTitle="Lead opvolgen"
+          links={{}}
+        />
+      ) : null}
     </div>
   );
 }

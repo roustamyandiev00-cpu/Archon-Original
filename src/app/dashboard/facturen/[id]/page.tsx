@@ -14,6 +14,7 @@ import {
   type CustomerLite,
 } from "@/lib/documentData";
 import { getPeppolConfig } from "@/lib/peppol/build";
+import RelatedTasksPanel from "@/components/dashboard/taken/RelatedTasksPanel";
 
 export async function generateMetadata({
   params,
@@ -301,6 +302,7 @@ export default async function FactuurDetailPage({
     "Onbekende klant";
 
   return (
+    <div className="space-y-4">
     <FactuurDetailView
       factuur={factuur}
       lines={lines}
@@ -334,5 +336,13 @@ export default async function FactuurDetailPage({
       docValues={docValues}
       docRows={docRows}
     />
+    <RelatedTasksPanel
+      supabase={supabase}
+      companyId={companyId}
+      canWrite
+      presetTitle={`Opvolging factuur ${factuur.nummer}`}
+      links={{ factuurId: factuur.id, contactId: factuur.customer_id ?? undefined }}
+    />
+    </div>
   );
 }

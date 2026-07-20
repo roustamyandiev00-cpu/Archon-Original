@@ -11,6 +11,7 @@ import {
   Settings,
   Bot,
   CalendarDays,
+  CheckSquare,
   Tags,
   List,
   ScrollText,
@@ -123,6 +124,7 @@ export function getMobileMoreLinks(registeredUsers: number): MoreLink[] {
     { label: "Projecten", href: "/dashboard/offertes/projecten", icon: FolderKanban },
     { label: "Leads / CRM", href: "/dashboard/leads", icon: Contact },
     { label: "Agenda", href: "/dashboard/agenda", icon: CalendarDays },
+    { label: "Taken", href: "/dashboard/taken", icon: CheckSquare },
     { label: "Prijslijst", href: "/dashboard/prijslijst", icon: Tags },
     { label: "Boekhouding", href: "/dashboard/boekhouding", icon: Wallet },
     {

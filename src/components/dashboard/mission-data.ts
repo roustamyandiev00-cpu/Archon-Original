@@ -372,6 +372,7 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
       deals,
       recentAccepted,
       recentPaid,
+      crmTasksRes,
     ] = await Promise.all([
       supabase
         .from("offertes")
@@ -431,6 +432,15 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
         .not("paid_at", "is", null)
         .order("paid_at", { ascending: false })
         .limit(3),
+      supabase
+        .from("tasks")
+        .select("id, title, status, priority, due_at, assigned_to_user_id")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .neq("status", "completed")
+        .neq("status", "cancelled")
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .limit(12),
     ]);
 
     const overdueFacturen = openFacturen.filter(
@@ -543,6 +553,38 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
           label: "Lead",
         });
       }
+    }
+
+    const crmTasks = (crmTasksRes.data ?? []) as {
+      id: number;
+      title: string;
+      status: string;
+      priority: string;
+      due_at: string | null;
+    }[];
+    for (const t of crmTasks) {
+      const overdue =
+        t.due_at != null &&
+        Date.parse(t.due_at) < Date.now() &&
+        t.status !== "completed";
+      const item: MissionTask = {
+        id: `crm-task-${t.id}`,
+        title: t.title,
+        detail: t.due_at
+          ? `Deadline ${shortDateFmt.format(new Date(t.due_at))} · ${t.status}`
+          : `Status ${t.status}`,
+        kind: "opvolging",
+        href: `/dashboard/taken/${t.id}`,
+        priority:
+          t.priority === "urgent" || overdue
+            ? "high"
+            : t.priority === "high"
+              ? "medium"
+              : "low",
+        label: overdue ? "Achterstallig" : t.priority,
+      };
+      if (overdue || t.priority === "urgent") important.unshift(item);
+      else tasks.unshift(item);
     }
 
     if (offertesCount === 0 && klantenCount > 0) {

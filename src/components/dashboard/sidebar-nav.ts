@@ -3,6 +3,7 @@ import {
   Bot,
   BrainCircuit,
   CalendarDays,
+  CheckSquare,
   Contact,
   Crosshair,
   FileText,
@@ -93,6 +94,11 @@ const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
         label: "Agenda",
         href: "/dashboard/agenda",
         icon: CalendarDays,
+      },
+      {
+        label: "Taken",
+        href: "/dashboard/taken",
+        icon: CheckSquare,
       },
       {
         label: "Facturen",

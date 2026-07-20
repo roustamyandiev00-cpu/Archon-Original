@@ -319,9 +319,23 @@ export default function CommandCenterView({
                 detail="Alles afgehandeld of nog niets aangemaakt."
               />
             )}
-            <PrimaryButton href="/dashboard/leads" className="mt-3">
-              Leads bekijken
+            <PrimaryButton href="/dashboard/taken" className="mt-3">
+              Taken openen
             </PrimaryButton>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Link
+                href="/dashboard/taken"
+                className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-zinc-300 hover:bg-white/5"
+              >
+                Nieuwe taak
+              </Link>
+              <Link
+                href="/dashboard/taken?overdue=1"
+                className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-zinc-300 hover:bg-white/5"
+              >
+                Achterstallig
+              </Link>
+            </div>
           </DashboardPanel>
 
           <DashboardPanel title="Cashflow" icon={Wallet}>

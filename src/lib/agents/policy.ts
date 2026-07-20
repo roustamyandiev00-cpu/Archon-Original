@@ -126,6 +126,22 @@ const POLICIES: Record<
     cooldownHours: 0,
     reversibility: "partial",
   },
+  "Nova:propose_create_task": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "low",
+    allowedChannels: ["internal"],
+    cooldownHours: 0,
+    reversibility: "full",
+  },
+  "Lima:propose_invoice_followup_task": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "low",
+    allowedChannels: ["internal"],
+    cooldownHours: 24,
+    reversibility: "full",
+  },
 };
 
 function policyKey(agentId: AgentId, actionType: string): string {
