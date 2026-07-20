@@ -4,6 +4,12 @@ import { grantAiCreditsAfterPayment } from "@/lib/ai/grant-credits";
 import { getStripe } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/service";
 import { untyped } from "@/lib/integraties";
+import {
+  claimStripeWebhookEvent,
+  completeStripeWebhookEvent,
+  failStripeWebhookEvent,
+  hashStripePayload,
+} from "@/lib/stripe/webhook-events";
 
 export const runtime = "nodejs";
 
@@ -88,9 +94,34 @@ export async function POST(request: Request) {
   try {
     event = getStripe().webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (err) {
+    // Invalid signature: do NOT register in stripe_webhook_events.
     const message = err instanceof Error ? err.message : "Invalid signature";
     return NextResponse.json({ error: message }, { status: 400 });
   }
+
+  const supabase = createServiceClient();
+  const payloadHash = hashStripePayload(rawBody);
+  const claim = await claimStripeWebhookEvent(supabase, {
+    stripeEventId: event.id,
+    eventType: event.type,
+    livemode: Boolean(event.livemode),
+    payloadHash,
+  });
+
+  if (claim.outcome === "error") {
+    console.error("stripe webhook claim:", claim.error);
+    return NextResponse.json({ error: claim.error }, { status: 500 });
+  }
+
+  if (claim.outcome === "duplicate") {
+    return NextResponse.json({
+      received: true,
+      duplicate: true,
+      status: claim.status,
+    });
+  }
+
+  const rowId = claim.rowId;
 
   try {
     if (event.type === "checkout.session.completed") {
@@ -98,14 +129,17 @@ export async function POST(request: Request) {
       if (session.payment_status === "paid" || session.status === "complete") {
         const result = await fulfillCheckoutSession(session);
         if ("error" in result && result.error) {
+          await failStripeWebhookEvent(supabase, rowId, result.error);
           return NextResponse.json({ error: result.error }, { status: 500 });
         }
       }
     }
 
+    await completeStripeWebhookEvent(supabase, rowId, "processed");
     return NextResponse.json({ received: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Webhook handler failed";
+    await failStripeWebhookEvent(supabase, rowId, message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
