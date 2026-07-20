@@ -4,6 +4,7 @@ import { getCompanyContext } from "@/lib/company";
 import { lineTotals } from "@/lib/offertes";
 import { factuurStatusMeta, documentTypeMeta } from "@/lib/facturen";
 import FactuurDetailView from "@/components/dashboard/facturen/FactuurDetailView";
+import RelatedTasksPanel from "@/components/dashboard/taken/RelatedTasksPanel";
 import type {
   FactuurActivityItem,
   FactuurPaymentRow,
@@ -208,35 +209,41 @@ export default async function FactuurDetailPage({
     "Onbekende klant";
 
   return (
-    <FactuurDetailView
-      factuur={factuur}
-      lines={lines}
-      totals={totals}
-      meta={meta}
-      typeMeta={typeMeta}
-      customerLabel={customerLabel}
-      customerDetails={
-        customer
-          ? {
-              email: customer.email,
-              phone: customer.phone,
-              address: customer.address,
-              btw: customer.btw,
-            }
-          : null
-      }
-      isProforma={isProforma}
-      isPaid={isPaid}
-      paidAmount={paidAmount}
-      openAmount={isPaid ? 0 : openAmount}
-      payments={payments}
-      activity={activity}
-      peppolConnected={peppolConnected}
-      peppolCanSend={peppolCanSend}
-      currentTemplate={factuur.template_id ?? ""}
-      defaultTemplate={bedrijf?.default_invoice_template ?? ""}
-      docValues={docValues}
-      docRows={docRows}
-    />
+    <div className="space-y-4">
+      <FactuurDetailView
+        factuur={factuur}
+        lines={lines}
+        totals={totals}
+        meta={meta}
+        typeMeta={typeMeta}
+        customerLabel={customerLabel}
+        customerDetails={
+          customer
+            ? {
+                email: customer.email,
+                phone: customer.phone,
+                address: customer.address,
+                btw: customer.btw,
+              }
+            : null
+        }
+        isProforma={isProforma}
+        isPaid={isPaid}
+        paidAmount={paidAmount}
+        openAmount={isPaid ? 0 : openAmount}
+        payments={payments}
+        activity={activity}
+        peppolConnected={peppolConnected}
+        peppolCanSend={peppolCanSend}
+        currentTemplate={factuur.template_id ?? ""}
+        defaultTemplate={bedrijf?.default_invoice_template ?? ""}
+        docValues={docValues}
+        docRows={docRows}
+      />
+      <RelatedTasksPanel
+        filter={{ factuurId }}
+        createHref={`/dashboard/taken?factuurId=${factuurId}`}
+      />
+    </div>
   );
 }

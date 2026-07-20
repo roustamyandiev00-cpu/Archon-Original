@@ -9,6 +9,7 @@ import {
   type AgentCapability,
   type CustomAgent,
 } from "@/components/dashboard/agents/config";
+import { untyped } from "@/lib/integraties";
 
 /** Actieve pipeline-stadia — alles behalve gesloten deals. */
 const OPEN_STADIA = STADIA.filter(
@@ -455,6 +456,60 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
         priority: "high",
         label: "Urgent",
       });
+    }
+
+    // Echte CRM-taken (soft-delete aware). Fail open als migratie nog niet live is.
+    try {
+      const { data: crmTasks } = await untyped(supabase)
+        .from("tasks")
+        .select(
+          "id, title, status, priority, due_at, assigned_to_user_id, ai_generated",
+        )
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .not("status", "in", '("completed","cancelled")')
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .limit(20);
+
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      const nowIso = new Date().toISOString();
+
+      for (const t of crmTasks ?? []) {
+        const due = t.due_at as string | null;
+        const overdue = Boolean(due && due < nowIso);
+        const dueToday = Boolean(
+          due && due <= endOfToday.toISOString() && !overdue,
+        );
+        const priority =
+          t.priority === "urgent" || t.priority === "high" || overdue
+            ? "high"
+            : t.priority === "low"
+              ? "low"
+              : "medium";
+        const item: MissionTask = {
+          id: `crm-task-${t.id}`,
+          title: t.title,
+          detail: overdue
+            ? "Achterstallig"
+            : dueToday
+              ? "Deadline vandaag"
+              : due
+                ? `Deadline ${shortDateFmt.format(new Date(due))}`
+                : t.status,
+          kind: "opvolging",
+          href: `/dashboard/taken/${t.id}`,
+          priority,
+          label: overdue ? "Achterstallig" : dueToday ? "Vandaag" : "Taak",
+        };
+        if (overdue || t.priority === "urgent") important.unshift(item);
+        else tasks.unshift(item);
+      }
+    } catch (error) {
+      console.error(
+        "CRM tasks mission load:",
+        error instanceof Error ? error.message : "onbekend",
+      );
     }
 
     for (const o of followUpOffertes.data ?? []) {

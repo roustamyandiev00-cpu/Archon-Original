@@ -309,7 +309,7 @@ export default function CommandCenterView({
             title="Mijn Taken"
             icon={Clock}
             action={
-              <IconActionButton href="/dashboard/leads" label="Taak toevoegen">
+              <IconActionButton href="/dashboard/taken" label="Taak toevoegen">
                 <Plus size={16} />
               </IconActionButton>
             }
@@ -339,7 +339,7 @@ export default function CommandCenterView({
                 detail="Alles afgehandeld of nog niets aangemaakt."
               />
             )}
-            <PrimaryButton href="/dashboard/leads" className="mt-3">
+            <PrimaryButton href="/dashboard/taken" className="mt-3">
               Taak toevoegen
             </PrimaryButton>
           </DashboardPanel>

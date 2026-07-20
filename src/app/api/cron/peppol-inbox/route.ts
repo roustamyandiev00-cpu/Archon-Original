@@ -2,20 +2,17 @@ import { NextResponse } from "next/server";
 import { untyped } from "@/lib/integraties";
 import { syncBillitPeppolInbox } from "@/lib/peppol/inbox";
 import { createClient } from "@supabase/supabase-js";
+import {
+  authorizeCronRequest,
+  unauthorizedCronResponse,
+} from "@/lib/cron/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function isAuthorized(req: Request) {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
-  const auth = req.headers.get("authorization");
-  return auth === `Bearer ${secret}`;
-}
-
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!authorizeCronRequest(req)) {
+    return unauthorizedCronResponse();
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

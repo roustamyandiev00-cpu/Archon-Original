@@ -22,6 +22,7 @@ import {
   Users,
   Wallet,
   Zap,
+  CheckSquare,
   type LucideIcon,
 } from "lucide-react";
 
@@ -99,6 +100,11 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         label: "Agenda",
         href: "/dashboard/agenda",
         icon: CalendarDays,
+      },
+      {
+        label: "Taken",
+        href: "/dashboard/taken",
+        icon: CheckSquare,
       },
       {
         label: "Prijslijst",
