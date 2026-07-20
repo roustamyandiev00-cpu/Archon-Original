@@ -1,11 +1,13 @@
 import {
   Gauge,
   FileText,
+  FolderKanban,
   Receipt,
   Contact,
   Users,
   Zap,
   HardHat,
+  Handshake,
   Settings,
   Bot,
   CalendarDays,
@@ -14,9 +16,14 @@ import {
   ScrollText,
   Wallet,
   Shield,
-  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
+
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  bouwnetwerkSidebarHint,
+  isBouwnetwerkUnlocked,
+} from "@/lib/bouwnetwerk-gate";
 
 export type MobileTab = {
   id: string;
@@ -44,7 +51,9 @@ export const MOBILE_SWIPE_TABS: MobileTab[] = [
     label: "Offertes",
     href: "/dashboard/offertes",
     icon: FileText,
-    match: (pathname) => pathname.startsWith("/dashboard/offertes"),
+    match: (pathname) =>
+      pathname.startsWith("/dashboard/offertes") &&
+      !pathname.startsWith("/dashboard/offertes/projecten"),
   },
   {
     id: "facturen",
@@ -76,32 +85,79 @@ export const MOBILE_SWIPE_TABS: MobileTab[] = [
   },
 ];
 
+const MOBILE_PRIMARY_TAB_IDS = new Set(["home", "contacten", "offertes", "facturen"]);
+
+/** Vaste hoofdnavigatie: maximaal vier routes, aangevuld met AI-chat en Meer. */
+export const MOBILE_PRIMARY_TABS = MOBILE_SWIPE_TABS.filter((tab) =>
+  MOBILE_PRIMARY_TAB_IDS.has(tab.id),
+);
+
 export type MoreLink = {
   label: string;
   href: string;
   icon: LucideIcon;
   available?: boolean;
   tag?: string;
+  /** Oranje/rood label voor modules die nog niet live zijn. */
+  labelTone?: "default" | "warning" | "danger";
+  hint?: string;
 };
 
-export const MOBILE_MORE_LINKS: MoreLink[] = [
-  { label: "BouwNetwerk", href: "/dashboard/werkposts", icon: HardHat },
-  {
-    label: "E-Facturen",
-    href: "/dashboard/e-facturen",
-    icon: ScrollText,
-    tag: "Beta",
-  },
-  { label: "Boekhouding", href: "/dashboard/boekhouding", icon: Wallet },
-  { label: "Agenda", href: "/dashboard/agenda", icon: CalendarDays },
-  { label: "Prijslijst", href: "/dashboard/prijslijst", icon: Tags },
-  { label: "AI Assistent", href: "/dashboard/command-center?view=crew", icon: Bot },
-  { label: "Activiteiten", href: "/dashboard/activiteit", icon: List },
-  { label: "Team", href: "/dashboard/team", icon: Users },
-  { label: "Audit", href: "/dashboard/audit", icon: Shield },
-  { label: "Telegram", href: "/dashboard/telegram", icon: MessageCircle },
-  { label: "Instellingen", href: "/dashboard/instellingen", icon: Settings },
-];
+function bouwnetwerkMoreMeta(
+  registeredUsers: number,
+): Pick<MoreLink, "labelTone" | "tag" | "available" | "hint"> {
+  if (isBouwnetwerkUnlocked(registeredUsers)) {
+    return { labelTone: "default", available: true };
+  }
+  return {
+    labelTone: "warning",
+    tag: "WIP",
+    available: false,
+    hint: bouwnetwerkSidebarHint(BOUWNETWERK_REQUIRED_USERS),
+  };
+}
+
+export function getMobileMoreLinks(registeredUsers: number): MoreLink[] {
+  const meta = bouwnetwerkMoreMeta(registeredUsers);
+  return [
+    { label: "Projecten", href: "/dashboard/offertes/projecten", icon: FolderKanban },
+    { label: "Leads / CRM", href: "/dashboard/leads", icon: Contact },
+    { label: "Agenda", href: "/dashboard/agenda", icon: CalendarDays },
+    { label: "Prijslijst", href: "/dashboard/prijslijst", icon: Tags },
+    { label: "Boekhouding", href: "/dashboard/boekhouding", icon: Wallet },
+    {
+      label: "Automatisaties",
+      href: "/dashboard/automatisaties",
+      icon: Zap,
+    },
+    { label: "AI Assistent", href: "/dashboard/command-center?view=crew", icon: Bot },
+    {
+      label: "BouwNetwerk",
+      href: "/dashboard/werkposts",
+      icon: HardHat,
+      ...meta,
+    },
+    {
+      label: "Samenwerkingen",
+      href: "/dashboard/werkposts/samenwerkingen",
+      icon: Handshake,
+      ...meta,
+    },
+    {
+      label: "E-Facturen",
+      href: "/dashboard/e-facturen",
+      icon: ScrollText,
+      tag: "Beta",
+    },
+    { label: "Activiteiten", href: "/dashboard/activiteit", icon: List },
+    { label: "Team", href: "/dashboard/team", icon: Users },
+    { label: "Audit", href: "/dashboard/audit", icon: Shield },
+    { label: "Instellingen", href: "/dashboard/instellingen", icon: Settings },
+  ];
+}
+
+/** @deprecated gebruik getMobileMoreLinks(registeredUsers) */
+export const MOBILE_MORE_LINKS: MoreLink[] = getMobileMoreLinks(0);
 
 export function getMobileSwipeTabIndex(pathname: string): number {
   return MOBILE_SWIPE_TABS.findIndex((tab) => tab.match(pathname));
@@ -122,14 +178,8 @@ export function getMobileDetailParent(pathname: string): string | null {
 }
 
 export function getActiveMobileTabId(pathname: string): string {
-  const swipeTab = MOBILE_SWIPE_TABS.find((tab) => tab.match(pathname));
-  if (swipeTab) return swipeTab.id;
-
-  const onMorePage = MOBILE_MORE_LINKS.some(
-    (link) =>
-      pathname === link.href || pathname.startsWith(`${link.href}/`),
-  );
-  if (onMorePage) return "more";
+  const primaryTab = MOBILE_PRIMARY_TABS.find((tab) => tab.match(pathname));
+  if (primaryTab) return primaryTab.id;
 
   return "more";
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
@@ -67,9 +66,9 @@ import { useDashboardTheme } from "@/components/dashboard/DashboardThemeProvider
 import { Globe, Type, Moon, Sun } from "lucide-react";
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
-const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
-const hintClass = "mt-1 text-xs text-zinc-500";
+  "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-1.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
+const labelClass = "mb-1 block text-sm font-medium text-zinc-200";
+const hintClass = "mt-1 text-[11px] text-zinc-500";
 
 type Section = "bedrijf" | "documenten" | "ai" | "import" | "api" | "integraties" | "weergave";
 
@@ -119,13 +118,13 @@ function SectionHeader({
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-3 border-b border-white/10 pb-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
+    <div className="flex items-start gap-2 border-b border-white/10 pb-2">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
         {icon}
       </span>
       <div>
-        <h2 className="text-base font-semibold text-zinc-100">{title}</h2>
-        <p className="mt-0.5 text-sm text-zinc-500">{description}</p>
+        <h2 className="text-sm font-semibold text-zinc-100">{title}</h2>
+        <p className="mt-0.5 text-xs text-zinc-500">{description}</p>
       </div>
     </div>
   );
@@ -314,6 +313,11 @@ function LogoField({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+
+  useEffect(() => {
+    setPreviewFailed(false);
+  }, [value]);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -344,31 +348,27 @@ function LogoField({
     onChange("");
   }
 
-  return (
-    <div className="sm:col-span-2">
-      <label className={labelClass}>Bedrijfslogo</label>
-      <p className={hintClass}>
-        Verschijnt op offertes en facturen. PNG, JPG, WebP, SVG of GIF — max. 2
-        MB.
-      </p>
+  const showPreview = Boolean(value) && !previewFailed;
 
-      <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start">
-        <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/70">
-          {value ? (
-            <Image
+  return (
+    <div className="w-full">
+      <label className={labelClass}>Bedrijfslogo</label>
+      <div className="flex items-start gap-3 mt-1.5">
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-zinc-900/70">
+          {showPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element -- storage/externe URL zonder image-optimizer
+            <img
               src={value}
               alt="Bedrijfslogo"
-              width={112}
-              height={112}
-              unoptimized
-              className="h-full w-full object-contain p-2"
+              className="h-full w-full max-h-full max-w-full object-contain p-1"
+              onError={() => setPreviewFailed(true)}
             />
           ) : (
-            <ImageIcon size={28} className="text-zinc-600" />
+            <ImageIcon size={20} className="text-zinc-600" />
           )}
         </div>
 
-        <div className="min-w-0 flex-1 space-y-3">
+        <div className="min-w-0 flex-1 space-y-2">
           <input
             ref={fileRef}
             type="file"
@@ -381,15 +381,15 @@ function LogoField({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
             >
               {uploading ? (
                 <>
-                  <Loader2 size={13} className="animate-spin" /> Uploaden…
+                  <Loader2 size={11} className="animate-spin" /> Uploaden…
                 </>
               ) : (
                 <>
-                  <Upload size={13} /> Logo uploaden
+                  <Upload size={11} /> Logo uploaden
                 </>
               )}
             </button>
@@ -398,26 +398,26 @@ function LogoField({
                 type="button"
                 onClick={handleRemove}
                 disabled={uploading}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-60"
+                className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-zinc-400 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-60"
               >
-                <X size={13} /> Verwijderen
+                <X size={11} /> Verwijderen
               </button>
             )}
           </div>
 
-          <Field
-            label="Of plak een logo-URL"
-            hint="Handig als je logo al online staat."
-          >
-            <input
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder="https://..."
-              className={inputClass}
-            />
-          </Field>
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Of plak logo-URL..."
+            className="w-full rounded-lg border border-white/10 bg-zinc-900/70 px-2 py-1 text-xs text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 focus:border-sky-500/60"
+          />
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {previewFailed && value ? (
+            <p className="mt-1 text-[10px] text-amber-300">
+              Logo-URL laadt niet. Controleer de link of upload opnieuw.
+            </p>
+          ) : null}
+          {error && <p className="mt-1 text-[10px] text-rose-400">{error}</p>}
         </div>
       </div>
     </div>
@@ -458,14 +458,8 @@ export default function SettingsForm({
   const { theme, toggleTheme } = useDashboardTheme();
 
   // Weergave (taal + lettertype) — geladen uit localStorage
-  const [selectedLanguage, setSelectedLanguageState] = useState<AppLanguage>("nl");
-  const [selectedFont, setSelectedFontState] = useState<AppFont>("inter");
-
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    setSelectedLanguageState(readLanguage());
-    setSelectedFontState(readFont());
-  }, []);
+  const [selectedLanguage, setSelectedLanguageState] = useState<AppLanguage>(() => readLanguage());
+  const [selectedFont, setSelectedFontState] = useState<AppFont>(() => readFont());
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -484,6 +478,7 @@ export default function SettingsForm({
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
     if (isSection(requestedTab)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTab(requestedTab);
     } else if (connectedParam || integrationError) {
       setTab(INTEGRATIES_SETTINGS_TAB);
@@ -591,15 +586,15 @@ export default function SettingsForm({
         ))}
       </div>
 
-      <GlowCard subtle innerClassName="p-4 sm:p-6">
+      <GlowCard subtle innerClassName="p-3 sm:p-4">
         {tab === "bedrijf" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <SectionHeader
               icon={<Building2 size={18} />}
               title="Bedrijfsgegevens"
               description="De basisgegevens van je bedrijf. Deze worden gebruikt op je documenten en door de AI-agent."
             />
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/40 px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/40 px-3 py-1.5">
               <span className="text-xs font-medium text-zinc-500">
                 Verificatiestatus
               </span>
@@ -627,17 +622,15 @@ export default function SettingsForm({
                 Alleen ter informatie — nog geen actie vereist.
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Field label="Bedrijfsnaam">
-                  <input
-                    value={form.naam}
-                    onChange={(e) => set("naam", e.target.value)}
-                    placeholder="bijv. Bouwbedrijf Janssen"
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
+            <div className="grid gap-x-4 gap-y-3 grid-cols-1 md:grid-cols-3">
+              <Field label="Bedrijfsnaam">
+                <input
+                  value={form.naam}
+                  onChange={(e) => set("naam", e.target.value)}
+                  placeholder="bijv. Bouwbedrijf Janssen"
+                  className={inputClass}
+                />
+              </Field>
               <Field label="E-mail">
                 <input
                   type="email"
@@ -655,7 +648,7 @@ export default function SettingsForm({
                   className={inputClass}
                 />
               </Field>
-              <div className="sm:col-span-2">
+              <div className="md:col-span-2 sm:col-span-2">
                 <Field label="Adres">
                   <input
                     value={form.adres}
@@ -694,7 +687,7 @@ export default function SettingsForm({
                   className={inputClass}
                 />
               </Field>
-              <Field label="IBAN" hint="Wordt getoond op facturen voor betaling.">
+              <Field label="IBAN" hint="Getoond op facturen voor betaling.">
                 <input
                   value={form.iban}
                   onChange={(e) => set("iban", e.target.value)}
@@ -704,7 +697,7 @@ export default function SettingsForm({
               </Field>
               <Field
                 label="Peppol-identificatie"
-                hint="Verplicht voor e-facturatie. Gebruik 0208:KBO-nummer of 9925:BE0xxx (BTW)."
+                hint="KBO-nummer of BTW (9925:BE0xxx)."
               >
                 <input
                   value={form.peppol_participant_id}
@@ -713,10 +706,12 @@ export default function SettingsForm({
                   className={inputClass}
                 />
               </Field>
-              <LogoField
-                value={form.logo_url}
-                onChange={(v) => set("logo_url", v)}
-              />
+              <div className="md:col-span-1 sm:col-span-2">
+                <LogoField
+                  value={form.logo_url}
+                  onChange={(v) => set("logo_url", v)}
+                />
+              </div>
             </div>
           </div>
         )}

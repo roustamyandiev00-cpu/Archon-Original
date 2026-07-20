@@ -42,22 +42,36 @@ function formatBytes(n: number | null | undefined) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function safeUploadError(message: string) {
+  const expectedMessages = [
+    "Selecteer minstens één bestand.",
+    "Maximaal ",
+    " is groter dan 15 MB.",
+    ": dit bestandstype is niet toegelaten",
+  ];
+  return expectedMessages.some((part) => message.includes(part))
+    ? message
+    : "Uploaden mislukt. Controleer het bestand en probeer opnieuw.";
+}
+
 export default function ProjectBestandenPanel({
   projectId,
   customerId,
   offerteId,
   initialBestanden,
+  initialError,
   readOnly,
 }: {
   projectId: string;
   customerId?: number | null;
   offerteId?: number | null;
   initialBestanden: ProjectBestandRow[];
+  initialError?: string | null;
   readOnly?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [bestanden, setBestanden] = useState(initialBestanden);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
   const [pending, startTransition] = useTransition();
 
   const fotos = bestanden.filter(
@@ -87,7 +101,7 @@ export default function ProjectBestandenPanel({
         formData: fd,
       });
       if ("error" in result && result.error) {
-        setError(result.error);
+        setError(safeUploadError(result.error));
         return;
       }
       // Refresh via soft reload of list
@@ -106,7 +120,7 @@ export default function ProjectBestandenPanel({
     startTransition(async () => {
       const result = await deleteProjectBestand(id);
       if ("error" in result && result.error) {
-        setError(result.error);
+        setError("Verwijderen mislukt. Probeer het opnieuw.");
         return;
       }
       setBestanden((prev) => prev.filter((b) => b.id !== id));
@@ -126,13 +140,20 @@ export default function ProjectBestandenPanel({
           </p>
         </div>
         {!readOnly && (
-          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-white/10">
-            {pending ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              <Upload size={13} />
-            )}
-            Uploaden
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => inputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {pending ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Upload size={13} />
+              )}
+              Uploaden
+            </button>
             <input
               ref={inputRef}
               type="file"
@@ -141,8 +162,9 @@ export default function ProjectBestandenPanel({
               className="hidden"
               onChange={onPick}
               disabled={pending}
+              aria-label="Projectbestanden kiezen"
             />
-          </label>
+          </>
         )}
       </div>
 
@@ -183,8 +205,9 @@ export default function ProjectBestandenPanel({
                   <button
                     type="button"
                     onClick={() => remove(f.id)}
-                    className="absolute right-0.5 top-0.5 grid h-5 w-5 place-items-center rounded bg-black/70 text-zinc-300 opacity-0 transition group-hover:opacity-100 hover:text-rose-300"
-                    aria-label="Verwijderen"
+                    disabled={pending}
+                    className="absolute right-0.5 top-0.5 grid h-7 w-7 place-items-center rounded bg-black/70 text-zinc-300 opacity-0 transition group-hover:opacity-100 hover:text-rose-300 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={`${f.original_name} verwijderen`}
                   >
                     <Trash2 size={11} />
                   </button>
@@ -239,8 +262,9 @@ export default function ProjectBestandenPanel({
                     <button
                       type="button"
                       onClick={() => remove(d.id)}
-                      className="text-zinc-500 hover:text-rose-300"
-                      aria-label="Verwijderen"
+                      disabled={pending}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-zinc-500 hover:bg-white/5 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label={`${d.original_name} verwijderen`}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -252,7 +276,7 @@ export default function ProjectBestandenPanel({
         </div>
       )}
 
-      {bestanden.length === 0 && (
+      {bestanden.length === 0 && !error && (
         <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
           <span className="mx-auto mb-2 grid h-9 w-9 place-items-center rounded-xl bg-violet-500/10 text-violet-400">
             <Upload size={16} />

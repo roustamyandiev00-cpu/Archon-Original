@@ -21,7 +21,7 @@ export default async function OfferteBewerkenPage({
 
   if (!companyId || Number.isNaN(offerteId)) notFound();
 
-  const { data: offerte } = await supabase
+  const { data: offerte, error: offerteError } = await supabase
     .from("offertes")
     .select(
       "id, nummer, klant, customer_id, datum, geldig_tot, notes, status_new, template_id, project_naam, afmetingen",
@@ -30,6 +30,9 @@ export default async function OfferteBewerkenPage({
     .eq("bedrijf_id", companyId)
     .maybeSingle();
 
+  if (offerteError) {
+    throw new Error("De offerte kon niet worden geladen.");
+  }
   if (!offerte) notFound();
 
   // Vergrendelde (definitief bevestigde) offertes kun je niet bewerken.
@@ -37,11 +40,15 @@ export default async function OfferteBewerkenPage({
     redirect(`/dashboard/offertes/${offerteId}`);
   }
 
-  const { data: lijnen } = await supabase
+  const { data: lijnen, error: lijnenError } = await supabase
     .from("offerte_lijnen")
     .select("omschrijving, aantal, eenheid, prijs_per_eenheid, btw_percentage")
     .eq("offerte_id", offerteId)
+    .eq("company_id", companyId)
     .order("sort_order");
+  if (lijnenError) {
+    throw new Error("De offertelijnen konden niet worden geladen.");
+  }
 
   let customers: {
     id: number;
@@ -55,7 +62,11 @@ export default async function OfferteBewerkenPage({
     btw: string | null;
   }[] = [];
 
-  const [{ data: klantData }, { data: bedrijf }, prijslijstItems] =
+  const [
+    { data: klantData, error: klantenError },
+    { data: bedrijf, error: bedrijfError },
+    prijslijstItems,
+  ] =
     await Promise.all([
       supabase
         .from("customers")
@@ -74,7 +85,28 @@ export default async function OfferteBewerkenPage({
         .maybeSingle(),
       loadActivePrijslijstItems(supabase, companyId),
     ]);
+  if (klantenError || bedrijfError) {
+    throw new Error("De editorgegevens konden niet volledig worden geladen.");
+  }
   customers = klantData ?? [];
+
+  if (
+    offerte.customer_id &&
+    !customers.some((customer) => customer.id === offerte.customer_id)
+  ) {
+    const { data: linkedCustomer, error: linkedCustomerError } = await supabase
+      .from("customers")
+      .select(
+        "id, name, company_name, first_name, last_name, address, email, phone, btw",
+      )
+      .eq("id", offerte.customer_id)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (linkedCustomerError) {
+      throw new Error("De gekoppelde klant kon niet worden geladen.");
+    }
+    if (linkedCustomer) customers = [linkedCustomer, ...customers];
+  }
 
   const documentContext: OfferteDocumentContext = {
     templateId: offerte.template_id ?? undefined,

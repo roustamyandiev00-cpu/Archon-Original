@@ -5,9 +5,11 @@ import { requireWriteAccess } from "@/components/dashboard/context";
 import {
   isOfferteEditable,
   lineTotals,
+  offerteLineHasContent,
   statusMeta,
   type OfferteLijnInput,
   type OfferteStatus,
+  validateOfferteInput,
 } from "@/lib/offertes";
 import { loadCompanyDefaultTemplate } from "@/components/dashboard/documenten/documentTemplate";
 import { ensureProjectFromOfferte } from "@/lib/projecten/ensureFromOfferte";
@@ -30,13 +32,26 @@ export async function createOfferte(input: CreateOfferteInput) {
   if ("error" in access) return { error: access.error };
   const { supabase, user, companyId } = access;
 
-  const cleanLines = input.lines.filter(
-    (l) => l.omschrijving.trim() !== "" || Number(l.prijs_per_eenheid) > 0,
-  );
-  if (cleanLines.length === 0) {
-    return { error: "Voeg minstens één offertelijn toe." };
+  const validationIssue = validateOfferteInput({
+    klant: input.klant,
+    datum: input.datum,
+    geldigTot: input.geldigTot ?? "",
+    lines: input.lines,
+  })[0];
+  if (validationIssue) return { error: validationIssue.message };
+
+  if (input.customerId != null) {
+    const { data: customer, error: customerError } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("id", input.customerId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (customerError) return { error: "De klant kon niet worden gecontroleerd." };
+    if (!customer) return { error: "De gekozen klant behoort niet tot dit bedrijf." };
   }
 
+  const cleanLines = input.lines.filter(offerteLineHasContent);
   const { totaal } = lineTotals(cleanLines);
   const templateId = await loadCompanyDefaultTemplate(supabase, companyId, "quote");
 
@@ -155,13 +170,26 @@ export async function updateOfferte(input: UpdateOfferteInput) {
     };
   }
 
-  const cleanLines = input.lines.filter(
-    (l) => l.omschrijving.trim() !== "" || Number(l.prijs_per_eenheid) > 0,
-  );
-  if (cleanLines.length === 0) {
-    return { error: "Voeg minstens één offertelijn toe." };
+  const validationIssue = validateOfferteInput({
+    klant: input.klant,
+    datum: input.datum,
+    geldigTot: input.geldigTot ?? "",
+    lines: input.lines,
+  })[0];
+  if (validationIssue) return { error: validationIssue.message };
+
+  if (input.customerId != null) {
+    const { data: customer, error: customerError } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("id", input.customerId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (customerError) return { error: "De klant kon niet worden gecontroleerd." };
+    if (!customer) return { error: "De gekozen klant behoort niet tot dit bedrijf." };
   }
 
+  const cleanLines = input.lines.filter(offerteLineHasContent);
   const { totaal } = lineTotals(cleanLines);
 
   const { error: updateError } = await supabase
@@ -185,7 +213,14 @@ export async function updateOfferte(input: UpdateOfferteInput) {
   }
 
   // Vervang de offertelijnen: verwijder de oude en voeg de nieuwe toe.
-  await supabase.from("offerte_lijnen").delete().eq("offerte_id", input.id);
+  const { error: deleteLinesError } = await supabase
+    .from("offerte_lijnen")
+    .delete()
+    .eq("offerte_id", input.id)
+    .eq("company_id", companyId);
+  if (deleteLinesError) {
+    return { error: "De bestaande offertelijnen konden niet worden vervangen." };
+  }
 
   const lijnen = cleanLines.map((l, i) => ({
     offerte_id: input.id,
@@ -277,7 +312,11 @@ export async function deleteOfferte(id: number) {
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
-  await supabase.from("offerte_lijnen").delete().eq("offerte_id", id);
+  await supabase
+    .from("offerte_lijnen")
+    .delete()
+    .eq("offerte_id", id)
+    .eq("company_id", companyId);
   const { error } = await supabase
     .from("offertes")
     .delete()

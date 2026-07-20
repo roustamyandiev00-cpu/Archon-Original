@@ -8,14 +8,17 @@ import {
   Loader2,
   MapPin,
   Plus,
+  RefreshCw,
   Trash2,
   X,
 } from "lucide-react";
 import {
   createAgendaAfspraak,
   deleteAgendaAfspraak,
+  syncGoogleCalendar,
   updateAgendaAfspraakStatus,
 } from "@/app/dashboard/agenda/actions";
+import type { GoogleCalendarConnection } from "@/components/dashboard/agenda/googleCalendar";
 
 export type AgendaAfspraak = {
   id: number;
@@ -67,16 +70,19 @@ function todayLocal() {
 export default function AgendaManager({
   afspraken,
   nowMs,
+  googleCalendar,
 }: {
   afspraken: AgendaAfspraak[];
   /** Stabiele "nu"-timestamp van de serverrender (ms). Vermijdt impure Date.now in render. */
   nowMs: number;
+  googleCalendar?: GoogleCalendarConnection | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [syncing, startSync] = useTransition();
   const [form, setForm] = useState({
     titel: "",
     datum: todayLocal(),
@@ -121,8 +127,28 @@ export default function AgendaManager({
         setError(result.error ?? "Aanmaken mislukt.");
         return;
       }
-      setSuccess("Afspraak toegevoegd.");
+      setSuccess(
+        result.googlePushed
+          ? "Afspraak toegevoegd en naar Google Calendar gestuurd."
+          : "Afspraak toegevoegd.",
+      );
       close();
+      router.refresh();
+    });
+  }
+
+  function runSync() {
+    setError(null);
+    setSuccess(null);
+    startSync(async () => {
+      const result = await syncGoogleCalendar();
+      if ("error" in result) {
+        setError(result.error ?? "Synchroniseren mislukt.");
+        return;
+      }
+      setSuccess(
+        `Google Calendar: ${result.imported} nieuw, ${result.updated} bijgewerkt (${result.total} events).`,
+      );
       router.refresh();
     });
   }
@@ -217,6 +243,45 @@ export default function AgendaManager({
 
   return (
     <div className="space-y-5">
+      {googleCalendar && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-zinc-100">Google Calendar</p>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              {googleCalendar.connected
+                ? `Verbonden${googleCalendar.accountEmail ? ` als ${googleCalendar.accountEmail}` : ""}. Nieuwe afspraken worden ook naar Google gestuurd.`
+                : googleCalendar.platformReady
+                  ? "Nog niet gekoppeld. Verbind je Google-account om te synchroniseren."
+                  : "Platform niet klaar: zet GOOGLE_CALENDAR_CLIENT_ID en SECRET in .env."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {googleCalendar.connected ? (
+              <button
+                type="button"
+                disabled={pending || syncing}
+                onClick={runSync}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:bg-white/5 disabled:opacity-60"
+              >
+                {syncing ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={13} />
+                )}
+                Synchroniseren
+              </button>
+            ) : googleCalendar.platformReady ? (
+              <a
+                href="/dashboard/integraties/google-calendar/authorize"
+                className="inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-3.5 py-2 text-xs font-semibold text-zinc-950 hover:bg-sky-400"
+              >
+                Verbinden met Google
+              </a>
+            ) : null}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-zinc-500">
           {upcoming.length} komende · {past.length} voorbije
@@ -232,7 +297,10 @@ export default function AgendaManager({
       </div>
 
       {error && (
-        <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+        <p
+          role="alert"
+          className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
+        >
           {error}
         </p>
       )}
@@ -254,40 +322,70 @@ export default function AgendaManager({
       </section>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="agenda-form-title"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl"
+          >
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CalendarDays size={18} className="text-sky-400" />
-                <h2 className="text-lg font-semibold text-zinc-100">
+                <h2
+                  id="agenda-form-title"
+                  className="text-lg font-semibold text-zinc-100"
+                >
                   Nieuwe afspraak
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={close}
+                aria-label="Dialoog sluiten"
                 className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-3">
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submit();
+              }}
+            >
               <div>
-                <label className="mb-1.5 block text-sm text-zinc-300">Titel</label>
+                <label
+                  htmlFor="agenda-titel"
+                  className="mb-1.5 block text-sm text-zinc-300"
+                >
+                  Titel
+                </label>
                 <input
+                  id="agenda-titel"
+                  name="titel"
                   className={inputClass}
                   value={form.titel}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, titel: e.target.value }))
                   }
                   placeholder="bv. Werfbezoek Peeters"
+                  required
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1.5 block text-sm text-zinc-300">Datum</label>
+                  <label
+                    htmlFor="agenda-datum"
+                    className="mb-1.5 block text-sm text-zinc-300"
+                  >
+                    Datum
+                  </label>
                   <input
+                    id="agenda-datum"
+                    name="datum"
                     type="date"
                     className={inputClass}
                     value={form.datum}
@@ -297,8 +395,15 @@ export default function AgendaManager({
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm text-zinc-300">Type</label>
+                  <label
+                    htmlFor="agenda-type"
+                    className="mb-1.5 block text-sm text-zinc-300"
+                  >
+                    Type
+                  </label>
                   <select
+                    id="agenda-type"
+                    name="type"
                     className={inputClass}
                     value={form.type}
                     onChange={(e) =>
@@ -314,8 +419,15 @@ export default function AgendaManager({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1.5 block text-sm text-zinc-300">Start</label>
+                  <label
+                    htmlFor="agenda-start"
+                    className="mb-1.5 block text-sm text-zinc-300"
+                  >
+                    Start
+                  </label>
                   <input
+                    id="agenda-start"
+                    name="startTijd"
                     type="time"
                     className={inputClass}
                     value={form.startTijd}
@@ -325,8 +437,15 @@ export default function AgendaManager({
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm text-zinc-300">Einde</label>
+                  <label
+                    htmlFor="agenda-einde"
+                    className="mb-1.5 block text-sm text-zinc-300"
+                  >
+                    Einde
+                  </label>
                   <input
+                    id="agenda-einde"
+                    name="eindTijd"
                     type="time"
                     className={inputClass}
                     value={form.eindTijd}
@@ -337,8 +456,15 @@ export default function AgendaManager({
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm text-zinc-300">Locatie</label>
+                <label
+                  htmlFor="agenda-locatie"
+                  className="mb-1.5 block text-sm text-zinc-300"
+                >
+                  Locatie
+                </label>
                 <input
+                  id="agenda-locatie"
+                  name="locatie"
                   className={inputClass}
                   value={form.locatie}
                   onChange={(e) =>
@@ -348,10 +474,15 @@ export default function AgendaManager({
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm text-zinc-300">
+                <label
+                  htmlFor="agenda-beschrijving"
+                  className="mb-1.5 block text-sm text-zinc-300"
+                >
                   Notitie
                 </label>
                 <textarea
+                  id="agenda-beschrijving"
+                  name="beschrijving"
                   className={`${inputClass} min-h-[80px] resize-y`}
                   value={form.beschrijving}
                   onChange={(e) =>
@@ -360,30 +491,29 @@ export default function AgendaManager({
                   placeholder="Optioneel"
                 />
               </div>
-            </div>
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={close}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:bg-white/5"
-              >
-                Annuleren
-              </button>
-              <button
-                type="button"
-                disabled={pending || !form.titel.trim()}
-                onClick={submit}
-                className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400 disabled:opacity-50"
-              >
-                {pending ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Plus size={16} />
-                )}
-                Opslaan
-              </button>
-            </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={close}
+                  className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:bg-white/5"
+                >
+                  Annuleren
+                </button>
+                <button
+                  type="submit"
+                  disabled={pending || !form.titel.trim()}
+                  className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400 disabled:opacity-50"
+                >
+                  {pending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Plus size={16} />
+                  )}
+                  Opslaan
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

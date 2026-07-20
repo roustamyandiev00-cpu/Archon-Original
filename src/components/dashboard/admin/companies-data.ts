@@ -21,7 +21,7 @@ export type ManagedCompany = {
   aiTokensUsed: number;
   aiCost: number;
   monthlyRevenue: number;
-  storageUsedGb: number;
+  storageUsedGb: number | null;
   lastLogin: string;
   status: CompanyStatus;
   /** Intern risicoveld (§4.4 / §8.1) — alleen admin. */
@@ -58,9 +58,9 @@ export const planLabels: Record<CompanyPlan, string> = {
 };
 
 export const statusLabels: Record<CompanyStatus, string> = {
-  active: "Active",
-  trial: "Trial",
-  suspended: "Suspended",
+  active: "Actief",
+  trial: "Proefperiode",
+  suspended: "Opgeschort",
 };
 
 const companies: ManagedCompany[] = [
@@ -449,32 +449,32 @@ export function getCompaniesStats(companyList: ManagedCompany[]): CompaniesStat[
   return [
     {
       id: "total",
-      label: "Total Companies",
+      label: "Totaal bedrijven",
       value: companyList.length.toLocaleString("nl-BE"),
-      detail: `${formatCurrency(totalMrr)} active MRR under management`,
+      detail: `${formatCurrency(totalMrr)} geschatte actieve pakketwaarde`,
     },
     {
       id: "active",
-      label: "Active Companies",
+      label: "Actieve bedrijven",
       value: active.length.toLocaleString("nl-BE"),
       detail: `${formatTokens(
         active.reduce((sum, company) => sum + company.aiTokensUsed, 0),
-      )} tokens this month`,
+      )} tokens deze maand`,
     },
     {
       id: "trial",
-      label: "Trial Companies",
+      label: "Bedrijven in proefperiode",
       value: trial.length.toLocaleString("nl-BE"),
-      detail: `${formatCurrency(trialPotential)} conversion pipeline`,
+      detail: `${formatCurrency(trialPotential)} geschatte pakketwaarde`,
     },
     {
       id: "suspended",
-      label: "Suspended Companies",
+      label: "Opgeschorte bedrijven",
       value: suspended.length.toLocaleString("nl-BE"),
       detail: `${suspended.reduce(
         (sum, company) => sum + company.activeUsers,
         0,
-      )} users currently locked`,
+      )} gebruikers momenteel geblokkeerd`,
     },
   ];
 }

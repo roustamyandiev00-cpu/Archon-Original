@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { getTokenResponse } from "@vercel/connect";
-import { getCompanyContext } from "@/lib/company";
+import { requireAdminAccess } from "@/components/dashboard/context";
 import { untyped, integratiesSettingsUrl } from "@/lib/integraties";
 import { slackTokenParams } from "@/components/dashboard/integraties/slackConnect";
 import { resolveSlackConnectorForCompany } from "@/components/dashboard/integraties/slackSetup";
@@ -25,7 +25,12 @@ export async function GET(req: NextRequest) {
   cookieStore.delete(COOKIE);
 
   const expectedCompanyId = companyIdRaw ? Number(companyIdRaw) : NaN;
-  const { supabase, companyId } = await getCompanyContext();
+  const access = await requireAdminAccess();
+  if ("error" in access) {
+    dashboard.searchParams.set("error", access.error);
+    return NextResponse.redirect(dashboard);
+  }
+  const { supabase, companyId } = access;
 
   if (!companyId || !Number.isFinite(expectedCompanyId) || companyId !== expectedCompanyId) {
     dashboard.searchParams.set("error", "Slack-koppeling verlopen. Probeer opnieuw.");

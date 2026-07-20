@@ -60,6 +60,7 @@ export async function updateSettings(input: SettingsInput) {
     incasso: {
       deurwaarderEmail: input.incasso.deurwaarderEmail.trim(),
     },
+    email: oldExtras.email,
   };
 
   const patch = {
@@ -334,7 +335,7 @@ export async function clearLogo() {
  * Legacy entrypoint — gebruik createAiTokenCheckoutSession (Stripe Checkout).
  * Directe toekenning zonder betaling blijft geblokkeerd.
  */
-export async function buyAiTokens(_amount: number) {
+export async function buyAiTokens() {
   return {
     error:
       "Gebruik ‘Betaal met Stripe’ bij een tokenpakket. Tokens worden alleen na een bevestigde betaling bijgeschreven.",

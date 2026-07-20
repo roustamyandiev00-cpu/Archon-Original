@@ -24,6 +24,7 @@ export default function ModuleWipBanner({
   useEffect(() => {
     try {
       const dismissed = window.localStorage.getItem(storageKey(moduleId));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(dismissed !== "1");
     } catch {
       setVisible(true);

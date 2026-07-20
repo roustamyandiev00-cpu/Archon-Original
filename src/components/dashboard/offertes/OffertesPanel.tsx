@@ -38,7 +38,7 @@ export default function OffertesPanel({
   ).length;
 
   return (
-    <Card className="dashboard-data-panel flex h-full min-h-0 flex-col overflow-hidden border-white/10 bg-zinc-950/50">
+    <Card className="dashboard-data-panel flex h-auto min-h-0 flex-col overflow-visible border-white/10 bg-zinc-950/50 lg:!flex-none lg:!overflow-visible">
       <CardHeader className="dashboard-data-panel-header gap-3 border-white/10 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-0.5">
           <CardTitle className="text-base font-semibold text-zinc-50">
@@ -63,7 +63,7 @@ export default function OffertesPanel({
         />
       </CardHeader>
 
-      <CardContent className="dashboard-data-panel-body flex min-h-0 flex-1 flex-col">
+      <CardContent className="dashboard-data-panel-body flex min-h-0 flex-col lg:!flex-none lg:!overflow-visible">
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Badge variant="info">
             {offertes.length.toLocaleString("nl-BE")} offertes
@@ -77,7 +77,7 @@ export default function OffertesPanel({
           {isDemo && <Badge variant="warning">Demo</Badge>}
         </div>
 
-        <div className="dashboard-table-area">
+        <div className="dashboard-table-area lg:!flex-none lg:!overflow-visible">
           <OffertesDataTable
             offertes={offertes}
             isDemo={isDemo}

@@ -5,15 +5,10 @@ import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  Ban,
-  Bot,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
   ExternalLink,
   MoreHorizontal,
-  Pencil,
   RotateCcw,
   Search,
   SlidersHorizontal,
@@ -148,16 +143,16 @@ export default function CompaniesDataTable({
     <Card className="overflow-hidden">
       <CardHeader className="gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <CardTitle>Companies</CardTitle>
+          <CardTitle>Bedrijven</CardTitle>
           <CardDescription>
-            Search, filter, sort, and manage all customer companies.
+            Zoek, filter en open de dossiers van alle klantbedrijven.
           </CardDescription>
         </div>
         <div className="flex items-center gap-2 text-xs text-zinc-500">
           <SlidersHorizontal size={14} />
           <span>
-            {filteredCompanies.length.toLocaleString("nl-BE")} of{" "}
-            {companies.length.toLocaleString("nl-BE")} companies
+            {filteredCompanies.length.toLocaleString("nl-BE")} van{" "}
+            {companies.length.toLocaleString("nl-BE")} bedrijven
           </span>
         </div>
       </CardHeader>
@@ -165,7 +160,7 @@ export default function CompaniesDataTable({
       <CardContent className="space-y-4">
         <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_12rem_12rem_auto]">
           <label className="relative block">
-            <span className="sr-only">Search companies</span>
+            <span className="sr-only">Bedrijven zoeken</span>
             <Search
               size={16}
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
@@ -176,13 +171,13 @@ export default function CompaniesDataTable({
                 setQuery(event.target.value);
                 setPage(1);
               }}
-              placeholder="Search companies, owners, domains..."
+              placeholder="Zoek op bedrijf, eigenaar of domein..."
               className="pl-9"
             />
           </label>
 
           <label>
-            <span className="sr-only">Filter by plan</span>
+            <span className="sr-only">Filter op abonnement</span>
             <Select
               value={planFilter}
               onChange={(event) => {
@@ -190,7 +185,7 @@ export default function CompaniesDataTable({
                 setPage(1);
               }}
             >
-              <option value="all">All plans</option>
+              <option value="all">Alle abonnementen</option>
               {companyPlanOptions.map((plan) => (
                 <option key={plan} value={plan}>
                   {planLabels[plan]}
@@ -200,7 +195,7 @@ export default function CompaniesDataTable({
           </label>
 
           <label>
-            <span className="sr-only">Filter by status</span>
+            <span className="sr-only">Filter op status</span>
             <Select
               value={statusFilter}
               onChange={(event) => {
@@ -208,7 +203,7 @@ export default function CompaniesDataTable({
                 setPage(1);
               }}
             >
-              <option value="all">All statuses</option>
+              <option value="all">Alle statussen</option>
               {companyStatusOptions.map((status) => (
                 <option key={status} value={status}>
                   {statusLabels[status]}
@@ -224,7 +219,7 @@ export default function CompaniesDataTable({
             className="justify-center"
           >
             <RotateCcw size={15} />
-            Reset
+            Wissen
           </Button>
         </div>
 
@@ -232,20 +227,20 @@ export default function CompaniesDataTable({
           <Table className="min-w-[1320px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="min-w-[260px]">Company Name</TableHead>
-                <TableHead className="min-w-[190px]">Owner</TableHead>
-                <TableHead>Subscription Plan</TableHead>
-                <TableHead className="text-right">Active Users</TableHead>
-                <TableHead className="text-right">AI Tokens Used</TableHead>
-                <TableHead className="text-right">AI Cost</TableHead>
+                <TableHead className="min-w-[260px]">Bedrijf</TableHead>
+                <TableHead className="min-w-[190px]">Eigenaar</TableHead>
+                <TableHead>Abonnement</TableHead>
+                <TableHead className="text-right">Actieve gebruikers</TableHead>
+                <TableHead className="text-right">AI-tokens</TableHead>
+                <TableHead className="text-right">Geregistreerde AI-kosten</TableHead>
                 <TableHead className="text-right">
                   <button
                     type="button"
                     onClick={toggleRevenueSort}
                     className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
-                    aria-label="Sort by monthly revenue"
+                    aria-label="Sorteer op geschatte pakketwaarde"
                   >
-                    Monthly Revenue
+                    Geschatte pakketwaarde
                     {revenueSort === "desc" ? (
                       <ArrowDown size={13} />
                     ) : (
@@ -253,13 +248,13 @@ export default function CompaniesDataTable({
                     )}
                   </button>
                 </TableHead>
-                <TableHead className="text-right">Storage Used</TableHead>
-                <TableHead>Last Login</TableHead>
+                <TableHead className="text-right">Opslaggebruik</TableHead>
+                <TableHead>Laatste activiteit</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Risico</TableHead>
-                <TableHead>Created Date</TableHead>
+                <TableHead>Aangemaakt</TableHead>
                 <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">Acties</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -277,7 +272,7 @@ export default function CompaniesDataTable({
                         </span>
                         <div className="min-w-0">
                           <Link
-                            href={`/dashboard/admin/companies/${company.id}`}
+                            href={`/admin/companies/${company.id}`}
                             className="block truncate font-medium text-zinc-100 transition-colors hover:text-sky-300"
                           >
                             {company.name}
@@ -314,7 +309,9 @@ export default function CompaniesDataTable({
                       {formatCurrency(company.monthlyRevenue)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-zinc-300">
-                      {formatStorage(company.storageUsedGb)}
+                      {company.storageUsedGb === null
+                        ? "Niet gekoppeld"
+                        : formatStorage(company.storageUsedGb)}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-zinc-500">
                       {formatDateTime(company.lastLogin)}
@@ -354,10 +351,10 @@ export default function CompaniesDataTable({
                   <TableCell colSpan={13} className="py-12 text-center">
                     <div className="mx-auto max-w-sm">
                       <p className="text-sm font-medium text-zinc-200">
-                        No companies found
+                        Geen bedrijven gevonden
                       </p>
                       <p className="mt-1 text-xs text-zinc-500">
-                        Adjust search or filters to broaden the company list.
+                        Pas de zoekopdracht of filters aan.
                       </p>
                     </div>
                   </TableCell>
@@ -369,16 +366,16 @@ export default function CompaniesDataTable({
 
         <div className="flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
-            Showing{" "}
+            Toont{" "}
             <span className="font-mono text-zinc-300">
               {filteredCompanies.length === 0 ? 0 : pageStart + 1}
             </span>{" "}
-            to{" "}
-            <span className="font-mono text-zinc-300">{pageEnd}</span> of{" "}
+            tot{" "}
+            <span className="font-mono text-zinc-300">{pageEnd}</span> van{" "}
             <span className="font-mono text-zinc-300">
               {filteredCompanies.length.toLocaleString("nl-BE")}
             </span>{" "}
-            companies
+            bedrijven
           </p>
 
           <div className="flex items-center justify-between gap-2 sm:justify-end">
@@ -388,12 +385,12 @@ export default function CompaniesDataTable({
               size="icon"
               onClick={() => setPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              aria-label="Previous page"
+              aria-label="Vorige pagina"
             >
               <ChevronLeft size={16} />
             </Button>
             <span className="min-w-24 text-center font-mono text-xs text-zinc-400">
-              Page {currentPage} / {pageCount}
+              Pagina {currentPage} / {pageCount}
             </span>
             <Button
               type="button"
@@ -401,7 +398,7 @@ export default function CompaniesDataTable({
               size="icon"
               onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
               disabled={currentPage === pageCount}
-              aria-label="Next page"
+              aria-label="Volgende pagina"
             >
               <ChevronRight size={16} />
             </Button>
@@ -437,7 +434,7 @@ function CompanyActionMenu({
         }}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Open actions for ${company.name}`}
+        aria-label={`Open acties voor ${company.name}`}
       >
         <MoreHorizontal size={16} />
       </Button>
@@ -449,64 +446,15 @@ function CompanyActionMenu({
           onClick={(event) => event.stopPropagation()}
         >
           <MenuLink
-            href={`/dashboard/admin/companies/${company.id}`}
+            href={`/admin/companies/${company.id}`}
             icon={<ExternalLink size={14} />}
             onClick={closeMenu}
           >
-            Open Company
+            Open dossier
           </MenuLink>
-          <MenuItem icon={<Pencil size={14} />} onClick={closeMenu}>
-            Edit
-          </MenuItem>
-          <MenuItem
-            icon={<Ban size={14} />}
-            onClick={closeMenu}
-            disabled={company.status === "suspended"}
-          >
-            Suspend
-          </MenuItem>
-          <MenuItem
-            icon={<CheckCircle2 size={14} />}
-            onClick={closeMenu}
-            disabled={company.status === "active"}
-          >
-            Activate
-          </MenuItem>
-          <div className="my-1 h-px bg-white/10" />
-          <MenuItem icon={<CreditCard size={14} />} onClick={closeMenu}>
-            View Billing
-          </MenuItem>
-          <MenuItem icon={<Bot size={14} />} onClick={closeMenu}>
-            View AI Usage
-          </MenuItem>
         </div>
       )}
     </div>
-  );
-}
-
-function MenuItem({
-  children,
-  icon,
-  onClick,
-  disabled = false,
-}: {
-  children: React.ReactNode;
-  icon: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={disabled}
-      onClick={onClick}
-      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-700 disabled:hover:bg-transparent"
-    >
-      <span className="text-zinc-500">{icon}</span>
-      {children}
-    </button>
   );
 }
 

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCompanyContext } from "@/lib/company";
-import { lineTotals } from "@/lib/offertes";
+import { formatEuro, lineTotals } from "@/lib/offertes";
 import { factuurStatusMeta, documentTypeMeta } from "@/lib/facturen";
 import FactuurDetailView from "@/components/dashboard/facturen/FactuurDetailView";
 import type {
@@ -59,7 +59,7 @@ export default async function FactuurDetailPage({
   const { data: factuur, error: factuurError } = await supabase
     .from("facturen")
     .select(
-      "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, updated_at, sent_at, paid_at, customer_id, template_id, offerte_id, buyer_reference, structured_communication, peppol_status, peppol_last_error, peppol_sent_at",
+      "id, nummer, klant, totaal_bedrag, datum, vervaldatum, status, document_type, omschrijving, notities, created_at, updated_at, sent_at, paid_at, customer_id, project_id, template_id, offerte_id, buyer_reference, structured_communication, peppol_status, peppol_last_error, peppol_sent_at",
     )
     .eq("id", factuurId)
     .eq("bedrijf_id", companyId)
@@ -151,6 +151,89 @@ export default async function FactuurDetailPage({
     customer = data;
   }
 
+  let relatedProject: {
+    id: string;
+    naam: string;
+    status: string;
+  } | null = null;
+  if (factuur.project_id) {
+    const { data, error: projectError } = await supabase
+      .from("projecten")
+      .select("id, naam, status")
+      .eq("id", factuur.project_id)
+      .eq("bedrijf_id", companyId)
+      .maybeSingle();
+    if (projectError) {
+      throw new Error("Het gekoppelde project kon niet worden opgehaald.");
+    }
+    relatedProject = data;
+  }
+
+  const customerStats = {
+    invoiceCount: 0,
+    projectCount: 0,
+    openAmount: 0,
+  };
+  if (factuur.customer_id) {
+    const [customerInvoicesResult, customerProjectsResult] = await Promise.all([
+      supabase
+        .from("facturen")
+        .select("id, totaal_bedrag, status, paid_at")
+        .eq("customer_id", factuur.customer_id)
+        .eq("bedrijf_id", companyId),
+      supabase
+        .from("projecten")
+        .select("id", { count: "exact", head: true })
+        .eq("customer_id", factuur.customer_id)
+        .eq("bedrijf_id", companyId),
+    ]);
+
+    if (customerInvoicesResult.error || customerProjectsResult.error) {
+      throw new Error("Het klantdossier kon niet volledig worden opgehaald.");
+    }
+
+    const customerInvoices = customerInvoicesResult.data ?? [];
+    customerStats.invoiceCount = customerInvoices.length;
+    customerStats.projectCount = customerProjectsResult.count ?? 0;
+
+    const openInvoices = customerInvoices.filter(
+      (invoice) => !invoice.paid_at && invoice.status !== "betaald",
+    );
+    if (openInvoices.length > 0) {
+      const { data: customerPayments, error: customerPaymentsError } = await supabase
+        .from("betalingen")
+        .select("factuur_id, bedrag")
+        .eq("bedrijf_id", companyId)
+        .in(
+          "factuur_id",
+          openInvoices.map((invoice) => invoice.id),
+        );
+
+      if (customerPaymentsError) {
+        throw new Error("Het openstaande klantsaldo kon niet worden berekend.");
+      }
+
+      const paidByInvoice = new Map<number, number>();
+      for (const payment of customerPayments ?? []) {
+        if (payment.factuur_id == null) continue;
+        paidByInvoice.set(
+          payment.factuur_id,
+          (paidByInvoice.get(payment.factuur_id) ?? 0) + Number(payment.bedrag ?? 0),
+        );
+      }
+      customerStats.openAmount = openInvoices.reduce(
+        (sum, invoice) =>
+          sum +
+          Math.max(
+            0,
+            Number(invoice.totaal_bedrag ?? 0) -
+              (paidByInvoice.get(invoice.id) ?? 0),
+          ),
+        0,
+      );
+    }
+  }
+
   const docValues = buildDocumentValues(
     {
       kind: "invoice",
@@ -194,7 +277,17 @@ export default async function FactuurDetailPage({
       at: factuur.peppol_sent_at,
     });
   }
-  if (factuur.paid_at) {
+  for (const payment of payments) {
+    if (!payment.datum) continue;
+    activity.push({
+      label: "Betaling geregistreerd",
+      detail: `${formatEuro(payment.bedrag)}${
+        payment.betaalmethode ? ` via ${payment.betaalmethode}` : ""
+      }`,
+      at: payment.datum,
+    });
+  }
+  if (factuur.paid_at && !payments.some((payment) => payment.datum)) {
     activity.push({ label: "Betaling geregistreerd", at: factuur.paid_at });
   }
   activity.sort(
@@ -218,6 +311,7 @@ export default async function FactuurDetailPage({
       customerDetails={
         customer
           ? {
+              id: factuur.customer_id,
               email: customer.email,
               phone: customer.phone,
               address: customer.address,
@@ -231,6 +325,8 @@ export default async function FactuurDetailPage({
       openAmount={isPaid ? 0 : openAmount}
       payments={payments}
       activity={activity}
+      customerStats={customerStats}
+      relatedProject={relatedProject}
       peppolConnected={peppolConnected}
       peppolCanSend={peppolCanSend}
       currentTemplate={factuur.template_id ?? ""}

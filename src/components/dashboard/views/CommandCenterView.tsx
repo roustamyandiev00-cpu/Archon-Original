@@ -8,9 +8,7 @@ import {
   FileText,
   FolderKanban,
   Inbox,
-  Plus,
   Receipt,
-  RefreshCw,
   TrendingUp,
   UserPlus,
   Users,
@@ -22,7 +20,6 @@ import type { DashboardHomeProps } from "@/components/dashboard/DashboardHome";
 import {
   DashboardPanel,
   EmptyState,
-  IconActionButton,
   MetricStat,
   PrimaryButton,
   QuickActionCard,
@@ -49,8 +46,8 @@ const domainCards: DomainCard[] = [
     iconTone: "text-orange-400 bg-orange-500/10",
     status: (m) =>
       m.offertesCount > 0
-        ? `${m.offertesCount} openstaande offerte${m.offertesCount > 1 ? "s" : ""}`
-        : "Geen openstaande offertes",
+        ? `${m.offertesCount} offerte${m.offertesCount > 1 ? "s" : ""} deze maand`
+        : "Nog geen offertes deze maand",
   },
   {
     id: "factuur",
@@ -61,8 +58,8 @@ const domainCards: DomainCard[] = [
     iconTone: "text-orange-400 bg-orange-500/10",
     status: (m) =>
       m.overdueFacturenCount > 0
-        ? `${m.overdueFacturenCount} openstaande factuur${m.overdueFacturenCount > 1 ? "en" : ""}`
-        : "Geen openstaande facturen",
+        ? `${m.overdueFacturenCount} vervallen factuur${m.overdueFacturenCount > 1 ? "en" : ""}`
+        : "Geen vervallen facturen",
   },
   {
     id: "project",
@@ -71,7 +68,7 @@ const domainCards: DomainCard[] = [
     href: "/dashboard/offertes/projecten",
     stripe: "border-l-zinc-600",
     iconTone: "text-zinc-400 bg-zinc-800/80",
-    status: () => "Geen actieve projecten",
+    status: () => "Projecten en voortgang bekijken",
   },
   {
     id: "klant",
@@ -92,7 +89,7 @@ const domainCards: DomainCard[] = [
     href: "/dashboard/agenda",
     stripe: "border-l-orange-500",
     iconTone: "text-orange-400 bg-orange-500/10",
-    status: () => "Geen taken vandaag",
+    status: () => "Planning en afspraken bekijken",
   },
   {
     id: "document",
@@ -101,7 +98,7 @@ const domainCards: DomainCard[] = [
     href: "/dashboard/offertes",
     stripe: "border-l-zinc-600",
     iconTone: "text-zinc-400 bg-zinc-800/80",
-    status: () => "Documenten controleren",
+    status: () => "Offertes en documenten bekijken",
   },
 ];
 
@@ -122,13 +119,13 @@ function statusMessage(mission: DashboardHomeProps["mission"]) {
     };
   }
   return {
-    text: "Alles rustig vandaag",
-    detail: "Geen openstaande acties – goed moment om vooruit te plannen.",
+    text: "Geen openstaande aandachtspunten",
+    detail: "Geen openstaande offerte-, factuur- of AI-acties.",
     tone: "ok" as const,
   };
 }
 
-const DOMAIN_AGENT_COUNT = domainCards.length;
+const DOMAIN_CARD_COUNT = domainCards.length;
 
 export default function CommandCenterView({
   mission,
@@ -136,9 +133,6 @@ export default function CommandCenterView({
   const status = statusMessage(mission);
   const openTasks = [...mission.important, ...mission.tasks].slice(0, 3);
   const hasCashflowData = mission.gefactureerd > 0 || mission.openstaand > 0;
-  const projectCount = mission.tasks.filter((t) =>
-    t.href.includes("project"),
-  ).length;
   const attentionCount = mission.important.length + mission.actionItems.length;
 
   return (
@@ -171,11 +165,11 @@ export default function CommandCenterView({
             className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:min-w-[360px]"
           >
             <MetricStat
-              label="Vandaag"
-              value={0}
-              sublabel="afspraken"
-              icon={Calendar}
-              tone="orange"
+              label="Contacten"
+              value={mission.klantenCount}
+              sublabel="actieve contacten"
+              icon={Users}
+              tone="neutral"
             />
             <MetricStat
               label="Aandacht"
@@ -196,9 +190,9 @@ export default function CommandCenterView({
               tone={mission.overdueFacturenCount > 0 ? "warn" : "ok"}
             />
             <MetricStat
-              label="Pipeline"
+              label="Offertes"
               value={mission.offertesCount}
-              sublabel={`${mission.offertesCount} offertes · ${projectCount} projecten`}
+              sublabel="deze maand"
               icon={TrendingUp}
               tone="orange"
             />
@@ -211,8 +205,8 @@ export default function CommandCenterView({
         className="grid shrink-0 grid-cols-2 gap-1.5 sm:grid-cols-4"
       >
         <QuickActionCard
-          title="Nieuwe Klant"
-          subtitle="Dossier openen"
+          title="Contacten"
+          subtitle="Klant toevoegen of beheren"
           href="/dashboard/contacten"
           icon={UserPlus}
         />
@@ -223,15 +217,15 @@ export default function CommandCenterView({
           icon={FileText}
         />
         <QuickActionCard
-          title="Nieuw Project"
-          subtitle="Planning starten"
+          title="Projecten"
+          subtitle="Vanuit een offerte starten"
           href="/dashboard/offertes/projecten"
           icon={FolderKanban}
         />
         <QuickActionCard
           title="Nieuwe Factuur"
           subtitle="Sneller betaald"
-          href="/dashboard/facturen"
+          href="/dashboard/facturen/nieuw"
           icon={Receipt}
         />
       </div>
@@ -239,7 +233,7 @@ export default function CommandCenterView({
       <div className="grid grid-cols-1 gap-2 pb-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-0">
         <DashboardPanel title="AI Command Center" icon={Bot} data-tour="dash-agents">
           <p className="mb-2 text-xs text-zinc-500">
-            {DOMAIN_AGENT_COUNT} agents – klik om te activeren
+            {DOMAIN_CARD_COUNT} werkgebieden – open een module
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {domainCards.map((card) => {
@@ -284,15 +278,6 @@ export default function CommandCenterView({
             title="AI Inbox"
             icon={Bot}
             data-tour="dash-inbox"
-            action={
-              <button
-                type="button"
-                className="grid h-8 w-8 place-items-center rounded-lg border border-white/[0.08] text-zinc-500 transition-colors hover:border-white/15 hover:bg-white/[0.04] hover:text-zinc-300"
-                aria-label="Vernieuwen"
-              >
-                <RefreshCw size={14} />
-              </button>
-            }
           >
             {mission.actionItems.length > 0 ? (
               <ActionItems items={mission.actionItems.slice(0, 2)} demoMode={mission.isDemo} />
@@ -308,11 +293,6 @@ export default function CommandCenterView({
           <DashboardPanel
             title="Mijn Taken"
             icon={Clock}
-            action={
-              <IconActionButton href="/dashboard/leads" label="Taak toevoegen">
-                <Plus size={16} />
-              </IconActionButton>
-            }
           >
             {openTasks.length > 0 ? (
               <ul className="space-y-1.5">
@@ -340,7 +320,7 @@ export default function CommandCenterView({
               />
             )}
             <PrimaryButton href="/dashboard/leads" className="mt-3">
-              Taak toevoegen
+              Leads bekijken
             </PrimaryButton>
           </DashboardPanel>
 
@@ -373,7 +353,7 @@ export default function CommandCenterView({
                   gebaseerd is.
                 </p>
                 <PrimaryButton href="/dashboard/facturen" className="mt-3">
-                  Opnieuw controleren
+                  Facturen bekijken
                 </PrimaryButton>
               </>
             )}

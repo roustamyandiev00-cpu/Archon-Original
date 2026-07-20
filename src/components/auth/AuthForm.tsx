@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
@@ -18,6 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 import { REFERRAL_REWARDS } from "@/components/ReferralProgram";
 import { redirectAfterAuth } from "@/lib/auth/redirect-after-auth";
 import { finalizeNewAccount } from "@/app/register/actions";
+import { signInWithPasswordAction } from "@/app/login/actions";
 
 type Mode = "login" | "register";
 
@@ -68,7 +69,17 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(() =>
+    searchParams.get("passwordReset") === "1"
+      ? "Je wachtwoord is gewijzigd. Log opnieuw in."
+      : null,
+  );
+  // Formulier pas na mount: voorkomt hydration-mismatch door browser-/Cursor-injecties
+  // (bijv. data-cursor-ref) op labels en inputs.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,25 +122,17 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           );
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const result = await signInWithPasswordAction({
           email,
           password,
+          requested: redirectTo,
         });
-        if (error) throw error;
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.rpc("ensure_user_referral", {
-            p_user_id: user.id,
-            p_full_name:
-              (user.user_metadata?.full_name as string | undefined) ?? undefined,
-            p_referred_by:
-              (user.user_metadata?.referred_by as string | undefined) ?? undefined,
-          });
+        if (result.error) throw new Error(result.error);
+        const destination = result.destination ?? "/dashboard/command-center";
+        if (destination !== "/admin") {
+          await finalizeNewAccount();
         }
-        await finalizeNewAccount();
-        redirectAfterAuth(redirectTo);
+        redirectAfterAuth(destination);
         return;
       }
     } catch (err) {
@@ -151,6 +154,39 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       },
     });
     if (error) setError(error.message);
+  }
+
+  async function handlePasswordReset() {
+    setError(null);
+    setNotice(null);
+
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setError("Vul eerst je e-mailadres in.");
+      return;
+    }
+
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      normalizedEmail,
+      {
+        redirectTo: `${window.location.origin}/auth/callback?flow=recovery&redirect=/auth/wachtwoord-resetten`,
+      },
+    );
+
+    if (error) {
+      setError("De herstelmail kon niet worden verstuurd. Probeer later opnieuw.");
+    } else {
+      setNotice(
+        "Als dit e-mailadres bestaat, ontvang je zo een veilige herstelmail.",
+      );
+    }
+    setLoading(false);
+  }
+
+  if (!mounted) {
+    return <AuthFormSkeleton isRegister={isRegister} />;
   }
 
   return (
@@ -304,12 +340,14 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               />
               Onthoud mij
             </label>
-            <a
-              href="#"
+            <button
+              type="button"
+              onClick={handlePasswordReset}
+              disabled={loading}
               className="text-sm text-zinc-400 transition-colors hover:text-sky-400"
             >
               Wachtwoord vergeten?
-            </a>
+            </button>
           </div>
         )}
 
@@ -362,6 +400,33 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-zinc-900/60 py-2.5 pl-10 pr-4 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60 focus:bg-zinc-900";
 
+function AuthFormSkeleton({ isRegister }: { isRegister: boolean }) {
+  const fieldCount = isRegister ? 5 : 2;
+  return (
+    <div aria-busy="true" aria-label="Formulier laden">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="h-11 animate-pulse rounded-xl bg-white/5" />
+        <div className="h-11 animate-pulse rounded-xl bg-white/5" />
+      </div>
+      <div className="my-4 flex items-center gap-3">
+        <span className="h-px flex-1 bg-white/10" />
+        <span className="text-xs text-zinc-500">Of</span>
+        <span className="h-px flex-1 bg-white/10" />
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: fieldCount }, (_, index) => (
+          <div key={index} className="space-y-1">
+            <div className="h-4 w-20 animate-pulse rounded bg-white/5" />
+            <div className="h-11 animate-pulse rounded-xl bg-white/5" />
+          </div>
+        ))}
+        <div className="h-10 animate-pulse rounded-full bg-sky-500/20" />
+      </div>
+      <div className="mx-auto mt-4 h-4 w-48 animate-pulse rounded bg-white/5" />
+    </div>
+  );
+}
+
 function Field({
   label,
   hint,
@@ -373,7 +438,10 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-zinc-200">
+      <label
+        className="mb-1 block text-sm font-medium text-zinc-200"
+        suppressHydrationWarning
+      >
         {label}
       </label>
       <div className="relative">{children}</div>

@@ -174,8 +174,11 @@ export function evaluatePolicy(input: PolicyInput): PolicyDecision {
   };
 }
 
-export function canApproveAction(userRole?: string): boolean {
-  if (!userRole) return true;
-  const blocked = new Set(["viewer", "readonly"]);
-  return !blocked.has(userRole.toLowerCase());
+export function canApproveAction(userRole?: string | null): boolean {
+  if (userRole == null) return false;
+  const normalized = userRole.trim().toLowerCase();
+  if (!normalized) return false;
+  // Deny-by-default: alleen expliciete allowlist.
+  const allowed = new Set(["owner", "admin"]);
+  return allowed.has(normalized);
 }

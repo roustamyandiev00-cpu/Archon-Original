@@ -37,6 +37,9 @@ export default function SendOfferteModal({
     whatsappUrl: string | null;
     nummer: string;
     klant: string;
+    canSendViaSmtp: boolean;
+    deliveryMode: "smtp" | "mailto";
+    smtpConfigured: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -76,6 +79,9 @@ export default function SendOfferteModal({
             whatsappUrl: result.whatsappUrl ?? null,
             nummer: result.nummer!,
             klant: result.klant!,
+            canSendViaSmtp: Boolean(result.canSendViaSmtp),
+            deliveryMode: result.deliveryMode ?? "mailto",
+            smtpConfigured: Boolean(result.smtpConfigured),
           });
           if ("customerEmail" in result && result.customerEmail) {
             setRecipientEmail(result.customerEmail);
@@ -194,23 +200,31 @@ export default function SendOfferteModal({
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-sky-500/60 disabled:cursor-not-allowed disabled:opacity-60"
               />
               <p className="mt-1 text-xs text-zinc-500">
-                Laat leeg om het e-mailadres van de klant te gebruiken.
+                {share.canSendViaSmtp
+                  ? "Wordt verstuurd via je SMTP/Gmail-instellingen."
+                  : share.deliveryMode === "smtp" && !share.smtpConfigured
+                    ? "SMTP gekozen, maar nog niet geconfigureerd in Instellingen → Integraties."
+                    : "Verzendwijze: handmatig via e-mailprogramma (Instellingen → Integraties)."}
               </p>
             </div>
 
-            <button
-              type="button"
-              disabled={emailSending || Boolean(emailSent)}
-              onClick={() => void sendByEmail()}
-              className="flex w-full items-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {emailSending ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Send size={16} />
-              )}
-              {emailSending ? "Versturen…" : "Via ArchonPro e-mail versturen"}
-            </button>
+            {share.canSendViaSmtp ? (
+              <button
+                type="button"
+                disabled={emailSending || Boolean(emailSent)}
+                onClick={() => void sendByEmail()}
+                className="flex w-full items-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {emailSending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Send size={16} />
+                )}
+                {emailSending
+                  ? "Versturen…"
+                  : "Via ArchonPro e-mail versturen"}
+              </button>
+            ) : null}
 
             {emailSent && (
               <p className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
@@ -242,10 +256,19 @@ export default function SendOfferteModal({
             {share.mailtoUrl ? (
               <a
                 href={share.mailtoUrl}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-100 transition-colors hover:bg-white/10"
+                className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-colors ${
+                  share.canSendViaSmtp
+                    ? "border border-white/10 bg-white/5 text-zinc-100 hover:bg-white/10"
+                    : "bg-sky-500 font-semibold text-zinc-950 hover:bg-sky-400"
+                }`}
               >
-                <Mail size={16} className="text-sky-400" />
-                E-mail openen
+                <Mail
+                  size={16}
+                  className={share.canSendViaSmtp ? "text-sky-400" : undefined}
+                />
+                {share.canSendViaSmtp
+                  ? "E-mailprogramma openen"
+                  : "E-mail openen"}
               </a>
             ) : (
               <p className="text-xs text-zinc-500">Geen e-mailadres bij klant.</p>

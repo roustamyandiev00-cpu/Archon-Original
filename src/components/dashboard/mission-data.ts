@@ -9,6 +9,10 @@ import {
   type AgentCapability,
   type CustomAgent,
 } from "@/components/dashboard/agents/config";
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  fetchPlatformRegistrationCount,
+} from "@/lib/bouwnetwerk-gate";
 
 /** Actieve pipeline-stadia — alles behalve gesloten deals. */
 const OPEN_STADIA = STADIA.filter(
@@ -135,6 +139,9 @@ export type TopbarSummary = {
   offertesVandaag: number;
   verzonden: number;
   pipeline: number;
+  /** Echte platform-registraties (profiles). */
+  registeredUsers: number;
+  requiredUsers: number;
   notifications: { id: string; title: string; detail: string; href: string }[];
   syncedAt: string;
 };
@@ -245,10 +252,13 @@ export async function loadTopbarSummary(
   companyId: number | null,
 ): Promise<TopbarSummary> {
   const today = new Date().toISOString().slice(0, 10);
+  const registeredUsers = await fetchPlatformRegistrationCount(supabase);
   const fallback: TopbarSummary = {
     offertesVandaag: 0,
     verzonden: 0,
     pipeline: 0,
+    registeredUsers,
+    requiredUsers: BOUWNETWERK_REQUIRED_USERS,
     notifications: [],
     syncedAt: new Date().toISOString(),
   };
@@ -301,6 +311,8 @@ export async function loadTopbarSummary(
     offertesVandaag: offertesToday.count ?? 0,
     verzonden: sentToday.count ?? 0,
     pipeline,
+    registeredUsers,
+    requiredUsers: BOUWNETWERK_REQUIRED_USERS,
     notifications,
     syncedAt: new Date().toISOString(),
   };

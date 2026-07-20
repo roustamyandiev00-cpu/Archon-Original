@@ -7,7 +7,9 @@ import {
   type CreateOfferteInput,
 } from "@/app/dashboard/offertes/actions";
 import { convertOfferteToFactuur } from "@/app/dashboard/offertes/convert-actions";
-import { markOfferteSent } from "@/app/dashboard/offertes/send-actions";
+import { markOfferteSent, sendOfferteByEmail } from "@/app/dashboard/offertes/send-actions";
+import { loadEmailDeliveryPreference } from "@/app/dashboard/instellingen/smtp-actions";
+import { loadCompanySmtpSettings } from "@/components/dashboard/email/smtp";
 import type {
   CreateInvoiceFromOffertePayload,
   CreateOffertePayload,
@@ -126,6 +128,62 @@ export async function executeAgentAction(input: {
 
     if (action.action_type === "send_offerte") {
       const p = payload as unknown as SendOffertePayload;
+      if (!p.offerteId || typeof p.offerteId !== "number") {
+        throw new Error(
+          "Dit verstuur-voorstel mist een offerte-ID. Maak het opnieuw aan via Automatisaties of de offertepagina.",
+        );
+      }
+
+      const deliveryMode = await loadEmailDeliveryPreference(
+        supabase,
+        companyId,
+      );
+      const smtpConfigured = Boolean(
+        await loadCompanySmtpSettings(supabase, companyId),
+      );
+
+      if (deliveryMode === "smtp" && smtpConfigured) {
+        const send = await sendOfferteByEmail(
+          p.offerteId,
+          p.recipientEmail ?? undefined,
+        );
+        if ("error" in send && send.error) {
+          throw new Error(send.error);
+        }
+
+        await supabase
+          .from("agent_actions")
+          .update({
+            executed_at: new Date().toISOString(),
+            target_route: `/dashboard/offertes/${p.offerteId}`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", actionId);
+
+        await logActivity(supabase, {
+          companyId,
+          userId,
+          agentName,
+          actionType: action.action_type,
+          message: `Offerte #${p.offerteId} verstuurd via SMTP`,
+          outputJson: {
+            offerteId: p.offerteId,
+            recipientEmail:
+              "recipientEmail" in send ? send.recipientEmail : undefined,
+            channel: "smtp",
+          },
+        });
+
+        revalidatePath("/dashboard/offertes");
+        revalidatePath(`/dashboard/offertes/${p.offerteId}`);
+        return {
+          ok: true,
+          offerteId: p.offerteId,
+          route: `/dashboard/offertes/${p.offerteId}`,
+          emailSent: true,
+        };
+      }
+
       const send = await markOfferteSent(p.offerteId, {
         recipientEmail: p.recipientEmail ?? null,
         channel: "agent",
@@ -149,12 +207,16 @@ export async function executeAgentAction(input: {
         agentName,
         actionType: action.action_type,
         message: `Offerte #${p.offerteId} gemarkeerd als verzonden`,
-        outputJson: { offerteId: p.offerteId },
+        outputJson: { offerteId: p.offerteId, channel: "agent" },
       });
 
       revalidatePath("/dashboard/offertes");
       revalidatePath(`/dashboard/offertes/${p.offerteId}`);
-      return { ok: true, offerteId: p.offerteId, route: `/dashboard/offertes/${p.offerteId}` };
+      return {
+        ok: true,
+        offerteId: p.offerteId,
+        route: `/dashboard/offertes/${p.offerteId}`,
+      };
     }
 
     if (action.action_type === "create_invoice_from_offerte") {
@@ -388,7 +450,7 @@ export async function executeAgentAction(input: {
       });
 
       revalidatePath("/dashboard/automatisaties");
-      revalidatePath("/dashboard/admin/rapportages");
+      revalidatePath("/admin/rapportages");
       return { ok: true, route };
     }
 
@@ -493,7 +555,7 @@ export async function executeAgentAction(input: {
         })
         .eq("id", p.geschilId);
 
-      const route = `/dashboard/admin/geschillen`;
+      const route = `/admin/geschillen`;
       await supabase
         .from("agent_actions")
         .update({
@@ -512,7 +574,7 @@ export async function executeAgentAction(input: {
         outputJson: { geschilId: p.geschilId },
       });
 
-      revalidatePath("/dashboard/admin/geschillen");
+      revalidatePath("/admin/geschillen");
       revalidatePath("/dashboard/geschillen");
       return { ok: true, route };
     }

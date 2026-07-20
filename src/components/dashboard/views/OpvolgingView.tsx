@@ -51,7 +51,7 @@ export default function OpvolgingView({
   return (
     <div className="grid grid-cols-1 gap-5 overflow-y-auto pb-4 xl:grid-cols-[1fr_320px]">
       <DashboardPanel
-        title="Vandaag"
+        title="Opvolging"
         badge={
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -60,7 +60,7 @@ export default function OpvolgingView({
                 : "bg-emerald-500/15 text-emerald-300"
             }`}
           >
-            {hasUrgent ? "Actie nodig" : "Op schema"}
+            {hasUrgent ? "Actie nodig" : "Geen urgente opvolging"}
           </span>
         }
       >
@@ -82,43 +82,43 @@ export default function OpvolgingView({
           </span>
           <div>
             <p className="text-lg font-semibold text-zinc-100">
-              {hasUrgent ? "Er staat werk klaar" : "Alles op schema"}
+              {hasUrgent ? "Er staat werk klaar" : "Geen urgente aandachtspunten"}
             </p>
             <p className="mt-1 text-sm leading-relaxed text-zinc-500">
               {hasUrgent
                 ? mission.nova.headline
-                : "Geen dringende taken of afspraken voor vandaag. Gebruik deze rustige ruimte om vooruit te plannen of opvolging af te ronden."}
+                : "Geen dringende offerte-, factuur- of leadopvolging gevonden. Open de agenda voor actuele afspraken."}
             </p>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
           <InfoTile
-            label="Planning"
+            label="Opvolging"
             icon={Calendar}
             value={
               planningTasks.length > 0
                 ? `${planningTasks.length} opvolging${planningTasks.length > 1 ? "en" : ""}`
-                : "Geen afspraken"
+                : "Geen openstaande opvolging"
             }
             detail={
               planningTasks.length > 0
-                ? "Bekijk je agenda voor de komende afspraken."
-                : "Agenda is helemaal vrij voor nieuw werk."
+                ? "Bekijk de gekoppelde leads en acties."
+                : "Open de agenda voor actuele afspraken en planning."
             }
           />
           <InfoTile
-            label="Taken"
+            label="Prioriteit"
             icon={Clock}
             value={
               deadlineTasks.length > 0
-                ? `${deadlineTasks.length} deadline${deadlineTasks.length > 1 ? "s" : ""}`
-                : "Geen deadlines"
+                ? `${deadlineTasks.length} prioritaire actie${deadlineTasks.length > 1 ? "s" : ""}`
+                : "Geen prioritaire acties"
             }
             detail={
               deadlineTasks.length > 0
-                ? "Pak de meest urgente taken eerst aan."
-                : "Goed moment om taken voor later deze week te bundelen."
+                ? "Pak de belangrijkste opvolging eerst aan."
+                : "Er zijn geen middelhoge of hoge acties in dit overzicht."
             }
           />
           <InfoTile

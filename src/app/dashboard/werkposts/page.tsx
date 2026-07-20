@@ -1,18 +1,25 @@
 import Link from "next/link";
-import { Handshake, HardHat, Plus, ShieldAlert, Users } from "lucide-react";
+import { Handshake, HardHat, Plus, ShieldAlert } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { isActivePreviewMode } from "@/components/dashboard/context";
 import { DemoBadge } from "@/components/dashboard/mission";
 import BouwnetwerkHub from "@/components/dashboard/bouwnetwerk/BouwnetwerkHub";
 import { loadBouwnetwerkData } from "@/components/dashboard/bouwnetwerk/load-bouwnetwerk-data";
 import { BouwnetwerkComingSoonBanner } from "@/components/dashboard/werkposts/BouwnetwerkComingSoonBanner";
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  fetchPlatformRegistrationCount,
+} from "@/lib/bouwnetwerk-gate";
 
 export const metadata = { title: "Bouwnetwerk — ArchonPro" };
 
 export default async function WerkpostsPage() {
   const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
-  const data = await loadBouwnetwerkData(supabase, companyId);
+  const [data, registeredUsers] = await Promise.all([
+    loadBouwnetwerkData(supabase, companyId),
+    fetchPlatformRegistrationCount(supabase),
+  ]);
 
   return (
     <div className="dashboard-page flex h-full min-h-0 flex-col gap-2">
@@ -75,7 +82,10 @@ export default async function WerkpostsPage() {
         </div>
       )}
 
-      <BouwnetwerkComingSoonBanner />
+      <BouwnetwerkComingSoonBanner
+        registeredUsers={registeredUsers}
+        requiredUsers={BOUWNETWERK_REQUIRED_USERS}
+      />
 
       <div className="dashboard-page-content min-h-0 flex-1">
         <BouwnetwerkHub

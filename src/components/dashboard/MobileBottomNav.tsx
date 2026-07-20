@@ -10,18 +10,23 @@ import MobileAgentChatNavButton from "@/components/dashboard/agent-chat/MobileAg
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 import {
   getActiveMobileTabId,
-  MOBILE_SWIPE_TABS,
+  MOBILE_PRIMARY_TABS,
 } from "@/components/dashboard/nav-config";
+import { BOUWNETWERK_FALLBACK_USERS } from "@/lib/bouwnetwerk-gate";
 
 type Props = {
   isPreviewMode?: boolean;
+  registeredUsers?: number;
 };
 
 const subscribeToClient = () => () => {};
 const clientSnapshot = () => true;
 const serverSnapshot = () => false;
 
-export default function MobileBottomNav({ isPreviewMode = false }: Props) {
+export default function MobileBottomNav({
+  isPreviewMode = false,
+  registeredUsers = BOUWNETWERK_FALLBACK_USERS,
+}: Props) {
   const pathname = usePathname();
   const { view: agentChatView } = useAgentChat();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -57,10 +62,6 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
     indicator.style.width = `${activeRect.width}px`;
     indicator.style.transform = `translateX(${left}px)`;
 
-    activeEl.scrollIntoView({
-      block: "nearest",
-      inline: "center",
-    });
   }, [activeId, mounted, pathname, agentChatView]);
 
   return (
@@ -79,9 +80,9 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
 
           <div
             ref={scrollRef}
-            className="relative flex items-stretch gap-0.5 overflow-x-auto px-2 pt-1.5 pb-[calc(0.35rem+env(safe-area-inset-bottom))] snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="relative flex items-stretch gap-0.5 px-1.5 pt-1.5 pb-[calc(0.35rem+env(safe-area-inset-bottom))]"
           >
-            {MOBILE_SWIPE_TABS.map((tab) => {
+            {MOBILE_PRIMARY_TABS.map((tab) => {
               const active = mounted && activeId === tab.id;
               return (
                 <Link
@@ -91,7 +92,7 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
                   aria-current={active ? "page" : undefined}
                   data-mobile-nav-active={active ? "true" : undefined}
                   data-no-swipe
-                  className={`relative z-[1] flex min-w-[4.25rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-medium transition-colors ${
+                  className={`relative z-[1] flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition-colors ${
                     active
                       ? "text-sky-400"
                       : "text-zinc-500 hover:text-zinc-300"
@@ -108,7 +109,7 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
                       <tab.icon size={18} strokeWidth={active ? 2.25 : 1.75} />
                     )}
                   </span>
-                  <span className="max-w-[4.25rem] truncate">{tab.label}</span>
+                  <span className="max-w-full truncate">{tab.label}</span>
                 </Link>
               );
             })}
@@ -125,7 +126,7 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
               aria-label="Meer menu"
               aria-expanded={moreOpen}
               aria-controls="mobile-more-sheet"
-              className={`relative z-[1] flex min-w-[4.25rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-medium transition-colors ${
+              className={`relative z-[1] flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition-colors ${
                 mounted && activeId === "more"
                   ? "text-sky-400"
                   : "text-zinc-500 hover:text-zinc-300"
@@ -151,6 +152,7 @@ export default function MobileBottomNav({ isPreviewMode = false }: Props) {
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
         isPreviewMode={isPreviewMode}
+        registeredUsers={registeredUsers}
       />
     </>
   );

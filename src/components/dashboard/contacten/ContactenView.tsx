@@ -3,7 +3,13 @@
 import KlantenPanel from "@/components/dashboard/contacten/KlantenPanel";
 import type { KlantRecord } from "@/components/dashboard/contacten/KlantForm";
 
-export default function ContactenView({ klanten }: { klanten: KlantRecord[] }) {
+export default function ContactenView({
+  klanten,
+  loadFailed = false,
+}: {
+  klanten: KlantRecord[];
+  loadFailed?: boolean;
+}) {
   return (
     <div className="dashboard-page flex h-full min-h-0 flex-col gap-2 lg:gap-0">
       <header className="dashboard-page-header flex shrink-0 flex-col gap-2 border-b border-white/10 pb-2 sm:flex-row sm:items-center sm:justify-between">
@@ -15,13 +21,13 @@ export default function ContactenView({ klanten }: { klanten: KlantRecord[] }) {
             Contacten
           </h1>
           <p className="mt-1 hidden text-sm text-zinc-400 sm:block lg:hidden xl:block">
-            Beheer klanten met adres- en Peppol-gegevens voor e-facturatie.
+            Beheer klanten met contact-, adres- en facturatiegegevens.
           </p>
         </div>
       </header>
 
       <div className="dashboard-page-content">
-        <KlantenPanel klanten={klanten} embedded />
+        <KlantenPanel klanten={klanten} loadFailed={loadFailed} embedded />
       </div>
     </div>
   );

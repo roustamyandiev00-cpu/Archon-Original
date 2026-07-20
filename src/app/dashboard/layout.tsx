@@ -95,7 +95,11 @@ export default async function DashboardLayout({
       >
         Ga naar inhoud
       </a>
-      <Sidebar isPreviewMode={isPreviewMode} showCeoConsole={showCeoConsole} />
+      <Sidebar
+        isPreviewMode={isPreviewMode}
+        showCeoConsole={showCeoConsole}
+        registeredUsers={topbarSummary.registeredUsers}
+      />
       <Topbar
         initial={topbarSummary}
         profile={topbarProfile}
@@ -126,7 +130,10 @@ export default async function DashboardLayout({
           />
         </DashboardSidePanel>
       )}
-      <MobileBottomNav isPreviewMode={isPreviewMode} />
+      <MobileBottomNav
+        isPreviewMode={isPreviewMode}
+        registeredUsers={topbarSummary.registeredUsers}
+      />
       <AddToHomeScreenPrompt />
       <AgentChatWidget />
       <DashboardTourUi />

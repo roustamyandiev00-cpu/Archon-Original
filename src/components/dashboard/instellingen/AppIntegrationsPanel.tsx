@@ -11,7 +11,8 @@ export default function AppIntegrationsPanel({
   slackPlatformReady?: boolean;
 }) {
   const providers = allSettingsIntegrationProviders();
-  const connectedCount = providers.filter(
+  const liveProviders = providers.filter((p) => p.availability !== "partner");
+  const connectedCount = liveProviders.filter(
     (p) => connections[p.id]?.status === "connected",
   ).length;
 
@@ -25,7 +26,7 @@ export default function AppIntegrationsPanel({
           </p>
         </div>
         <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs font-medium text-zinc-400">
-          {connectedCount}/{providers.length} verbonden
+          {connectedCount}/{liveProviders.length} verbonden
         </span>
       </div>
 

@@ -4,6 +4,7 @@ import { grantAiCreditsAfterPayment } from "@/lib/ai/grant-credits";
 import { getStripe } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/service";
 import { untyped } from "@/lib/integraties";
+import { syncStripeInvoice } from "@/lib/admin/platform-billing";
 
 export const runtime = "nodejs";
 
@@ -101,6 +102,20 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: result.error }, { status: 500 });
         }
       }
+    } else if (
+      event.type === "invoice.created" ||
+      event.type === "invoice.finalized" ||
+      event.type === "invoice.paid" ||
+      event.type === "invoice.payment_succeeded" ||
+      event.type === "invoice.payment_failed" ||
+      event.type === "invoice.voided" ||
+      event.type === "invoice.marked_uncollectible"
+    ) {
+      await syncStripeInvoice(
+        createServiceClient(),
+        event.data.object as Stripe.Invoice,
+        event.created,
+      );
     }
 
     return NextResponse.json({ received: true });

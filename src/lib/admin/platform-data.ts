@@ -25,7 +25,9 @@ import type {
   CompanyQuote,
   CompanyUser,
   FeatureFlag,
+  SecurityEvent,
 } from "@/components/dashboard/admin/company-detail-data";
+import { fetchPlatformBillingInvoices } from "@/lib/admin/platform-billing";
 
 type ServiceSupabase = SupabaseClient<Database>;
 
@@ -133,7 +135,12 @@ function buildRevenueChart(
 export async function fetchManagedCompanies(
   supabase: ServiceSupabase,
 ): Promise<ManagedCompany[]> {
-  const [{ data: companies }, { data: memberships }, { data: credits }, { data: profiles }] =
+  const [
+    { data: companies, error: companiesError },
+    { data: memberships, error: membershipsError },
+    { data: credits, error: creditsError },
+    { data: profiles, error: profilesError },
+  ] =
     await Promise.all([
       supabase
         .from("bedrijven")
@@ -148,6 +155,14 @@ export async function fetchManagedCompanies(
       supabase.from("company_ai_credits").select("company_id, credits_used, total_spent"),
       supabase.from("profiles").select("id, email, full_name"),
     ]);
+
+  const loadError =
+    companiesError ?? membershipsError ?? creditsError ?? profilesError;
+  if (loadError) {
+    throw new Error(
+      `Platformbedrijven konden niet worden geladen: ${loadError.message}`,
+    );
+  }
 
   const usersByCompany = new Map<number, number>();
   for (const row of memberships ?? []) {
@@ -186,7 +201,7 @@ export async function fetchManagedCompanies(
       aiTokensUsed: credit?.used ?? 0,
       aiCost: credit?.spent ?? 0,
       monthlyRevenue: planMrr(company.plan),
-      storageUsedGb: 0,
+      storageUsedGb: null,
       lastLogin: company.last_activity_at ?? company.created_at ?? new Date().toISOString(),
       status: normalizeStatus(
         company.status,
@@ -221,11 +236,11 @@ export function getCompaniesStats(companies: ManagedCompany[]): CompaniesStat[] 
       id: "active" as const,
       label: "Actief",
       value: String(active),
-      detail: `MRR ~ €${mrr.toLocaleString("nl-BE")}`,
+      detail: `Geschatte pakketwaarde €${mrr.toLocaleString("nl-BE")}/mnd`,
     },
     {
       id: "trial" as const,
-      label: "Trial",
+      label: "Proefperiode",
       value: String(trial),
       detail: "Nog in proefperiode",
     },
@@ -288,7 +303,7 @@ export async function fetchCeoDashboardData(
   const kpis: KpiMetric[] = [
     {
       id: "mrr",
-      label: "MRR",
+      label: "Geschatte MRR",
       value: `€${mrr.toLocaleString("nl-BE")}`,
       change: `${companies.length} klanten`,
       positive: true,
@@ -299,7 +314,7 @@ export async function fetchCeoDashboardData(
       id: "companies",
       label: "Bedrijven",
       value: String(companies.length),
-      change: `+${registrations30d} deze maand`,
+      change: `+${registrations30d} in 30 dagen`,
       positive: registrations30d > 0,
       icon: "companies",
       tone: "emerald",
@@ -335,7 +350,7 @@ export async function fetchCeoDashboardData(
       id: "ai-cost",
       label: "AI kosten",
       value: `€${aiCost.toFixed(0)}`,
-      change: "inference + tokens",
+      change: "geregistreerde providerkosten",
       positive: aiCost < 500,
       icon: "ai-cost",
       tone: "rose",
@@ -383,7 +398,13 @@ export async function fetchCeoDashboardData(
           normalizeStatus(row.status, row.subscription_status, row.is_active) ===
           "trial"
             ? "trial"
-            : "active",
+            : normalizeStatus(
+                  row.status,
+                  row.subscription_status,
+                  row.is_active,
+                ) === "suspended"
+              ? "churned"
+              : "active",
       };
     },
   );
@@ -413,35 +434,28 @@ export async function fetchCeoDashboardData(
     severity: "warning" as const,
   }));
 
-  const aiUsageChart: ChartPoint[] = buildGrowthChart(rawCompanies ?? []).map(
-    (point, index) => ({
-      ...point,
-      aiRequests: Math.round(aiUsed / Math.max(1, 12 - index)),
-      aiCost: Number((aiCost / 12).toFixed(2)),
-    }),
-  );
-
   return {
     kpis,
     revenueChart: buildRevenueChart(rawCompanies ?? []),
     companyGrowthChart: buildGrowthChart(rawCompanies ?? []),
-    aiUsageChart,
+    aiUsageChart: [],
     companies: platformCompanies,
     payments: [] as Payment[],
     registrations,
     aiErrors,
     supportTickets: [] as SupportTicket[],
     systemStatus: [
-      { name: "Supabase", status: "operational" },
-      { name: "OpenAI", status: "operational" },
-      { name: "Agent executor", status: (pendingActionCount ?? 0) > 20 ? "degraded" : "operational" },
-      { name: "Peppol", status: "operational" },
+      { name: "Supabase", status: "unknown" },
+      { name: "OpenAI", status: "unknown" },
+      { name: "Agent executor", status: "unknown" },
+      { name: "Peppol", status: "unknown" },
     ] as SystemService[],
     syncedAt: new Date().toISOString(),
   };
 }
 
 export type CrmOverview = {
+  totalAccounts: number;
   totalCustomers: number;
   totalDeals: number;
   openDeals: number;
@@ -449,6 +463,18 @@ export type CrmOverview = {
   totalOffertes: number;
   openFacturen: number;
   overdueFacturen: number;
+  accounts: Array<{
+    companyId: number;
+    companyName: string;
+    ownerName: string;
+    ownerEmail: string;
+    plan: CompanyPlan;
+    status: CompanyStatus;
+    activeUsers: number;
+    creditsRemaining: number;
+    creditsUsed: number;
+    lastActivity: string;
+  }>;
   recentDeals: Array<{
     id: number;
     companyId: number;
@@ -473,6 +499,7 @@ export async function fetchCrmOverview(
     { data: deals },
     { count: offerteCount },
     { data: openInvoices },
+    { data: credits },
   ] = await Promise.all([
     supabase.from("customers").select("id", { count: "exact", head: true }),
     supabase
@@ -485,7 +512,14 @@ export async function fetchCrmOverview(
       .from("facturen")
       .select("id, status, vervaldatum")
       .in("status", ["open", "verzonden", "te_laat"]),
+    supabase
+      .from("company_ai_credits")
+      .select("company_id, credits_remaining, credits_used"),
   ]);
+
+  const creditsByCompany = new Map(
+    (credits ?? []).map((credit) => [credit.company_id, credit]),
+  );
 
   const allDeals = deals ?? [];
   const openDeals = allDeals.filter(
@@ -504,6 +538,7 @@ export async function fetchCrmOverview(
   }).length;
 
   return {
+    totalAccounts: companies.length,
     totalCustomers: customerCount ?? 0,
     totalDeals: allDeals.length,
     openDeals,
@@ -511,6 +546,21 @@ export async function fetchCrmOverview(
     totalOffertes: offerteCount ?? 0,
     openFacturen: openInvoices?.length ?? 0,
     overdueFacturen,
+    accounts: companies.slice(0, 10).map((company) => {
+      const credit = creditsByCompany.get(Number(company.id));
+      return {
+        companyId: Number(company.id),
+        companyName: company.name,
+        ownerName: company.owner,
+        ownerEmail: company.ownerEmail,
+        plan: company.plan,
+        status: company.status,
+        activeUsers: company.activeUsers,
+        creditsRemaining: credit?.credits_remaining ?? 0,
+        creditsUsed: credit?.credits_used ?? company.aiTokensUsed,
+        lastActivity: company.lastLogin,
+      };
+    }),
     recentDeals: allDeals.slice(0, 8).map((deal) => ({
       id: deal.id,
       companyId: deal.bedrijf_id ?? 0,
@@ -617,7 +667,7 @@ export async function fetchAiFleetOverview(
     return {
       companyId: id,
       companyName: company.name,
-      agentsConfigured: agentsByCompany.get(id) ?? 4,
+      agentsConfigured: agentsByCompany.get(id) ?? 0,
       pendingActions: pendingByCompany.get(id) ?? 0,
       executedToday: executedTodayByCompany.get(id) ?? 0,
       creditsUsed: credit?.credits_used ?? company.aiTokensUsed,
@@ -630,28 +680,102 @@ export async function fetchAiFleetOverview(
   });
 }
 
+async function fetchManagedCompany(
+  supabase: ServiceSupabase,
+  companyId: number,
+): Promise<ManagedCompany | null> {
+  const { data: company, error: companyError } = await supabase
+    .from("bedrijven")
+    .select(
+      "id, naam, email, plan, status, subscription_status, is_active, created_at, last_activity_at, owner_user_id, risicostatus, verificatiestatus",
+    )
+    .eq("id", companyId)
+    .maybeSingle();
+
+  if (companyError) {
+    throw new Error(`Bedrijf kon niet worden geladen: ${companyError.message}`);
+  }
+  if (!company) return null;
+
+  const [
+    { count: activeUsers, error: membershipsError },
+    { data: credit, error: creditsError },
+    ownerResult,
+  ] = await Promise.all([
+    supabase
+      .from("company_memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .eq("is_active", true),
+    supabase
+      .from("company_ai_credits")
+      .select("credits_used, total_spent")
+      .eq("company_id", companyId)
+      .maybeSingle(),
+    company.owner_user_id
+      ? supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", company.owner_user_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const relationError =
+    membershipsError ?? creditsError ?? ownerResult.error;
+  if (relationError) {
+    throw new Error(
+      `Bedrijfsrelaties konden niet worden geladen: ${relationError.message}`,
+    );
+  }
+
+  return {
+    id: String(company.id),
+    name: company.naam,
+    domain: company.email?.split("@")[1] ?? "—",
+    owner: ownerResult.data?.full_name ?? "Onbekend",
+    ownerEmail: ownerResult.data?.email ?? company.email ?? "—",
+    plan: normalizePlan(company.plan),
+    activeUsers: activeUsers ?? 0,
+    aiTokensUsed: credit?.credits_used ?? 0,
+    aiCost: Number(credit?.total_spent ?? 0),
+    monthlyRevenue: planMrr(company.plan),
+    storageUsedGb: null,
+    lastLogin: company.last_activity_at ?? company.created_at ?? "",
+    status: normalizeStatus(
+      company.status,
+      company.subscription_status,
+      company.is_active,
+    ),
+    risicoStatus: company.risicostatus ?? "normaal",
+    verificatieStatus: company.verificatiestatus ?? "onbevestigd",
+    createdAt: company.created_at ?? "",
+    logoInitials: initials(company.naam),
+    logoTone: LOGO_TONES[company.id % LOGO_TONES.length] ?? "sky",
+  };
+}
+
 export async function fetchCompanyDetail(
   supabase: ServiceSupabase,
   companyId: number,
 ): Promise<CompanyDetail | null> {
-  const companies = await fetchManagedCompanies(supabase);
-  const company = companies.find((row) => row.id === String(companyId));
+  const company = await fetchManagedCompany(supabase, companyId);
   if (!company) return null;
 
   const [
-    { data: memberships },
-    { data: profiles },
-    { data: offertes },
-    { data: facturen },
-    { data: credits },
-    { data: activity },
-    { data: bedrijf },
+    { data: memberships, error: membershipsError },
+    { data: offertes, error: offertesError },
+    { data: facturen, error: facturenError },
+    { data: credits, error: creditsError },
+    { data: activity, error: activityError },
+    { data: bedrijf, error: bedrijfError },
+    { data: auditLogs, error: auditLogsError },
+    platformInvoices,
   ] = await Promise.all([
     supabase
       .from("company_memberships")
       .select("user_id, role, is_active, joined_at, created_at")
       .eq("company_id", companyId),
-    supabase.from("profiles").select("id, email, full_name"),
     supabase
       .from("offertes")
       .select("id, nummer, klant, bedrag, status, created_at, geldig_tot")
@@ -680,7 +804,44 @@ export async function fetchCompanyDetail(
       .select("ai_assistant, subscription_status, risicostatus, verificatiestatus")
       .eq("id", companyId)
       .maybeSingle(),
+    supabase
+      .from("audit_logs")
+      .select("id, event_category, event_type, severity, created_at, metadata")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    fetchPlatformBillingInvoices(supabase, companyId),
   ]);
+
+  const detailError =
+    membershipsError ??
+    offertesError ??
+    facturenError ??
+    creditsError ??
+    activityError ??
+    bedrijfError ??
+    auditLogsError;
+  if (detailError) {
+    throw new Error(
+      `Bedrijfsdossier kon niet volledig worden geladen: ${detailError.message}`,
+    );
+  }
+
+  const memberIds = Array.from(
+    new Set((memberships ?? []).map((membership) => membership.user_id)),
+  );
+  const { data: profiles, error: profilesError } =
+    memberIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, email, full_name")
+          .in("id", memberIds)
+      : { data: [], error: null };
+  if (profilesError) {
+    throw new Error(
+      `Bedrijfsgebruikers konden niet worden geladen: ${profilesError.message}`,
+    );
+  }
 
   const profileById = new Map(
     (profiles ?? []).map((profile) => [profile.id, profile]),
@@ -729,6 +890,30 @@ export async function fetchCompanyDetail(
     actor: row.agent_name,
   }));
 
+  const securityEvents: SecurityEvent[] = (auditLogs ?? []).map((row) => {
+    const metadata =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? row.metadata
+        : null;
+    const outcome =
+      metadata && typeof metadata.outcome === "string"
+        ? metadata.outcome.replaceAll("_", " ")
+        : null;
+
+    return {
+      id: String(row.id),
+      category: row.event_category,
+      detail: outcome
+        ? `${row.event_type.replaceAll(".", " ")} — ${outcome}`
+        : row.event_type.replaceAll(".", " "),
+      severity:
+        row.severity === "critical" || row.severity === "warning"
+          ? row.severity
+          : ("info" as const),
+      time: row.created_at,
+    };
+  });
+
   let featureFlags: FeatureFlag[] = [
     { key: "ai_agents", label: "AI Agents", enabled: true },
     { key: "peppol", label: "Peppol", enabled: true },
@@ -757,7 +942,7 @@ export async function fetchCompanyDetail(
     risicoStatus: bedrijf?.risicostatus ?? company.risicoStatus ?? "normaal",
     verificatieStatus:
       bedrijf?.verificatiestatus ?? company.verificatieStatus ?? "onbevestigd",
-    nextInvoiceDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    nextInvoiceDate: "",
     requestsToday: activity?.length ?? 0,
     failedRequests: activity?.filter((row) => row.error_message).length ?? 0,
     projectsTotal: 0,
@@ -771,9 +956,10 @@ export async function fetchCompanyDetail(
     aiUsageChart: [],
     providerBreakdown: [],
     paymentHistory: [],
+    platformInvoices,
     failedPayments: [],
     activity: events,
-    auditLog: [],
+    auditLog: securityEvents,
     systemNotes: [],
     featureFlags,
     planLimits: {

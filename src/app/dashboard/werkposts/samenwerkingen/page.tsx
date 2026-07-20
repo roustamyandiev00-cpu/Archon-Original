@@ -12,6 +12,10 @@ import SamenwerkingenClient, {
 } from "@/components/dashboard/werkposts/SamenwerkingenClient";
 import { BouwnetwerkComingSoonBanner } from "@/components/dashboard/werkposts/BouwnetwerkComingSoonBanner";
 import { hasAcceptedCurrentChatTerms } from "@/lib/bouwnetwerk/chat-terms";
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  fetchPlatformRegistrationCount,
+} from "@/lib/bouwnetwerk-gate";
 
 export const metadata = { title: "Samenwerkingen — ArchonPro" };
 
@@ -55,6 +59,7 @@ export default async function SamenwerkingenPage({
 }) {
   const { channel: initialChannelId } = await searchParams;
   const { supabase, companyId, user } = await getCompanyContext();
+  const registeredUsers = await fetchPlatformRegistrationCount(supabase);
 
   let samenwerkingen: Samenwerking[] = [];
   let afspraken: AfspraakRow[] = [];
@@ -333,7 +338,10 @@ export default async function SamenwerkingenPage({
         </p>
       </div>
 
-      <BouwnetwerkComingSoonBanner />
+      <BouwnetwerkComingSoonBanner
+        registeredUsers={registeredUsers}
+        requiredUsers={BOUWNETWERK_REQUIRED_USERS}
+      />
 
       {!companyId ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">

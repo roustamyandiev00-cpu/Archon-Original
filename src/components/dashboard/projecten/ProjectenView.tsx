@@ -36,19 +36,6 @@ const FILTERS: {
   { id: "gepauzeerd", label: "Gepauzeerd", icon: PauseCircle },
 ];
 
-function progressForStatus(status: string) {
-  switch (status) {
-    case "afgerond":
-      return 100;
-    case "actief":
-      return 55;
-    case "gepauzeerd":
-      return 35;
-    default:
-      return 15;
-  }
-}
-
 export default function ProjectenView({
   projecten,
   fileCounts,
@@ -148,28 +135,30 @@ export default function ProjectenView({
         )}
       </header>
 
-      <div
-        className="flex flex-wrap gap-2"
-        role="tablist"
-        aria-label="Filter op status"
-      >
-        <FilterChip
-          active={filter === "all"}
-          label="Alle"
-          count={projecten.length}
-          onClick={() => setFilter("all")}
-        />
-        {FILTERS.map((f) => (
+      {projecten.length > 0 && (
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Projecten filteren op status"
+        >
           <FilterChip
-            key={f.id}
-            active={filter === f.id}
-            label={f.label}
-            count={counts[f.id]}
-            icon={<f.icon size={12} />}
-            onClick={() => setFilter(f.id)}
+            active={filter === "all"}
+            label="Alle"
+            count={projecten.length}
+            onClick={() => setFilter("all")}
           />
-        ))}
-      </div>
+          {FILTERS.map((f) => (
+            <FilterChip
+              key={f.id}
+              active={filter === f.id}
+              label={f.label}
+              count={counts[f.id]}
+              icon={<f.icon size={12} />}
+              onClick={() => setFilter(f.id)}
+            />
+          ))}
+        </div>
+      )}
 
       <section className="overflow-hidden rounded-xl border border-white/[0.08] bg-zinc-900/40">
         <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3 sm:px-5">
@@ -198,8 +187,17 @@ export default function ProjectenView({
               <p className="text-sm leading-relaxed text-zinc-400">
                 {projecten.length === 0
                   ? "Maak je eerste project aan en volg de voortgang van planning tot oplevering."
-                  : "Kies een andere filter of maak een nieuw project aan."}
+                  : "Kies een andere status of toon opnieuw alle projecten."}
               </p>
+              {projecten.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("all")}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] px-4 text-sm font-medium text-zinc-100 hover:bg-white/[0.07]"
+                >
+                  Alle projecten tonen
+                </button>
+              )}
               {canCreate && projecten.length === 0 && (
                 <div className="flex flex-col items-center gap-2 pt-1 sm:flex-row sm:justify-center">
                   <button
@@ -234,7 +232,6 @@ export default function ProjectenView({
                     <th className="px-5 py-3 font-semibold">Klant</th>
                     <th className="px-5 py-3 font-semibold">Status</th>
                     <th className="px-5 py-3 font-semibold">Planning</th>
-                    <th className="px-5 py-3 font-semibold">Voortgang</th>
                     <th className="px-5 py-3 font-semibold">
                       <span className="sr-only">Acties</span>
                     </th>
@@ -243,7 +240,6 @@ export default function ProjectenView({
                 <tbody>
                   {filtered.map((p) => {
                     const meta = projectStatusMeta(p.status);
-                    const progress = progressForStatus(p.status);
                     const files = fileCounts[p.id] ?? 0;
                     return (
                       <tr
@@ -286,26 +282,6 @@ export default function ProjectenView({
                         <td className="px-5 py-3.5 text-zinc-400">
                           {p.start_datum_label || "—"}
                         </td>
-                        <td className="px-5 py-3.5">
-                          <div
-                            className="flex max-w-[120px] items-center gap-2"
-                            role="meter"
-                            aria-label={`Voortgang ${meta.label}`}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={progress}
-                          >
-                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                              <div
-                                className="h-full rounded-full bg-sky-500/80"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                            <span className="text-[11px] tabular-nums text-zinc-500">
-                              {progress}%
-                            </span>
-                          </div>
-                        </td>
                         <td className="px-5 py-3.5 text-right">
                           {!isDemo && (
                             <TableRowActionMenu
@@ -338,7 +314,7 @@ export default function ProjectenView({
             <ul className="divide-y divide-white/[0.06] md:hidden">
               {filtered.map((p) => {
                 const meta = projectStatusMeta(p.status);
-                const progress = progressForStatus(p.status);
+                const files = fileCounts[p.id] ?? 0;
                 return (
                   <li key={p.id} className="px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
@@ -370,17 +346,11 @@ export default function ProjectenView({
                     <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
                       <span>Planning: {p.start_datum_label || "—"}</span>
                       <span>Aangemaakt: {formatProjectDate(p.created_at)}</span>
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                        <div
-                          className="h-full rounded-full bg-sky-500/80"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <span className="text-[11px] tabular-nums text-zinc-500">
-                        {progress}%
-                      </span>
+                      {!isDemo && files > 0 && (
+                        <span>
+                          {files} {files === 1 ? "bestand" : "bestanden"}
+                        </span>
+                      )}
                     </div>
                   </li>
                 );
@@ -426,8 +396,7 @@ function FilterChip({
   return (
     <button
       type="button"
-      role="tab"
-      aria-selected={active}
+      aria-pressed={active}
       onClick={onClick}
       className={`inline-flex h-11 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40 ${
         active

@@ -48,7 +48,10 @@ export async function decideAction(id: number, decision: "approve" | "reject") {
     return { error: "Dit voorstel is verlopen." };
   }
 
-  if (decision === "approve" && !canApproveAction()) {
+  if (
+    decision === "approve" &&
+    !(access.isAdmin || canApproveAction(access.role))
+  ) {
     return { error: "Je hebt geen rechten om deze actie goed te keuren." };
   }
 

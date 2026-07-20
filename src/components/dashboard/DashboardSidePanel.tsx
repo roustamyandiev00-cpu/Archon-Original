@@ -56,14 +56,12 @@ export function DashboardSidePanelProvider({
   children: ReactNode;
   enabled: boolean;
 }) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(() => readStoredCollapsed());
   const [hydrated, setHydrated] = useState(false);
   const userInteractedRef = useRef(false);
 
   useEffect(() => {
-    if (!userInteractedRef.current) {
-      setCollapsed(readStoredCollapsed());
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true);
   }, []);
 

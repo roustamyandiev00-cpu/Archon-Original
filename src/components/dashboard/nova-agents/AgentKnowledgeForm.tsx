@@ -120,6 +120,7 @@ export default function AgentKnowledgeForm({
   const selected = agents.find((a) => a.id === agentId);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (defaultAgentId) setAgentId(defaultAgentId);
   }, [defaultAgentId]);
 
@@ -137,6 +138,7 @@ export default function AgentKnowledgeForm({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDocuments(agentId);
   }, [agentId, loadDocuments]);
 

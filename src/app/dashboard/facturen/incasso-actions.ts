@@ -14,7 +14,10 @@ import {
   stageLabel,
 } from "@/components/dashboard/facturen/incasso";
 import { requireWriteAccess } from "@/components/dashboard/context";
-import { sendEmailViaCompanySmtp } from "@/app/dashboard/instellingen/smtp-actions";
+import {
+  loadEmailDeliveryPreference,
+  sendEmailViaCompanySmtp,
+} from "@/app/dashboard/instellingen/smtp-actions";
 import { generateFactuurPdfBuffer } from "@/components/dashboard/email/factuurPdfBuffer";
 
 export type ExecuteIncassoInput = {
@@ -180,6 +183,11 @@ async function deliverIncassoEmail(
   | { mode: "mailto"; mailto: string }
   | { error: string }
 > {
+  const deliveryMode = await loadEmailDeliveryPreference(supabase, companyId);
+  if (deliveryMode !== "smtp") {
+    return { mode: "mailto", mailto: mailtoUrl(to, subject, body) };
+  }
+
   const pdfResult = await generateFactuurPdfBuffer(
     supabase,
     companyId,

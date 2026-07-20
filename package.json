@@ -13,8 +13,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "types:generate": "echo 'Run: npx supabase gen types typescript --linked > src/types/database.types.ts'"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

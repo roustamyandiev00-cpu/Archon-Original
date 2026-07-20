@@ -3,16 +3,35 @@ import { createClient } from "@/lib/supabase/server";
 import { provisionWorkspaceIfNeeded } from "@/lib/company";
 import { ensureUserReferral } from "@/lib/referral";
 import { seedOnboardingFromMetadata } from "@/lib/onboarding/seed";
+import { resolvePostLoginDestination } from "@/app/login/actions";
+
+function safeInternalRedirect(value: string | null, fallback: string): string {
+  if (!value?.startsWith("/") || value.startsWith("//")) return fallback;
+  return value;
+}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const isRecovery = searchParams.get("flow") === "recovery";
+  const redirect = safeInternalRedirect(
+    searchParams.get("redirect"),
+    isRecovery ? "/auth/wachtwoord-resetten" : "/dashboard",
+  );
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      if (isRecovery) {
+        return NextResponse.redirect(`${origin}${redirect}`);
+      }
+
+      const destination = await resolvePostLoginDestination(redirect);
+      if (destination === "/admin") {
+        return NextResponse.redirect(`${origin}${destination}`);
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -28,7 +47,7 @@ export async function GET(request: Request) {
           user.user_metadata as Record<string, unknown>,
         );
       }
-      return NextResponse.redirect(`${origin}${redirect}`);
+      return NextResponse.redirect(`${origin}${destination}`);
     }
   }
 

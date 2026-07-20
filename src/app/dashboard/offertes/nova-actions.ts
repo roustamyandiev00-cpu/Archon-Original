@@ -82,10 +82,10 @@ export async function requestNovaOfferte(input: {
   const retrievalContext = await fetchRetrievalContext(
     supabase,
     companyId,
-    `${klant} ${input.description}`,
+    `${klant} ${input.description} prijs uurtarief materiaal`,
   );
   const enrichedDescription = retrievalContext
-    ? `Relevante context (geheugen + kennisbank, gebruik waar van toepassing):\n${retrievalContext}\n\n${input.description}`
+    ? `Relevante context (geheugen + geleerde prijzen + kennisbank — gebruik waar van toepassing, prefer geleerde/historische unitprijzen):\n${retrievalContext}\n\n${input.description}`
     : input.description;
 
   const { draft, error: aiError } = await suggestOfferteFromPhotosAndDimensions({

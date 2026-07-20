@@ -13,6 +13,7 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
+import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
 import {
   DashboardMobileCard,
   DashboardMobileEmpty,
@@ -53,18 +54,20 @@ export type FactuurListItem = {
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20] as const;
 
-export type FactuurColumnKey = "date" | "dueDate";
+export type FactuurColumnKey = "date" | "dueDate" | "send";
 
 export type FactuurColumnVisibility = Record<FactuurColumnKey, boolean>;
 
 export const FACTUUR_COLUMN_OPTIONS = [
   { id: "date", label: "Factuurdatum" },
   { id: "dueDate", label: "Vervaldatum" },
+  { id: "send", label: "Versturen" },
 ] as const;
 
 export const defaultFactuurColumnVisibility: FactuurColumnVisibility = {
   date: true,
   dueDate: true,
+  send: true,
 };
 
 const stickyActionsClass =
@@ -98,7 +101,6 @@ export default function FacturenDataTable({
   const [pageSize, setPageSize] = useState<number>(10);
   const [page, setPage] = useState(1);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -124,34 +126,12 @@ export default function FacturenDataTable({
   const pageStart = (currentPage - 1) * pageSize;
   const pageEnd = Math.min(pageStart + pageSize, filtered.length);
   const visible = filtered.slice(pageStart, pageEnd);
-  const allVisibleSelected =
-    visible.length > 0 && visible.every((f) => selectedIds.has(f.id));
+  const hasActiveFilters = query.trim().length > 0 || statusFilter !== "all";
 
   function resetFilters() {
     setQuery("");
     setStatusFilter("all");
     setPage(1);
-  }
-
-  function toggleSelectAll() {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (allVisibleSelected) {
-        visible.forEach((f) => next.delete(f.id));
-      } else {
-        visible.forEach((f) => next.add(f.id));
-      }
-      return next;
-    });
-  }
-
-  function toggleSelect(id: number) {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   }
 
   return (
@@ -196,6 +176,7 @@ export default function FacturenDataTable({
             type="button"
             variant="ghost"
             onClick={resetFilters}
+            disabled={!hasActiveFilters}
             className="justify-center"
           >
             <RotateCcw size={15} />
@@ -210,11 +191,6 @@ export default function FacturenDataTable({
           {filtered.length.toLocaleString("nl-BE")} van{" "}
           {facturen.length.toLocaleString("nl-BE")} facturen
         </span>
-        {selectedIds.size > 0 ? (
-          <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300">
-            {selectedIds.size} geselecteerd
-          </span>
-        ) : null}
       </div>
 
         <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
@@ -227,13 +203,6 @@ export default function FacturenDataTable({
                 return (
                   <DashboardMobileCard key={f.id}>
                     <div className="flex items-start justify-between gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(f.id)}
-                        onChange={() => toggleSelect(f.id)}
-                        aria-label={`Selecteer ${f.nummer ?? `factuur ${f.id}`}`}
-                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 bg-zinc-950 accent-sky-500"
-                      />
                       <div className="min-w-0 flex-1">
                         {isDemo ? (
                           <p className="truncate font-mono text-sm font-medium text-zinc-100">
@@ -263,7 +232,23 @@ export default function FacturenDataTable({
                       {formatDate(f.datum)}
                       {f.vervaldatum ? ` · verval ${formatDate(f.vervaldatum)}` : ""}
                     </p>
-                    <div className="mt-3 flex items-center justify-end border-t border-white/10 pt-2">
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2">
+                      <DocumentContactActions
+                        soort={
+                          f.document_type === "proforma" ? "proforma" : "factuur"
+                        }
+                        nummer={f.nummer ?? `#${f.id}`}
+                        klant={f.klant ?? "klant"}
+                        bedrag={f.totaal_bedrag}
+                        email={f.email}
+                        phone={f.phone}
+                        detailPath={
+                          isDemo ? undefined : `/dashboard/facturen/${f.id}`
+                        }
+                        pdfPath={
+                          isDemo ? undefined : `/dashboard/facturen/${f.id}/pdf`
+                        }
+                      />
                       <FactuurRowMenu
                         id={f.id}
                         nummer={f.nummer ?? `#${f.id}`}
@@ -288,18 +273,28 @@ export default function FacturenDataTable({
               <div className="space-y-3">
                 <DashboardMobileEmpty
                   icon={<Receipt size={22} />}
-                  title="Geen zoekresultaten"
-                  description="Pas je zoekopdracht of statusfilter aan."
+                  title={
+                    facturen.length === 0
+                      ? "Nog geen facturen"
+                      : "Geen zoekresultaten"
+                  }
+                  description={
+                    facturen.length === 0
+                      ? "Maak een factuur of proforma aan en volg betalingen vanuit één overzicht."
+                      : "Pas je zoekopdracht of statusfilter aan."
+                  }
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={resetFilters}
-                  className="mx-auto flex"
-                >
-                  <RotateCcw size={15} />
-                  Filters wissen
-                </Button>
+                {facturen.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={resetFilters}
+                    className="mx-auto flex"
+                  >
+                    <RotateCcw size={15} />
+                    Filters wissen
+                  </Button>
+                ) : null}
               </div>
             )}
           </div>
@@ -308,15 +303,6 @@ export default function FacturenDataTable({
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="group border-b border-white/[0.08] bg-zinc-900/70 hover:bg-zinc-900/70">
-                <TableHead className="w-11">
-                  <input
-                    type="checkbox"
-                    checked={allVisibleSelected}
-                    onChange={toggleSelectAll}
-                    aria-label="Selecteer zichtbare facturen"
-                    className="h-4 w-4 rounded border-white/20 bg-zinc-950 accent-sky-500"
-                  />
-                </TableHead>
                 <TableHead className="min-w-0 text-zinc-400">Nummer</TableHead>
                 <TableHead className="min-w-0 text-zinc-400">Klant</TableHead>
                 <TableHead
@@ -340,6 +326,15 @@ export default function FacturenDataTable({
                 <TableHead className="text-right text-zinc-400">Bedrag</TableHead>
                 <TableHead className="text-zinc-400">Status</TableHead>
                 <TableHead
+                  className={tableColumnClass(
+                    columnVisibility.send,
+                    undefined,
+                    "text-right text-zinc-400",
+                  )}
+                >
+                  Versturen
+                </TableHead>
+                <TableHead
                   className={`${stickyActionsClass} bg-zinc-900/95 group-hover:bg-zinc-900/95`}
                 >
                   <span className="sr-only">Acties</span>
@@ -356,15 +351,6 @@ export default function FacturenDataTable({
                       key={f.id}
                       className="group border-b border-white/[0.06] hover:bg-white/[0.03]"
                     >
-                      <TableCell className="w-11">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(f.id)}
-                          onChange={() => toggleSelect(f.id)}
-                          aria-label={`Selecteer ${f.nummer ?? `factuur ${f.id}`}`}
-                          className="h-4 w-4 rounded border-white/20 bg-zinc-950 accent-sky-500"
-                        />
-                      </TableCell>
                       <TableCell className="min-w-0">
                         {isDemo ? (
                           <span className="truncate font-mono text-zinc-200">
@@ -408,6 +394,34 @@ export default function FacturenDataTable({
                           {meta.label}
                         </Badge>
                       </TableCell>
+                      <TableCell
+                        className={tableColumnClass(
+                          columnVisibility.send,
+                          undefined,
+                          "text-right",
+                        )}
+                      >
+                        <DocumentContactActions
+                          soort={
+                            f.document_type === "proforma"
+                              ? "proforma"
+                              : "factuur"
+                          }
+                          nummer={f.nummer ?? `#${f.id}`}
+                          klant={f.klant ?? "klant"}
+                          bedrag={f.totaal_bedrag}
+                          email={f.email}
+                          phone={f.phone}
+                          detailPath={
+                            isDemo ? undefined : `/dashboard/facturen/${f.id}`
+                          }
+                          pdfPath={
+                            isDemo
+                              ? undefined
+                              : `/dashboard/facturen/${f.id}/pdf`
+                          }
+                        />
+                      </TableCell>
                       <TableCell className={stickyActionsClass}>
                         <FactuurRowMenu
                           id={f.id}
@@ -436,26 +450,32 @@ export default function FacturenDataTable({
                 })
               ) : (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={8} className="py-14 text-center">
+                  <TableCell colSpan={8} className="py-8 text-center">
                     <div className="mx-auto flex max-w-sm flex-col items-center">
                       <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/[0.08] bg-zinc-900 text-sky-400">
                         <Receipt size={22} />
                       </span>
                       <p className="mt-3 text-sm font-medium text-zinc-100">
-                        Geen zoekresultaten
+                        {facturen.length === 0
+                          ? "Nog geen facturen"
+                          : "Geen zoekresultaten"}
                       </p>
                       <p className="mt-1 text-xs text-zinc-400">
-                        Pas je zoekopdracht of statusfilter aan.
+                        {facturen.length === 0
+                          ? "Maak een factuur of proforma aan en volg betalingen vanuit één overzicht."
+                          : "Pas je zoekopdracht of statusfilter aan."}
                       </p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={resetFilters}
-                        className="mt-3"
-                      >
-                        <RotateCcw size={15} />
-                        Filters wissen
-                      </Button>
+                      {facturen.length > 0 ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={resetFilters}
+                          className="mt-3"
+                        >
+                          <RotateCcw size={15} />
+                          Filters wissen
+                        </Button>
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -465,64 +485,66 @@ export default function FacturenDataTable({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2 border-t border-white/[0.08] pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-            <label htmlFor="facturen-page-size">Rijen per pagina</label>
-            <select
-              id="facturen-page-size"
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
-                setPage(1);
-              }}
-              className="h-8 rounded-lg border border-white/10 bg-zinc-950 px-2 text-xs text-zinc-300 outline-none focus:border-sky-500/50"
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-            <span aria-hidden>·</span>
-            <span>
-            Toont{" "}
-            <span className="font-mono text-zinc-300">
-              {filtered.length === 0 ? 0 : pageStart + 1}
-            </span>{" "}
-            tot{" "}
-            <span className="font-mono text-zinc-300">{pageEnd}</span> van{" "}
-            <span className="font-mono text-zinc-300">
-              {filtered.length.toLocaleString("nl-BE")}
-            </span>
-            </span>
-          </div>
+        {filtered.length > 0 ? (
+          <div className="flex shrink-0 flex-col gap-2 border-t border-white/[0.08] pt-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+              <label htmlFor="facturen-page-size">Rijen per pagina</label>
+              <select
+                id="facturen-page-size"
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+                className="h-8 rounded-lg border border-white/10 bg-zinc-950 px-2 text-xs text-zinc-300 outline-none focus:border-sky-500/50"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <span aria-hidden>·</span>
+              <span>
+                Toont{" "}
+                <span className="font-mono text-zinc-300">
+                  {pageStart + 1}
+                </span>{" "}
+                tot <span className="font-mono text-zinc-300">{pageEnd}</span>{" "}
+                van{" "}
+                <span className="font-mono text-zinc-300">
+                  {filtered.length.toLocaleString("nl-BE")}
+                </span>
+              </span>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              aria-label="Vorige pagina"
-            >
-              <ChevronLeft size={16} />
-            </Button>
-            <span className="min-w-24 text-center font-mono text-xs text-zinc-400">
-              Pagina {currentPage} / {pageCount}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
-              disabled={currentPage === pageCount}
-              aria-label="Volgende pagina"
-            >
-              <ChevronRight size={16} />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                aria-label="Vorige pagina"
+              >
+                <ChevronLeft size={16} />
+              </Button>
+              <span className="min-w-24 text-center font-mono text-xs text-zinc-400">
+                Pagina {currentPage} / {pageCount}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
+                disabled={currentPage === pageCount}
+                aria-label="Volgende pagina"
+              >
+                <ChevronRight size={16} />
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : null}
     </div>
   );
 }

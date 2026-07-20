@@ -74,6 +74,7 @@ export default function SamenwerkingContractPanel({
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setContract(initialContract);
   }, [initialContract, channelId]);
 

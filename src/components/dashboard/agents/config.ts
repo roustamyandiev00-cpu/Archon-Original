@@ -63,7 +63,7 @@ export const CAPABILITY_OPTIONS: {
     id: "planning",
     label: "Planning",
     description: "Afspraken en werfbezoeken plannen",
-    href: "/dashboard/comms",
+    href: "/dashboard/agenda",
   },
 ];
 

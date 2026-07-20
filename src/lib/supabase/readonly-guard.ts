@@ -2,6 +2,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 
 const BLOCKED_WRITE_METHODS = new Set(["insert", "update", "upsert", "delete"]);
+const BLOCKED_STORAGE_METHODS = new Set([
+  "copy",
+  "createSignedUploadUrl",
+  "move",
+  "remove",
+  "update",
+  "upload",
+]);
 
 function blocked(): never {
   throw new Error(
@@ -39,6 +47,61 @@ export function withReadOnlyGuard(
       }
       if (prop === "rpc") {
         return blocked;
+      }
+      if (prop === "functions") {
+        return new Proxy(target.functions, {
+          get(functionsTarget, functionsProp, functionsReceiver) {
+            if (functionsProp === "invoke") return blocked;
+            const value = Reflect.get(
+              functionsTarget,
+              functionsProp,
+              functionsReceiver,
+            );
+            return typeof value === "function" ? value.bind(functionsTarget) : value;
+          },
+        });
+      }
+      if (prop === "storage") {
+        return new Proxy(target.storage, {
+          get(storageTarget, storageProp, storageReceiver) {
+            if (storageProp === "from") {
+              return (...args: Parameters<typeof storageTarget.from>) => {
+                const bucket = Reflect.apply(storageTarget.from, storageTarget, args);
+                return new Proxy(bucket, {
+                  get(bucketTarget, bucketProp, bucketReceiver) {
+                    if (
+                      typeof bucketProp === "string" &&
+                      BLOCKED_STORAGE_METHODS.has(bucketProp)
+                    ) {
+                      return blocked;
+                    }
+                    const value = Reflect.get(
+                      bucketTarget,
+                      bucketProp,
+                      bucketReceiver,
+                    );
+                    return typeof value === "function"
+                      ? value.bind(bucketTarget)
+                      : value;
+                  },
+                });
+              };
+            }
+            const value = Reflect.get(storageTarget, storageProp, storageReceiver);
+            return typeof value === "function" ? value.bind(storageTarget) : value;
+          },
+        });
+      }
+      if (prop === "auth") {
+        return new Proxy(target.auth, {
+          get(authTarget, authProp, authReceiver) {
+            if (authProp === "admin") {
+              return new Proxy({}, { get: () => blocked });
+            }
+            const value = Reflect.get(authTarget, authProp, authReceiver);
+            return typeof value === "function" ? value.bind(authTarget) : value;
+          },
+        });
       }
       const value = Reflect.get(target, prop, receiver);
       return typeof value === "function" ? value.bind(target) : value;

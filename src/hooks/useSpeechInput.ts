@@ -39,7 +39,7 @@ export function useSpeechInput(options: UseSpeechInputOptions = {}) {
   } = options;
 
   const [isListening, setIsListening] = useState(false);
-  const [supported, setSupported] = useState(false);
+  const [supported] = useState(() => isSpeechRecognitionSupported());
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const bufferRef = useRef("");
   const handlersRef = useRef({ onResult, onFinal });
@@ -51,7 +51,6 @@ export function useSpeechInput(options: UseSpeechInputOptions = {}) {
   }, [onResult, onFinal]);
 
   useEffect(() => {
-    setSupported(isSpeechRecognitionSupported());
     const recognition = createSpeechRecognition();
     if (!recognition) return;
 

@@ -350,6 +350,7 @@ export default function SamenwerkingenClient({
       initialChannelId &&
       samenwerkingen.some((s) => s.channelId === initialChannelId)
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedId(initialChannelId);
       setMobileChatOpen(true);
     }
@@ -2179,6 +2180,7 @@ function ProfileField({
 // DOCUMENTS PANEL
 // ---------------------------------------------------------
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function DocumentsPanel({
   loading,
   documents,

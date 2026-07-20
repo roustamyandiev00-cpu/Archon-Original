@@ -11,7 +11,10 @@ export interface PricingPlan {
   name: string;
   badge?: string;
   tagline: string;
-  basePrice: Record<BillingCycle, number>; // prijs per maand (per bedrijfsdossier)
+  /** Actuele prijs per maand (per bedrijfsdossier). */
+  basePrice: Record<BillingCycle, number>;
+  /** Doorgestreepte listprijs (promotie) — hoger dan de actuele maandprijs. */
+  listPrice: number;
   extraUserPrice: number; // extra gebruiker per maand
   includedUsers: number; // standaard inbegrepen gebruikers
   maxUsers?: number;
@@ -34,9 +37,12 @@ export interface Addon {
 
 export interface PriceBreakdown {
   planBase: number;
+  planListBase: number;
   extraUsersTotal: number;
   addonsTotal: number;
   subtotalMonthly: number;
+  listSubtotalMonthly: number;
+  discountPercent: number;
   billingMultiplier: number; // hoeveelheid maanden per betaalperiode
   totalPerPeriod: number;
   savingsVsMonthly: number;
@@ -74,6 +80,7 @@ export const PLANS: PricingPlan[] = [
       quarterly: 28,
       yearly: 27,
     },
+    listPrice: 39,
     extraUserPrice: 9,
     includedUsers: 1,
     features: [
@@ -97,6 +104,7 @@ export const PLANS: PricingPlan[] = [
       quarterly: 57,
       yearly: 55,
     },
+    listPrice: 79,
     extraUserPrice: 9,
     includedUsers: 1,
     features: [
@@ -121,6 +129,7 @@ export const PLANS: PricingPlan[] = [
       quarterly: 96,
       yearly: 92,
     },
+    listPrice: 129,
     extraUserPrice: 9,
     includedUsers: 1,
     features: [
@@ -209,6 +218,7 @@ export function usePricingCalculator() {
   const breakdown = useMemo((): PriceBreakdown => {
     const plan = selectedPlan;
     const planBase = plan.basePrice[billing];
+    const planListBase = plan.listPrice;
     const extraUsers = Math.max(0, userCount - plan.includedUsers);
     const extraUsersTotal = extraUsers * plan.extraUserPrice;
 
@@ -218,6 +228,11 @@ export function usePricingCalculator() {
     );
 
     const subtotalMonthly = planBase + extraUsersTotal + addonsTotal;
+    const listSubtotalMonthly = planListBase + extraUsersTotal + addonsTotal;
+    const discountPercent =
+      planListBase > planBase
+        ? Math.round((1 - planBase / planListBase) * 100)
+        : 0;
     const multiplier = BILLING_MULTIPLIER[billing];
     const discount = BILLING_DISCOUNT[billing];
     const totalPerPeriod = Math.round(subtotalMonthly * multiplier * discount * 100) / 100;
@@ -236,9 +251,12 @@ export function usePricingCalculator() {
 
     return {
       planBase,
+      planListBase,
       extraUsersTotal,
       addonsTotal,
       subtotalMonthly,
+      listSubtotalMonthly,
+      discountPercent,
       billingMultiplier: multiplier,
       totalPerPeriod,
       savingsVsMonthly,

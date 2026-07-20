@@ -10,6 +10,7 @@ import {
   type SmtpSettingsView,
 } from "@/app/dashboard/instellingen/smtp-actions";
 import { GMAIL_SMTP } from "@/components/dashboard/email/smtp-constants";
+import type { EmailDeliveryMode } from "@/app/dashboard/instellingen/settings";
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
@@ -35,6 +36,7 @@ export default function SmtpSettingsPanel({
     smtp_pass: "",
     from_email: initial.from_email || companyEmail,
     from_name: initial.from_name || companyName,
+    deliveryMode: initial.deliveryMode,
   });
   const [pending, startTransition] = useTransition();
   const [testing, startTest] = useTransition();
@@ -49,6 +51,10 @@ export default function SmtpSettingsPanel({
     setForm((f) => ({ ...f, [key]: value }));
     setSaved(false);
     setTestOk(false);
+  }
+
+  function setDeliveryMode(mode: EmailDeliveryMode) {
+    set("deliveryMode", mode);
   }
 
   function applyGmailPreset() {
@@ -98,124 +104,181 @@ export default function SmtpSettingsPanel({
             E-mail (SMTP / Gmail)
           </h2>
           <p className="mt-0.5 text-sm text-zinc-500">
-            Automatisch versturen van incasso-mails en documenten via je eigen
-            mailbox. Geen Resend nodig.
+            Kies zelf hoe ArchonPro offertes en incasso-mails verstuurt: via jouw
+            mailbox of via je e-mailprogramma.
           </p>
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={applyGmailPreset}
-          className={`rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-            form.preset === "gmail"
-              ? "bg-sky-500 text-zinc-950"
-              : "border border-white/10 text-zinc-300 hover:bg-white/5"
-          }`}
-        >
-          Gmail
-        </button>
-        <button
-          type="button"
-          onClick={() => set("preset", "custom")}
-          className={`rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-            form.preset === "custom"
-              ? "bg-sky-500 text-zinc-950"
-              : "border border-white/10 text-zinc-300 hover:bg-white/5"
-          }`}
-        >
-          Eigen SMTP
-        </button>
+      <div className="mb-5 space-y-2">
+        <p className={labelClass}>Verzendwijze</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setDeliveryMode("smtp")}
+            className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+              form.deliveryMode === "smtp"
+                ? "border-sky-500/50 bg-sky-500/10"
+                : "border-white/10 hover:bg-white/5"
+            }`}
+          >
+            <span className="block text-sm font-semibold text-zinc-100">
+              Automatisch via SMTP / Gmail
+            </span>
+            <span className="mt-1 block text-xs text-zinc-500">
+              ArchonPro verstuurt mails zelf, met PDF-bijlage.
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeliveryMode("mailto")}
+            className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+              form.deliveryMode === "mailto"
+                ? "border-sky-500/50 bg-sky-500/10"
+                : "border-white/10 hover:bg-white/5"
+            }`}
+          >
+            <span className="block text-sm font-semibold text-zinc-100">
+              Handmatig via e-mailprogramma
+            </span>
+            <span className="mt-1 block text-xs text-zinc-500">
+              Opent Outlook, Gmail of Apple Mail met een vooraf ingevulde mail.
+            </span>
+          </button>
+        </div>
       </div>
 
-      {form.preset === "gmail" && (
-        <div className="mb-4 rounded-xl border border-sky-500/20 bg-sky-500/[0.06] px-4 py-3 text-xs text-zinc-400">
-          Gebruik een{" "}
-          <span className="font-medium text-zinc-200">Google app-wachtwoord</span>{" "}
-          (niet je normale wachtwoord). Activeer 2FA in Google en maak een
-          app-wachtwoord aan onder Beveiliging → App-wachtwoorden.
-        </div>
-      )}
+      {form.deliveryMode === "smtp" && (
+        <>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={applyGmailPreset}
+              className={`rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                form.preset === "gmail"
+                  ? "bg-sky-500 text-zinc-950"
+                  : "border border-white/10 text-zinc-300 hover:bg-white/5"
+              }`}
+            >
+              Gmail
+            </button>
+            <button
+              type="button"
+              onClick={() => set("preset", "custom")}
+              className={`rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                form.preset === "custom"
+                  ? "bg-sky-500 text-zinc-950"
+                  : "border border-white/10 text-zinc-300 hover:bg-white/5"
+              }`}
+            >
+              Eigen SMTP
+            </button>
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className={labelClass}>Afzender naam</label>
-          <input
-            type="text"
-            value={form.from_name}
-            onChange={(e) => set("from_name", e.target.value)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Afzender e-mail</label>
-          <input
-            type="email"
-            value={form.from_email}
-            onChange={(e) => set("from_email", e.target.value)}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>
-            {form.preset === "gmail" ? "Gmail-adres" : "SMTP-gebruiker"}
-          </label>
-          <input
-            type="email"
-            value={form.smtp_user}
-            onChange={(e) => set("smtp_user", e.target.value)}
-            placeholder="jij@gmail.com"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>
-            {form.preset === "gmail" ? "App-wachtwoord" : "SMTP-wachtwoord"}
-          </label>
-          <input
-            type="password"
-            value={form.smtp_pass}
-            onChange={(e) => set("smtp_pass", e.target.value)}
-            placeholder={
-              initial.hasPassword && !form.smtp_pass
-                ? "•••••••• (opgeslagen)"
-                : form.preset === "gmail"
-                  ? "16 tekens app-wachtwoord"
-                  : "Wachtwoord"
-            }
-            className={inputClass}
-          />
-          {initial.hasPassword && !form.smtp_pass && (
-            <p className={hintClass}>Laat leeg om het opgeslagen wachtwoord te behouden.</p>
+          {form.preset === "gmail" && (
+            <div className="mb-4 rounded-xl border border-sky-500/20 bg-sky-500/[0.06] px-4 py-3 text-xs text-zinc-400">
+              Gebruik een{" "}
+              <span className="font-medium text-zinc-200">
+                Google app-wachtwoord
+              </span>{" "}
+              (niet je normale wachtwoord). Activeer 2FA in Google en maak een
+              app-wachtwoord aan onder Beveiliging → App-wachtwoorden.
+            </div>
           )}
-        </div>
 
-        {form.preset === "custom" && (
-          <>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>SMTP-host</label>
+              <label className={labelClass}>Afzender naam</label>
               <input
                 type="text"
-                value={form.smtp_host}
-                onChange={(e) => set("smtp_host", e.target.value)}
-                placeholder="mail.jouwdomein.be"
+                value={form.from_name}
+                onChange={(e) => set("from_name", e.target.value)}
                 className={inputClass}
               />
             </div>
             <div>
-              <label className={labelClass}>SMTP-poort</label>
+              <label className={labelClass}>Afzender e-mail</label>
               <input
-                type="number"
-                value={form.smtp_port}
-                onChange={(e) => set("smtp_port", Number(e.target.value) || 587)}
+                type="email"
+                value={form.from_email}
+                onChange={(e) => set("from_email", e.target.value)}
                 className={inputClass}
               />
-              <p className={hintClass}>Meestal 587 (STARTTLS) of 465 (SSL).</p>
             </div>
-          </>
-        )}
-      </div>
+            <div>
+              <label className={labelClass}>
+                {form.preset === "gmail" ? "Gmail-adres" : "SMTP-gebruiker"}
+              </label>
+              <input
+                type="email"
+                value={form.smtp_user}
+                onChange={(e) => set("smtp_user", e.target.value)}
+                placeholder="jij@gmail.com"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>
+                {form.preset === "gmail" ? "App-wachtwoord" : "SMTP-wachtwoord"}
+              </label>
+              <input
+                type="password"
+                value={form.smtp_pass}
+                onChange={(e) => set("smtp_pass", e.target.value)}
+                placeholder={
+                  initial.hasPassword && !form.smtp_pass
+                    ? "•••••••• (opgeslagen)"
+                    : form.preset === "gmail"
+                      ? "16 tekens app-wachtwoord"
+                      : "Wachtwoord"
+                }
+                className={inputClass}
+              />
+              {initial.hasPassword && !form.smtp_pass && (
+                <p className={hintClass}>
+                  Laat leeg om het opgeslagen wachtwoord te behouden.
+                </p>
+              )}
+            </div>
+
+            {form.preset === "custom" && (
+              <>
+                <div>
+                  <label className={labelClass}>SMTP-host</label>
+                  <input
+                    type="text"
+                    value={form.smtp_host}
+                    onChange={(e) => set("smtp_host", e.target.value)}
+                    placeholder="mail.jouwdomein.be"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>SMTP-poort</label>
+                  <input
+                    type="number"
+                    value={form.smtp_port}
+                    onChange={(e) =>
+                      set("smtp_port", Number(e.target.value) || 587)
+                    }
+                    className={inputClass}
+                  />
+                  <p className={hintClass}>
+                    Meestal 587 (STARTTLS) of 465 (SSL).
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {form.deliveryMode === "mailto" && (
+        <p className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-zinc-500">
+          Offertes en incasso openen je eigen e-mailprogramma. Je kunt later
+          alsnog overschakelen naar automatische SMTP/Gmail-verzending.
+        </p>
+      )}
 
       {error && (
         <p className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
@@ -224,29 +287,32 @@ export default function SmtpSettingsPanel({
       )}
       {saved && !error && (
         <p className="mt-4 inline-flex items-center gap-1.5 text-sm text-emerald-400">
-          <Check size={15} /> SMTP-instellingen opgeslagen
+          <Check size={15} /> E-mailinstellingen opgeslagen
         </p>
       )}
       {testOk && !error && (
         <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-emerald-400">
-          <Check size={15} /> Testmail verstuurd naar {companyEmail || form.from_email}
+          <Check size={15} /> Testmail verstuurd naar{" "}
+          {companyEmail || form.from_email}
         </p>
       )}
 
       <div className="mt-5 flex flex-wrap justify-end gap-3">
-        <button
-          type="button"
-          onClick={handleTest}
-          disabled={pending || testing}
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
-        >
-          {testing ? (
-            <Loader2 size={15} className="animate-spin" />
-          ) : (
-            <Send size={15} />
-          )}
-          Testmail versturen
-        </button>
+        {form.deliveryMode === "smtp" && (
+          <button
+            type="button"
+            onClick={handleTest}
+            disabled={pending || testing}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
+          >
+            {testing ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <Send size={15} />
+            )}
+            Testmail versturen
+          </button>
+        )}
         <button
           type="button"
           onClick={handleSave}

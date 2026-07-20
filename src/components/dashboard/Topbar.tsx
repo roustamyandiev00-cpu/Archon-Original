@@ -21,7 +21,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import ThemeToggle from "@/components/dashboard/ThemeToggle";
 import AgentChatTopbarButton from "@/components/dashboard/agent-chat/AgentChatTopbarButton";
 import AgentAvatar from "@/components/dashboard/agents/AgentAvatar";
 import { useAgentCompletions } from "@/components/dashboard/AgentCompletionsProvider";

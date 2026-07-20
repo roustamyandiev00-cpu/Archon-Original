@@ -72,6 +72,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");
+  const isAdmin = request.nextUrl.pathname.startsWith("/admin");
   const isPreviewEntry = request.nextUrl.pathname === "/dashboard/voorbeeld";
   const isPreviewMode =
     request.cookies.get(PREVIEW_COOKIE)?.value === "1" || isPreviewEntry;
@@ -79,13 +80,15 @@ export async function updateSession(request: NextRequest) {
 
   if (
     !user &&
-    isDashboard &&
-    !isPreviewMode &&
+    (isAdmin || (isDashboard && !isPreviewMode)) &&
     !(authCheckFailed && hasAuthCookie)
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
+    url.searchParams.set(
+      "redirect",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    );
     return NextResponse.redirect(url);
   }
 

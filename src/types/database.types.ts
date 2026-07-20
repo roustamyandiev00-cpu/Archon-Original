@@ -6077,6 +6077,7 @@ export type Database = {
           }
         | { Args: { record_id: number; table_name: string }; Returns: number }
       get_plan_limits: { Args: { plan_name: string }; Returns: Json }
+      get_platform_registration_count: { Args: never; Returns: number }
       get_project_file_storage_path: {
         Args: { p_filename: string; p_project_id: string }
         Returns: string

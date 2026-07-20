@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowRight,
   ArrowDownRight,
   ArrowUpRight,
   Bot,
   Building2,
+  CircleCheck,
+  Coins,
   CreditCard,
   DollarSign,
   Headphones,
@@ -68,6 +72,57 @@ const kpiTone: Record<KpiMetric["tone"], string> = {
   cyan: "bg-cyan-500/10 text-cyan-400",
 };
 
+const quickLinks = [
+  {
+    href: "/admin/companies",
+    label: "Bedrijven beheren",
+    description: "Klanten, plannen en toegang",
+    icon: Building2,
+  },
+  {
+    href: "/admin/ai-tokens",
+    label: "AI-verbruik bekijken",
+    description: "Credits, kosten en limieten",
+    icon: Coins,
+  },
+  {
+    href: "/admin/rapportages",
+    label: "Rapportages openen",
+    description: "Groei en platformprestaties",
+    icon: TrendingUp,
+  },
+] as const;
+
+const paymentStatusLabel = {
+  paid: "betaald",
+  pending: "in behandeling",
+  failed: "mislukt",
+} as const;
+
+const severityLabel = {
+  critical: "kritiek",
+  warning: "waarschuwing",
+} as const;
+
+const priorityLabel = {
+  high: "hoog",
+  medium: "normaal",
+  low: "laag",
+} as const;
+
+const ticketStatusLabel = {
+  open: "open",
+  in_progress: "in behandeling",
+  resolved: "opgelost",
+} as const;
+
+const serviceStatusLabel = {
+  operational: "operationeel",
+  degraded: "vertraagd",
+  outage: "storing",
+  unknown: "niet gemeten",
+} as const;
+
 export default function CeoHomeDashboard({
   data,
   live = false,
@@ -75,7 +130,6 @@ export default function CeoHomeDashboard({
   data: CeoDashboardData;
   live?: boolean;
 }) {
-
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -91,19 +145,19 @@ export default function CeoHomeDashboard({
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Platform Command Center
+              Platformbeheer
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
-              CEO Dashboard
+              Beheerdersdashboard
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              Intern overzicht voor ArchonPro — MRR, groei, AI-verbruik en
-              platformgezondheid in één view.
+              Geschatte pakketwaarde, groei, AI-verbruik en beschikbare
+              platformsignalen in één helder overzicht.
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
             {live ? (
-              <Badge variant="success">Live data</Badge>
+              <Badge variant="success">Live gegevens</Badge>
             ) : (
               <DemoBadge />
             )}
@@ -117,6 +171,37 @@ export default function CeoHomeDashboard({
         </div>
       </header>
 
+      <nav aria-label="Snelle beheeracties" className="grid gap-3 md:grid-cols-3">
+        {quickLinks.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950/40 p-4 transition-colors hover:border-sky-500/30 hover:bg-sky-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
+                <Icon size={18} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-zinc-100">
+                  {item.label}
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-zinc-500">
+                  {item.description}
+                </span>
+              </span>
+              <ArrowRight
+                size={16}
+                aria-hidden="true"
+                className="shrink-0 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-400"
+              />
+            </Link>
+          );
+        })}
+      </nav>
+
       {/* KPI strip — 8 cards */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {data.kpis.map((kpi) => (
@@ -128,15 +213,15 @@ export default function CeoHomeDashboard({
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <div className="space-y-6 xl:col-span-8">
           <ChartCard
-            title="Revenue"
-            description="Maandelijks terugkerende omzet (MRR) — laatste 12 maanden"
+            title="Geschatte pakketwaarde"
+            description="Pakketwaarde per maand — afgeleid van actieve abonnementen"
             icon={<TrendingUp size={16} className="text-sky-400" />}
           >
             <RevenueChart data={data.revenueChart} />
           </ChartCard>
 
           <ChartCard
-            title="Company Growth"
+            title="Groei van bedrijven"
             description="Actieve bouwbedrijven op het platform per maand"
             icon={<Building2 size={16} className="text-emerald-400" />}
           >
@@ -144,7 +229,7 @@ export default function CeoHomeDashboard({
           </ChartCard>
 
           <ChartCard
-            title="AI Usage"
+            title="AI-verbruik"
             description="AI-verzoeken en inference-kosten over het platform"
             icon={<Zap size={16} className="text-violet-400" />}
           >
@@ -154,7 +239,7 @@ export default function CeoHomeDashboard({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
-                <CardTitle>Recent Companies</CardTitle>
+                <CardTitle>Recente bedrijven</CardTitle>
                 <CardDescription>
                   Laatst actieve klanten op het ArchonPro-platform
                 </CardDescription>
@@ -162,15 +247,47 @@ export default function CeoHomeDashboard({
               <Badge variant="info">{data.companies.length} totaal</Badge>
             </CardHeader>
             <CardContent className="px-0 pb-0">
-              <Table>
+              {data.companies.length === 0 ? (
+                <EmptyState message="Er zijn nog geen bedrijven om te tonen." />
+              ) : (
+                <>
+                  <ul className="divide-y divide-white/5 px-5 sm:hidden">
+                    {data.companies.map((company) => (
+                      <li key={company.id} className="py-4 first:pt-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-zinc-100">
+                              {company.name}
+                            </p>
+                            <p className="mt-1 text-xs text-zinc-500">
+                              {company.users} gebruikers · {formatEuro(company.revenue)}/m
+                            </p>
+                          </div>
+                          <Badge variant={statusBadgeVariant(company.status)}>
+                            {statusLabel(company.status)}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <Badge variant={planBadgeVariant(company.plan)}>
+                            {company.plan}
+                          </Badge>
+                          <span className="text-xs text-zinc-500">
+                            Login {formatLogin(company.lastLogin)}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="hidden sm:block">
+                    <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Company</TableHead>
+                    <TableHead>Bedrijf</TableHead>
                     <TableHead>Plan</TableHead>
-                    <TableHead className="text-right">Users</TableHead>
-                    <TableHead className="text-right">AI Usage</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead>Last Login</TableHead>
+                    <TableHead className="text-right">Gebruikers</TableHead>
+                    <TableHead className="text-right">AI-verbruik</TableHead>
+                    <TableHead className="text-right">Omzet</TableHead>
+                    <TableHead>Laatste login</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -205,17 +322,23 @@ export default function CeoHomeDashboard({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                    </Table>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
 
         <aside className="space-y-4 xl:col-span-4">
           <WidgetCard
-            title="Latest Payments"
+            title="Recente betalingen"
             icon={<CreditCard size={16} className="text-emerald-400" />}
           >
-            <ul className="divide-y divide-white/5">
+            {data.payments.length === 0 ? (
+              <EmptyState message="Geen recente betalingen." />
+            ) : (
+              <ul className="divide-y divide-white/5">
               {data.payments.map((p) => (
                 <li
                   key={p.id}
@@ -242,19 +365,23 @@ export default function CeoHomeDashboard({
                             : "danger"
                       }
                     >
-                      {p.status}
+                      {paymentStatusLabel[p.status]}
                     </Badge>
                   </div>
                 </li>
               ))}
-            </ul>
+              </ul>
+            )}
           </WidgetCard>
 
           <WidgetCard
-            title="Latest Registrations"
+            title="Nieuwe registraties"
             icon={<UserPlus size={16} className="text-sky-400" />}
           >
-            <ul className="divide-y divide-white/5">
+            {data.registrations.length === 0 ? (
+              <EmptyState message="Geen nieuwe registraties." />
+            ) : (
+              <ul className="divide-y divide-white/5">
               {data.registrations.map((r) => (
                 <li key={r.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-start justify-between gap-2">
@@ -273,26 +400,30 @@ export default function CeoHomeDashboard({
                   </p>
                 </li>
               ))}
-            </ul>
+              </ul>
+            )}
           </WidgetCard>
 
           <WidgetCard
-            title="Latest AI Errors"
+            title="Recente AI-fouten"
             icon={<Bot size={16} className="text-rose-400" />}
             badge={
               <Badge variant="danger">
-                {data.aiErrors.filter((e) => e.severity === "critical").length} critical
+                {data.aiErrors.filter((e) => e.severity === "critical").length} kritiek
               </Badge>
             }
           >
-            <ul className="divide-y divide-white/5">
+            {data.aiErrors.length === 0 ? (
+              <EmptyState message="Geen recente AI-fouten." positive />
+            ) : (
+              <ul className="divide-y divide-white/5">
               {data.aiErrors.map((e) => (
                 <li key={e.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-start gap-2">
                     <Badge
                       variant={e.severity === "critical" ? "danger" : "warning"}
                     >
-                      {e.severity}
+                      {severityLabel[e.severity]}
                     </Badge>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-zinc-300">
@@ -308,14 +439,18 @@ export default function CeoHomeDashboard({
                   </div>
                 </li>
               ))}
-            </ul>
+              </ul>
+            )}
           </WidgetCard>
 
           <WidgetCard
-            title="Latest Support Tickets"
+            title="Recente supporttickets"
             icon={<Headphones size={16} className="text-violet-400" />}
           >
-            <ul className="divide-y divide-white/5">
+            {data.supportTickets.length === 0 ? (
+              <EmptyState message="Geen openstaande supporttickets." positive />
+            ) : (
+              <ul className="divide-y divide-white/5">
               {data.supportTickets.map((t) => (
                 <li key={t.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-start justify-between gap-2">
@@ -334,7 +469,7 @@ export default function CeoHomeDashboard({
                             : "default"
                       }
                     >
-                      {t.priority}
+                      {priorityLabel[t.priority]}
                     </Badge>
                   </div>
                   <div className="mt-1.5 flex items-center justify-between">
@@ -347,7 +482,7 @@ export default function CeoHomeDashboard({
                             : "warning"
                       }
                     >
-                      {t.status.replace("_", " ")}
+                      {ticketStatusLabel[t.status]}
                     </Badge>
                     <span className="text-[10px] text-zinc-600">
                       {formatRelative(t.time)}
@@ -355,14 +490,18 @@ export default function CeoHomeDashboard({
                   </div>
                 </li>
               ))}
-            </ul>
+              </ul>
+            )}
           </WidgetCard>
 
           <WidgetCard
-            title="System Status"
+            title="Systeemstatus"
             icon={<Server size={16} className="text-cyan-400" />}
           >
-            <ul className="space-y-2">
+            {data.systemStatus.length === 0 ? (
+              <EmptyState message="Geen systeemstatus beschikbaar." />
+            ) : (
+              <ul className="space-y-2">
               {data.systemStatus.map((service) => (
                 <li
                   key={service.name}
@@ -381,18 +520,38 @@ export default function CeoHomeDashboard({
                           ? "success"
                           : service.status === "degraded"
                             ? "warning"
-                            : "danger"
+                            : service.status === "outage"
+                              ? "danger"
+                              : "default"
                       }
                     >
-                      {service.status}
+                      {serviceStatusLabel[service.status]}
                     </Badge>
                   </div>
                 </li>
               ))}
-            </ul>
+              </ul>
+            )}
           </WidgetCard>
         </aside>
       </div>
+    </div>
+  );
+}
+
+function EmptyState({
+  message,
+  positive = false,
+}: {
+  message: string;
+  positive?: boolean;
+}) {
+  return (
+    <div className="flex min-h-24 flex-col items-center justify-center px-5 py-6 text-center">
+      {positive ? (
+        <CircleCheck size={20} aria-hidden="true" className="mb-2 text-emerald-400" />
+      ) : null}
+      <p className="text-sm text-zinc-500">{message}</p>
     </div>
   );
 }

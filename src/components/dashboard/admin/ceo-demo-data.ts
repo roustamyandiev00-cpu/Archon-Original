@@ -64,7 +64,7 @@ export type SupportTicket = {
 
 export type SystemService = {
   name: string;
-  status: "operational" | "degraded" | "outage";
+  status: "operational" | "degraded" | "outage" | "unknown";
   latency?: string;
 };
 

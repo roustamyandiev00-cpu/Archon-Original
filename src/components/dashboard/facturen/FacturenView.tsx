@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { PenLine } from "lucide-react";
 import FacturenPanel from "@/components/dashboard/facturen/FacturenPanel";
 import type { FactuurListItem } from "@/components/dashboard/facturen/FacturenDataTable";
 import type { FacturenAccessIssue } from "@/lib/facturen/load-facturen-data";
@@ -45,8 +45,8 @@ export default function FacturenView({
             href="/dashboard/facturen/nieuw"
             className="dashboard-page-action-primary inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 sm:w-auto"
           >
-            <Plus size={16} />
-            Nieuwe factuur
+            <PenLine size={16} />
+            Nieuw manueel
           </Link>
         ) : null}
       </header>

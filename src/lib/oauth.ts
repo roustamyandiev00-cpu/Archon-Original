@@ -56,6 +56,77 @@ export const OAUTH_CONFIGS: Record<string, OAuthConfig> = {
       },
     },
   },
+  "google-calendar": {
+    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    scope: [
+      "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/userinfo.email",
+    ].join(" "),
+    extraAuthParams: {
+      access_type: "offline",
+      prompt: "consent",
+      include_granted_scopes: "true",
+    },
+    identity: {
+      url: "https://www.googleapis.com/oauth2/v2/userinfo",
+      method: "GET",
+      accountName: (json) => {
+        const d = json as { email?: string; name?: string };
+        return d.email || d.name || null;
+      },
+    },
+  },
+  "microsoft-teams": {
+    authorizeUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+    tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    scope: ["openid", "profile", "email", "User.Read", "offline_access"].join(
+      " ",
+    ),
+    identity: {
+      url: "https://graph.microsoft.com/v1.0/me",
+      method: "GET",
+      accountName: (json) => {
+        const d = json as {
+          displayName?: string;
+          mail?: string;
+          userPrincipalName?: string;
+        };
+        return d.displayName || d.mail || d.userPrincipalName || null;
+      },
+    },
+  },
+  dropbox: {
+    authorizeUrl: "https://www.dropbox.com/oauth2/authorize",
+    tokenUrl: "https://api.dropboxapi.com/oauth2/token",
+    scope: undefined,
+    extraAuthParams: { token_access_type: "offline" },
+    identity: {
+      url: "https://api.dropboxapi.com/2/users/get_current_account",
+      method: "POST",
+      accountName: (json) => {
+        const d = json as {
+          email?: string;
+          name?: { display_name?: string };
+        };
+        return d.name?.display_name || d.email || null;
+      },
+    },
+  },
+  quickbooks: {
+    authorizeUrl: "https://appcenter.intuit.com/connect/oauth2",
+    tokenUrl: "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+    scope: "com.intuit.quickbooks.accounting openid profile email",
+    identity: {
+      url: "https://accounts.platform.intuit.com/v1/openid_connect/userinfo",
+      method: "GET",
+      accountName: (json) => {
+        const d = json as { email?: string; givenName?: string; familyName?: string };
+        const name = [d.givenName, d.familyName].filter(Boolean).join(" ");
+        return name || d.email || null;
+      },
+    },
+  },
 };
 
 export function hasOAuth(provider: string): boolean {
@@ -223,7 +294,11 @@ export async function fetchAccountName(
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
+        ...(cfg.identity.method === "POST"
+          ? { "Content-Type": "application/json" }
+          : {}),
       },
+      ...(cfg.identity.method === "POST" ? { body: "null" } : {}),
     });
     if (!res.ok) {
       return { ok: false, error: `Provider gaf HTTP ${res.status} terug.` };

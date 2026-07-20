@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   HardHat,
-  HandHelping,
   Handshake,
   Plus,
   Search,
@@ -49,13 +48,9 @@ export default function BouwnetwerkHub({
   preview: boolean;
 }) {
   const router = useRouter();
-  const [activeView, setActiveView] = useState<BouwnetwerkViewId>("werkposts");
+  const [activeView, setActiveView] = useState<BouwnetwerkViewId>(() => readStoredView());
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ChannelFilter>("alles");
-
-  useEffect(() => {
-    setActiveView(readStoredView());
-  }, []);
 
   const selectView = useCallback((id: BouwnetwerkViewId) => {
     setActiveView(id);

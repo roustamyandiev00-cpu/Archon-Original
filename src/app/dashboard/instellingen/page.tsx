@@ -7,7 +7,11 @@ import SettingsForm from "@/components/dashboard/instellingen/SettingsForm";
 import PlaceholderPage from "@/components/dashboard/PlaceholderPage";
 import { parseExtras, DEFAULT_TEMPLATE, type SettingsInput } from "./settings";
 import type { ApiKeyInfo } from "@/lib/apiResources";
-import { untyped, type Integratie } from "@/lib/integraties";
+import {
+  integrationConfigForClient,
+  untyped,
+  type Integratie,
+} from "@/lib/integraties";
 import {
   isSlackPlatformReady,
   loadSlackSetupStatus,
@@ -78,6 +82,7 @@ export default async function InstellingenPage() {
     from_email: smtpStatus?.from_email ?? data?.email ?? "",
     from_name: smtpStatus?.from_name ?? data?.naam ?? "",
     hasPassword: Boolean(smtpStatus?.has_password),
+    deliveryMode: extras.email?.deliveryMode ?? "mailto",
   };
 
   const referralCode = user
@@ -94,7 +99,10 @@ export default async function InstellingenPage() {
 
   const integrationConnections = Object.fromEntries(
     ((integrationRows ?? []) as Pick<Integratie, "provider" | "status" | "config">[]).map(
-      (c) => [c.provider, { status: c.status, config: c.config ?? {} }],
+      (c) => [
+        c.provider,
+        { status: c.status, config: integrationConfigForClient(c.config) },
+      ],
     ),
   );
 
@@ -125,7 +133,7 @@ export default async function InstellingenPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-4">
+    <div className="mx-auto h-full min-h-0 w-full max-w-[1100px] space-y-3 overflow-y-auto overscroll-contain pb-2 pr-1 [scrollbar-gutter:stable]">
       <header className="flex items-start gap-3">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
           <Settings size={20} />

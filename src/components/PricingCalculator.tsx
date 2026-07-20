@@ -169,8 +169,9 @@ function PlanCard({
   onSelect: () => void;
 }) {
   const price = plan.basePrice[billing];
-  const compare = plan.basePrice["monthly"];
-  const showStrike = billing !== "monthly" && price < compare;
+  const listPrice = plan.listPrice;
+  const discountPercent =
+    listPrice > price ? Math.round((1 - price / listPrice) * 100) : 0;
   const extraUsers = Math.max(0, userCount - plan.includedUsers);
 
   return (
@@ -206,13 +207,20 @@ function PlanCard({
         </span>
       </div>
 
-      <div className="mt-4 flex items-end gap-1.5">
-        {showStrike && (
-          <span className="text-sm text-zinc-400 line-through">€{compare}</span>
+      <div className="mt-4 flex flex-wrap items-end gap-x-2 gap-y-1">
+        {discountPercent > 0 && (
+          <span className="text-base font-medium text-zinc-400 line-through decoration-zinc-400/80">
+            €{listPrice}
+          </span>
         )}
         <span className="text-3xl font-bold tracking-tight text-zinc-900">€{price}</span>
         <span className="pb-0.5 text-xs text-zinc-500">/maand</span>
       </div>
+      {discountPercent > 0 && (
+        <span className="mt-2 inline-flex w-fit items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200/80">
+          −{discountPercent}% korting
+        </span>
+      )}
 
       {extraUsers > 0 && (
         <p className="mt-1.5 text-xs text-zinc-500">
@@ -332,12 +340,22 @@ function PriceSummary({
         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
           Jouw prijs — live berekend
         </p>
-        <div className="mt-2 flex items-end gap-2">
+        <div className="mt-2 flex flex-wrap items-end gap-x-2 gap-y-1">
+          {breakdown.discountPercent > 0 && (
+            <span className="pb-1 text-lg font-medium text-zinc-400 line-through">
+              €{Math.round(breakdown.listSubtotalMonthly)}
+            </span>
+          )}
           <span className="text-4xl font-bold tracking-tight text-zinc-900">
             €{Math.round(breakdown.subtotalMonthly)}
           </span>
           <span className="pb-1 text-sm text-zinc-500">/ maand</span>
         </div>
+        {breakdown.discountPercent > 0 && (
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            −{breakdown.discountPercent}% introductiekorting
+          </div>
+        )}
         {billing !== "monthly" && (
           <p className="mt-1 text-xs text-zinc-500">
             Gefactureerd als{" "}
@@ -358,7 +376,14 @@ function PriceSummary({
         <ul className="space-y-2.5 text-sm">
           <li className="flex justify-between text-zinc-600">
             <span>Pakket {plan.name}</span>
-            <span className="font-medium text-zinc-900">€{breakdown.planBase}/m</span>
+            <span className="font-medium text-zinc-900">
+              {breakdown.discountPercent > 0 && (
+                <span className="mr-1.5 text-zinc-400 line-through">
+                  €{breakdown.planListBase}
+                </span>
+              )}
+              €{breakdown.planBase}/m
+            </span>
           </li>
           {extraUsers > 0 && (
             <li className="flex justify-between text-zinc-600">

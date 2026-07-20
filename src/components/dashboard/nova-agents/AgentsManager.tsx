@@ -560,7 +560,7 @@ const AgentsManager = forwardRef<AgentsManagerHandle, Props>(function AgentsMana
                           type="button"
                           title={option.label}
                           onClick={() => updateDraft("avatarUrl", option.url)}
-                          className={`rounded-xl p-1 transition-all ${
+                          className={`overflow-hidden rounded-xl p-1 transition-all ${
                             selected
                               ? "ring-2 ring-sky-400 ring-offset-2 ring-offset-zinc-950"
                               : "ring-1 ring-white/10 hover:ring-white/20"
