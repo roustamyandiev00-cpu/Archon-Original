@@ -5135,6 +5135,54 @@ export type Database = {
           },
         ]
       }
+      stripe_webhook_events: {
+        Row: {
+          id: string
+          stripe_event_id: string
+          event_type: string
+          livemode: boolean
+          status: string
+          processing_started_at: string
+          processed_at: string | null
+          failed_at: string | null
+          attempts: number
+          last_error: string | null
+          payload_hash: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          stripe_event_id: string
+          event_type: string
+          livemode?: boolean
+          status?: string
+          processing_started_at?: string
+          processed_at?: string | null
+          failed_at?: string | null
+          attempts?: number
+          last_error?: string | null
+          payload_hash: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          stripe_event_id?: string
+          event_type?: string
+          livemode?: boolean
+          status?: string
+          processing_started_at?: string
+          processed_at?: string | null
+          failed_at?: string | null
+          attempts?: number
+          last_error?: string | null
+          payload_hash?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       taken: {
         Row: {
           created_at: string
@@ -5171,57 +5219,108 @@ export type Database = {
       tasks: {
         Row: {
           assigned_to: string | null
+          assigned_to_user_id: string | null
           company_id: number
           completed_at: string | null
           created_at: string | null
           created_by: string | null
+          created_by_user_id: string | null
           customer_id: number | null
+          contact_id: number | null
+          deal_id: number | null
           description: string | null
           due_date: string | null
+          due_at: string | null
+          start_at: string | null
           id: number
           priority: string
           project_id: number | null
+          offerte_id: number | null
+          factuur_id: number | null
+          afspraak_id: number | null
+          parent_task_id: number | null
           related_entity_id: number | null
           related_entity_type: string | null
+          source: string
+          ai_generated: boolean
+          requires_approval: boolean
+          recurrence_rule_id: number | null
+          position: number
+          metadata: Json
           status: string
           title: string
           updated_at: string | null
+          deleted_at: string | null
         }
         Insert: {
           assigned_to?: string | null
+          assigned_to_user_id?: string | null
           company_id: number
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
+          created_by_user_id?: string | null
           customer_id?: number | null
+          contact_id?: number | null
+          deal_id?: number | null
           description?: string | null
           due_date?: string | null
+          due_at?: string | null
+          start_at?: string | null
           id?: number
           priority?: string
           project_id?: number | null
+          offerte_id?: number | null
+          factuur_id?: number | null
+          afspraak_id?: number | null
+          parent_task_id?: number | null
           related_entity_id?: number | null
           related_entity_type?: string | null
+          source?: string
+          ai_generated?: boolean
+          requires_approval?: boolean
+          recurrence_rule_id?: number | null
+          position?: number
+          metadata?: Json
           status?: string
           title: string
           updated_at?: string | null
+          deleted_at?: string | null
         }
         Update: {
           assigned_to?: string | null
+          assigned_to_user_id?: string | null
           company_id?: number
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
+          created_by_user_id?: string | null
           customer_id?: number | null
+          contact_id?: number | null
+          deal_id?: number | null
           description?: string | null
           due_date?: string | null
+          due_at?: string | null
+          start_at?: string | null
           id?: number
           priority?: string
           project_id?: number | null
+          offerte_id?: number | null
+          factuur_id?: number | null
+          afspraak_id?: number | null
+          parent_task_id?: number | null
           related_entity_id?: number | null
           related_entity_type?: string | null
+          source?: string
+          ai_generated?: boolean
+          requires_approval?: boolean
+          recurrence_rule_id?: number | null
+          position?: number
+          metadata?: Json
           status?: string
           title?: string
           updated_at?: string | null
+          deleted_at?: string | null
         }
         Relationships: [
           {
@@ -5230,22 +5329,275 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bedrijven"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "bedrijven_directory"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
+          }
         ]
+      }
+      task_comments: {
+        Row: {
+          id: number
+          company_id: number
+          task_id: number
+          body: string
+          created_by_user_id: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: number
+          company_id: number
+          task_id: number
+          body: string
+          created_by_user_id?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: number
+          company_id?: number
+          task_id?: number
+          body?: string
+          created_by_user_id?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: []
+      }
+      task_attachments: {
+        Row: {
+          id: string
+          company_id: number
+          task_id: number
+          file_name: string
+          original_name: string
+          mime_type: string | null
+          size_bytes: number | null
+          storage_bucket: string
+          storage_path: string
+          uploaded_by: string | null
+          created_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          company_id: number
+          task_id: number
+          file_name: string
+          original_name: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path: string
+          uploaded_by?: string | null
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          company_id?: number
+          task_id?: number
+          file_name?: string
+          original_name?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path?: string
+          uploaded_by?: string | null
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: []
+      }
+      task_labels: {
+        Row: {
+          id: number
+          company_id: number
+          name: string
+          color: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          company_id: number
+          name: string
+          color?: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          company_id?: number
+          name?: string
+          color?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      task_label_assignments: {
+        Row: {
+          task_id: number
+          label_id: number
+          company_id: number
+          created_at: string
+        }
+        Insert: {
+          task_id: number
+          label_id: number
+          company_id: number
+          created_at?: string
+        }
+        Update: {
+          task_id?: number
+          label_id?: number
+          company_id?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      task_reminders: {
+        Row: {
+          id: number
+          company_id: number
+          task_id: number
+          remind_at: string
+          channel: string
+          status: string
+          idempotency_key: string
+          sent_at: string | null
+          last_error: string | null
+          created_by_user_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          company_id: number
+          task_id: number
+          remind_at: string
+          channel?: string
+          status?: string
+          idempotency_key: string
+          sent_at?: string | null
+          last_error?: string | null
+          created_by_user_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          company_id?: number
+          task_id?: number
+          remind_at?: string
+          channel?: string
+          status?: string
+          idempotency_key?: string
+          sent_at?: string | null
+          last_error?: string | null
+          created_by_user_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      task_recurrence_rules: {
+        Row: {
+          id: number
+          company_id: number
+          frequency: string
+          interval_count: number
+          timezone: string
+          next_run_at: string | null
+          ends_at: string | null
+          is_active: boolean
+          created_by_user_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          company_id: number
+          frequency: string
+          interval_count?: number
+          timezone?: string
+          next_run_at?: string | null
+          ends_at?: string | null
+          is_active?: boolean
+          created_by_user_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          company_id?: number
+          frequency?: string
+          interval_count?: number
+          timezone?: string
+          next_run_at?: string | null
+          ends_at?: string | null
+          is_active?: boolean
+          created_by_user_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      task_recurrence_occurrences: {
+        Row: {
+          id: number
+          company_id: number
+          recurrence_rule_id: number
+          occurrence_key: string
+          task_id: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          company_id: number
+          recurrence_rule_id: number
+          occurrence_key: string
+          task_id?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          company_id?: number
+          recurrence_rule_id?: number
+          occurrence_key?: string
+          task_id?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      task_activity_logs: {
+        Row: {
+          id: number
+          company_id: number
+          task_id: number
+          actor_id: string | null
+          event_type: string
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          company_id: number
+          task_id: number
+          actor_id?: string | null
+          event_type: string
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          company_id?: number
+          task_id?: number
+          actor_id?: string | null
+          event_type?: string
+          metadata?: Json
+          created_at?: string
+        }
+        Relationships: []
       }
       timesheets: {
         Row: {

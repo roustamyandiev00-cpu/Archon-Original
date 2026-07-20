@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { grantAiCreditsAfterPayment } from "@/lib/ai/grant-credits";
 import { getStripe } from "@/lib/stripe";
+import {
+  claimStripeWebhookEvent,
+  completeStripeWebhookEvent,
+  failStripeWebhookEvent,
+  hashStripePayload,
+} from "@/lib/stripe/webhook-events";
 import { createServiceClient } from "@/lib/supabase/service";
 import { untyped } from "@/lib/integraties";
 import { syncStripeInvoice } from "@/lib/admin/platform-billing";
@@ -90,8 +96,36 @@ export async function POST(request: Request) {
     event = getStripe().webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid signature";
+    // Ongeldige signature mag nooit in de ledger terechtkomen.
     return NextResponse.json({ error: message }, { status: 400 });
   }
+
+  const supabase = createServiceClient();
+  const payloadHash = hashStripePayload(rawBody);
+
+  let claim;
+  try {
+    claim = await claimStripeWebhookEvent(supabase, {
+      stripeEventId: event.id,
+      eventType: event.type,
+      livemode: Boolean(event.livemode),
+      payloadHash,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "claim failed";
+    console.error("stripe webhook claim:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  if (claim.outcome === "duplicate") {
+    return NextResponse.json({
+      received: true,
+      duplicate: true,
+      status: claim.status,
+    });
+  }
+
+  const rowId = claim.rowId;
 
   try {
     if (event.type === "checkout.session.completed") {
@@ -99,6 +133,7 @@ export async function POST(request: Request) {
       if (session.payment_status === "paid" || session.status === "complete") {
         const result = await fulfillCheckoutSession(session);
         if ("error" in result && result.error) {
+          await failStripeWebhookEvent(supabase, rowId, result.error);
           return NextResponse.json({ error: result.error }, { status: 500 });
         }
       }
@@ -118,9 +153,11 @@ export async function POST(request: Request) {
       );
     }
 
+    await completeStripeWebhookEvent(supabase, rowId, "processed");
     return NextResponse.json({ received: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Webhook handler failed";
+    await failStripeWebhookEvent(supabase, rowId, message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
