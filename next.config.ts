@@ -21,6 +21,21 @@ const nextConfig: NextConfig = {
   },
   // Turbopack is default in Next 16; lege config voorkomt conflict met eventuele webpack-plugins.
   turbopack: {},
+  // Platform-admin leeft onder /admin; oude /dashboard/admin-URLs blijven werken via redirect.
+  async redirects() {
+    return [
+      {
+        source: "/dashboard/admin",
+        destination: "/admin",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/admin/:path*",
+        destination: "/admin/:path*",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

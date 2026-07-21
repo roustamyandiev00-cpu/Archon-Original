@@ -7,8 +7,9 @@ function bootstrapEmails(): string[] {
   const raw = process.env.PLATFORM_ADMIN_EMAILS?.trim();
   if (!raw) return [];
   return raw
+    .replace(/^["']|["']$/g, "")
     .split(",")
-    .map((email) => email.trim().toLowerCase())
+    .map((email) => email.trim().toLowerCase().replace(/^["']|["']$/g, ""))
     .filter(Boolean);
 }
 
@@ -45,7 +46,7 @@ export async function requirePlatformAdmin(): Promise<{
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?next=/dashboard/admin");
+    redirect("/login?redirect=/admin");
   }
 
   const allowed = await isPlatformAdmin(user.id, user.email);

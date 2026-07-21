@@ -103,7 +103,7 @@ export default async function AdminAiAgentsPage() {
                 <TableRow key={row.companyId}>
                   <TableCell>
                     <Link
-                      href={`/dashboard/admin/companies/${row.companyId}`}
+                      href={`/admin/companies/${row.companyId}`}
                       className="font-medium text-zinc-100 hover:text-sky-300"
                     >
                       {row.companyName}

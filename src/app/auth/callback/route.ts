@@ -3,32 +3,48 @@ import { createClient } from "@/lib/supabase/server";
 import { provisionWorkspaceIfNeeded } from "@/lib/company";
 import { ensureUserReferral } from "@/lib/referral";
 import { seedOnboardingFromMetadata } from "@/lib/onboarding/seed";
+import { isPlatformAdmin } from "@/lib/platform-admin";
+import { pickPostLoginPath } from "@/lib/auth/post-login-redirect";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const requested = searchParams.get("redirect") ?? searchParams.get("next");
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      await ensureUserReferral(supabase, {
-        fullName: user?.user_metadata?.full_name as string | undefined,
-        referredBy: user?.user_metadata?.referred_by as string | undefined,
+      const user =
+        data.user ??
+        data.session?.user ??
+        (await supabase.auth.getUser()).data.user;
+
+      const admin = user
+        ? await isPlatformAdmin(user.id, user.email)
+        : false;
+      const redirectPath = pickPostLoginPath({
+        isPlatformAdmin: admin,
+        requested,
       });
-      const companyId = await provisionWorkspaceIfNeeded(supabase);
-      if (companyId && user) {
-        await seedOnboardingFromMetadata(
-          supabase,
-          companyId,
-          user.user_metadata as Record<string, unknown>,
-        );
+
+      // Tenant-onboarding niet blokkeren voor platform-admin landing.
+      if (user && !admin) {
+        await ensureUserReferral(supabase, {
+          fullName: user.user_metadata?.full_name as string | undefined,
+          referredBy: user.user_metadata?.referred_by as string | undefined,
+        });
+        const companyId = await provisionWorkspaceIfNeeded(supabase);
+        if (companyId) {
+          await seedOnboardingFromMetadata(
+            supabase,
+            companyId,
+            user.user_metadata as Record<string, unknown>,
+          );
+        }
       }
-      return NextResponse.redirect(`${origin}${redirect}`);
+
+      return NextResponse.redirect(`${origin}${redirectPath}`);
     }
   }
 

@@ -388,7 +388,7 @@ export async function executeAgentAction(input: {
       });
 
       revalidatePath("/dashboard/automatisaties");
-      revalidatePath("/dashboard/admin/rapportages");
+      revalidatePath("/admin/rapportages");
       return { ok: true, route };
     }
 
@@ -493,7 +493,7 @@ export async function executeAgentAction(input: {
         })
         .eq("id", p.geschilId);
 
-      const route = `/dashboard/admin/geschillen`;
+      const route = `/admin/geschillen`;
       await supabase
         .from("agent_actions")
         .update({
@@ -512,7 +512,7 @@ export async function executeAgentAction(input: {
         outputJson: { geschilId: p.geschilId },
       });
 
-      revalidatePath("/dashboard/admin/geschillen");
+      revalidatePath("/admin/geschillen");
       revalidatePath("/dashboard/geschillen");
       return { ok: true, route };
     }

@@ -38,7 +38,7 @@ export async function createContentRapportage(input: {
 
   if (error) return { error: error.message };
 
-  revalidatePath("/dashboard/admin/rapportages");
+  revalidatePath("/admin/rapportages");
   return { ok: true as const };
 }
 
@@ -59,6 +59,6 @@ export async function resolveContentRapportage(input: {
 
   if (error) return { ok: false as const, error: error.message };
 
-  revalidatePath("/dashboard/admin/rapportages");
+  revalidatePath("/admin/rapportages");
   return { ok: true as const };
 }

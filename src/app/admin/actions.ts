@@ -27,9 +27,9 @@ export async function updateCompanyStatusAction(input: {
     return { ok: false as const, error: error.message };
   }
 
-  revalidatePath("/dashboard/admin");
-  revalidatePath("/dashboard/admin/companies");
-  revalidatePath(`/dashboard/admin/companies/${input.companyId}`);
+  revalidatePath("/admin");
+  revalidatePath("/admin/companies");
+  revalidatePath(`/admin/companies/${input.companyId}`);
 
   return { ok: true as const };
 }
@@ -69,8 +69,8 @@ export async function addAiCreditsAction(input: {
     if (error) return { ok: false as const, error: error.message };
   }
 
-  revalidatePath(`/dashboard/admin/companies/${input.companyId}`);
-  revalidatePath("/dashboard/admin/ai-agents");
+  revalidatePath(`/admin/companies/${input.companyId}`);
+  revalidatePath("/admin/ai-agents");
 
   return { ok: true as const };
 }

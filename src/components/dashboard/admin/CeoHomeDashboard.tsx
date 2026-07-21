@@ -103,7 +103,7 @@ export default function CeoHomeDashboard({
           </div>
           <div className="flex flex-col items-end gap-2">
             {live ? (
-              <Badge variant="success">Live data</Badge>
+              <Badge variant="warning">Gedeeltelijk live</Badge>
             ) : (
               <DemoBadge />
             )}
@@ -129,7 +129,7 @@ export default function CeoHomeDashboard({
         <div className="space-y-6 xl:col-span-8">
           <ChartCard
             title="Revenue"
-            description="Maandelijks terugkerende omzet (MRR) — laatste 12 maanden"
+            description="Geschatte MRR op basis van geconfigureerde plannen"
             icon={<TrendingUp size={16} className="text-sky-400" />}
           >
             <RevenueChart data={data.revenueChart} />
@@ -145,10 +145,14 @@ export default function CeoHomeDashboard({
 
           <ChartCard
             title="AI Usage"
-            description="AI-verzoeken en inference-kosten over het platform"
+            description="Historische trend is nog niet beschikbaar"
             icon={<Zap size={16} className="text-violet-400" />}
           >
-            <AiUsageChart data={data.aiUsageChart} />
+            {data.aiUsageChart.length > 0 ? (
+              <AiUsageChart data={data.aiUsageChart} />
+            ) : (
+              <DashboardDataUnavailable message="Er is nog geen betrouwbare maandelijkse AI-gebruiksreeks." />
+            )}
           </ChartCard>
 
           <Card>
@@ -215,8 +219,9 @@ export default function CeoHomeDashboard({
             title="Latest Payments"
             icon={<CreditCard size={16} className="text-emerald-400" />}
           >
-            <ul className="divide-y divide-white/5">
-              {data.payments.map((p) => (
+            {data.payments.length > 0 ? (
+              <ul className="divide-y divide-white/5">
+                {data.payments.map((p) => (
                 <li
                   key={p.id}
                   className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
@@ -246,8 +251,11 @@ export default function CeoHomeDashboard({
                     </Badge>
                   </div>
                 </li>
-              ))}
-            </ul>
+                ))}
+              </ul>
+            ) : (
+              <DashboardDataUnavailable message="Betalingsdata is nog niet aangesloten." compact />
+            )}
           </WidgetCard>
 
           <WidgetCard
@@ -315,8 +323,9 @@ export default function CeoHomeDashboard({
             title="Latest Support Tickets"
             icon={<Headphones size={16} className="text-violet-400" />}
           >
-            <ul className="divide-y divide-white/5">
-              {data.supportTickets.map((t) => (
+            {data.supportTickets.length > 0 ? (
+              <ul className="divide-y divide-white/5">
+                {data.supportTickets.map((t) => (
                 <li key={t.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -354,8 +363,11 @@ export default function CeoHomeDashboard({
                     </span>
                   </div>
                 </li>
-              ))}
-            </ul>
+                ))}
+              </ul>
+            ) : (
+              <DashboardDataUnavailable message="Supporttickets zijn nog niet aangesloten." compact />
+            )}
           </WidgetCard>
 
           <WidgetCard
@@ -381,10 +393,14 @@ export default function CeoHomeDashboard({
                           ? "success"
                           : service.status === "degraded"
                             ? "warning"
-                            : "danger"
+                            : service.status === "unverified"
+                              ? "default"
+                              : "danger"
                       }
                     >
-                      {service.status}
+                      {service.status === "unverified"
+                        ? "niet gemeten"
+                        : service.status}
                     </Badge>
                   </div>
                 </li>
@@ -393,6 +409,24 @@ export default function CeoHomeDashboard({
           </WidgetCard>
         </aside>
       </div>
+    </div>
+  );
+}
+
+function DashboardDataUnavailable({
+  message,
+  compact = false,
+}: {
+  message: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-xl border border-amber-500/20 bg-amber-500/5 text-sm text-amber-200/80 ${
+        compact ? "px-3 py-4" : "grid h-80 place-items-center px-6 text-center"
+      }`}
+    >
+      {message}
     </div>
   );
 }

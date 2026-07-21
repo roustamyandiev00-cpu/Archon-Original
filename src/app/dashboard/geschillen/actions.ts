@@ -71,7 +71,7 @@ export async function createGeschil(input: {
         geschilId: data.id,
         samenvatting,
       },
-      targetRoute: `/dashboard/admin/geschillen`,
+      targetRoute: `/admin/geschillen`,
       requiresApproval: true,
     });
 
@@ -89,7 +89,7 @@ export async function createGeschil(input: {
   }
 
   revalidatePath("/dashboard/geschillen");
-  revalidatePath("/dashboard/admin/geschillen");
+  revalidatePath("/admin/geschillen");
   return { ok: true as const, id: data?.id as string };
 }
 
@@ -137,7 +137,7 @@ export async function submitGeschilVerklaring(input: {
 
   if (error) return { error: error.message };
   revalidatePath("/dashboard/geschillen");
-  revalidatePath("/dashboard/admin/geschillen");
+  revalidatePath("/admin/geschillen");
   return { ok: true as const };
 }
 
@@ -177,7 +177,7 @@ export async function fileGeschilBezwaar(input: {
 
   if (error) return { error: error.message };
   revalidatePath("/dashboard/geschillen");
-  revalidatePath("/dashboard/admin/geschillen");
+  revalidatePath("/admin/geschillen");
   return { ok: true as const };
 }
 
@@ -204,7 +204,7 @@ export async function decideGeschil(input: {
     .eq("id", input.geschilId);
 
   if (error) return { ok: false as const, error: error.message };
-  revalidatePath("/dashboard/admin/geschillen");
+  revalidatePath("/admin/geschillen");
   revalidatePath("/dashboard/geschillen");
   return { ok: true as const };
 }

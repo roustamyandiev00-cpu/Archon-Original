@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Eye, Sparkles } from "lucide-react";
 import { TRIAL_DAYS, type TrialStatus } from "@/components/dashboard/trial";
-import { stopImpersonationAction } from "@/app/dashboard/admin/impersonation-actions";
+import { stopImpersonationAction } from "@/app/admin/impersonation-actions";
 
 const shell =
   "dashboard-access-banner fixed inset-x-0 top-14 z-20 border-b bg-zinc-950/95 backdrop-blur-xl lg:left-[220px]";

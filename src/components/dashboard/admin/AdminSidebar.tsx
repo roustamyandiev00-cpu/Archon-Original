@@ -51,11 +51,11 @@ export default function AdminSidebar() {
 
       <div className="mt-auto border-t border-white/10 pt-4">
         <Link
-          href="/dashboard/command-center"
+          href="/"
           className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-200"
         >
           <ArrowLeft size={16} />
-          Terug naar Archon
+          Naar ArchonPro-website
         </Link>
       </div>
     </aside>

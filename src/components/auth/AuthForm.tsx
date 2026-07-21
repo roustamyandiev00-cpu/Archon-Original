@@ -18,6 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 import { REFERRAL_REWARDS } from "@/components/ReferralProgram";
 import { redirectAfterAuth } from "@/lib/auth/redirect-after-auth";
 import { finalizeNewAccount } from "@/app/register/actions";
+import { signInWithPasswordAction } from "@/app/login/actions";
 
 type Mode = "login" | "register";
 
@@ -55,7 +56,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const isRegister = mode === "register";
 
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/dashboard";
+  // Geen default /dashboard — anders lijkt login altijd "tenant".
+  // Zonder param kiest de server: /admin (platform) of /dashboard (tenant).
+  const redirectTo =
+    searchParams.get("redirect") ?? searchParams.get("next") ?? null;
   const refFromUrl = searchParams.get("ref")?.trim() ?? "";
   const prefillEmail = searchParams.get("email") ?? "";
 
@@ -76,6 +80,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     setNotice(null);
     setLoading(true);
     const supabase = createClient();
+    const callbackRedirect = redirectTo
+      ? `?redirect=${encodeURIComponent(redirectTo)}`
+      : "";
 
     try {
       if (isRegister) {
@@ -90,7 +97,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
                 ? { referred_by: referralCode.trim().toUpperCase() }
                 : {}),
             },
-            emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
+            emailRedirectTo: `${window.location.origin}/auth/callback${callbackRedirect}`,
           },
         });
         if (error) throw error;
@@ -103,7 +110,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             });
           }
           await finalizeNewAccount();
-          redirectAfterAuth(redirectTo);
+          redirectAfterAuth(
+            `/auth/continue${callbackRedirect ? callbackRedirect : ""}`,
+          );
           return;
         } else {
           setNotice(
@@ -111,25 +120,16 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           );
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const result = await signInWithPasswordAction({
           email,
           password,
+          redirectTo,
         });
-        if (error) throw error;
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.rpc("ensure_user_referral", {
-            p_user_id: user.id,
-            p_full_name:
-              (user.user_metadata?.full_name as string | undefined) ?? undefined,
-            p_referred_by:
-              (user.user_metadata?.referred_by as string | undefined) ?? undefined,
-          });
+        if (!result.ok) {
+          setError(result.error);
+          return;
         }
-        await finalizeNewAccount();
-        redirectAfterAuth(redirectTo);
+        redirectAfterAuth(result.destination);
         return;
       }
     } catch (err) {
@@ -143,14 +143,21 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
   async function handleOAuth(provider: "google" | "apple") {
     setError(null);
+    setLoading(true);
     const supabase = createClient();
+    const callbackRedirect = redirectTo
+      ? `?redirect=${encodeURIComponent(redirectTo)}`
+      : "";
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
+        redirectTo: `${window.location.origin}/auth/callback${callbackRedirect}`,
       },
     });
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    }
   }
 
   return (

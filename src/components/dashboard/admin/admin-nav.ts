@@ -11,43 +11,43 @@ import {
 
 export const adminNavItems = [
   {
-    href: "/dashboard/admin",
+    href: "/admin",
     label: "Overzicht",
     icon: LayoutDashboard,
     exact: true,
   },
   {
-    href: "/dashboard/admin/companies",
+    href: "/admin/companies",
     label: "Bedrijven",
     icon: Building2,
   },
   {
-    href: "/dashboard/admin/crm",
+    href: "/admin/crm",
     label: "CRM",
     icon: Users,
   },
   {
-    href: "/dashboard/admin/rapportages",
+    href: "/admin/rapportages",
     label: "Rapportages",
     icon: Flag,
   },
   {
-    href: "/dashboard/admin/geschillen",
+    href: "/admin/geschillen",
     label: "Geschillen",
     icon: Scale,
   },
   {
-    href: "/dashboard/admin/ai-agents",
+    href: "/admin/ai-agents",
     label: "AI Agents",
     icon: Bot,
   },
   {
-    href: "/dashboard/admin/ai-tokens",
+    href: "/admin/ai-tokens",
     label: "AI Tokens",
     icon: Coins,
   },
   {
-    href: "/dashboard/admin/proactive",
+    href: "/admin/proactive",
     label: "Proactief",
     icon: Radar,
   },

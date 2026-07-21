@@ -112,7 +112,7 @@ export default async function AdminCrmPage() {
                   </TableCell>
                   <TableCell>
                     <Link
-                      href={`/dashboard/admin/companies/${deal.companyId}`}
+                      href={`/admin/companies/${deal.companyId}`}
                       className="text-sky-300 hover:underline"
                     >
                       {deal.companyName}

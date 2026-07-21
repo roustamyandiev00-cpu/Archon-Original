@@ -21,7 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import CompanyAiUsageChart from "@/components/dashboard/admin/CompanyAiUsageChart";
-import { actAsCompanyAction } from "@/app/dashboard/admin/impersonation-actions";
+import { actAsCompanyAction } from "@/app/admin/impersonation-actions";
 import {
   formatCurrency,
   formatDate,
@@ -255,11 +255,21 @@ export default function CompanyDetailView({
                 <Bot size={15} />
                 View AI Usage
               </ActionButton>
-              <Button type="button" variant="danger">
+              <Button
+                type="button"
+                variant="danger"
+                disabled
+                title="Nog niet veilig aangesloten"
+              >
                 <Ban size={15} />
                 Suspend Company
               </Button>
-              <Button type="button" variant="secondary">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled
+                title="Nog niet aangesloten"
+              >
                 <Edit3 size={15} />
                 Edit Company
               </Button>

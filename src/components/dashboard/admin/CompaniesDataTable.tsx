@@ -277,7 +277,7 @@ export default function CompaniesDataTable({
                         </span>
                         <div className="min-w-0">
                           <Link
-                            href={`/dashboard/admin/companies/${company.id}`}
+                            href={`/admin/companies/${company.id}`}
                             className="block truncate font-medium text-zinc-100 transition-colors hover:text-sky-300"
                           >
                             {company.name}
@@ -449,34 +449,34 @@ function CompanyActionMenu({
           onClick={(event) => event.stopPropagation()}
         >
           <MenuLink
-            href={`/dashboard/admin/companies/${company.id}`}
+            href={`/admin/companies/${company.id}`}
             icon={<ExternalLink size={14} />}
             onClick={closeMenu}
           >
             Open Company
           </MenuLink>
-          <MenuItem icon={<Pencil size={14} />} onClick={closeMenu}>
+          <MenuItem icon={<Pencil size={14} />} onClick={closeMenu} disabled>
             Edit
           </MenuItem>
           <MenuItem
             icon={<Ban size={14} />}
             onClick={closeMenu}
-            disabled={company.status === "suspended"}
+            disabled
           >
             Suspend
           </MenuItem>
           <MenuItem
             icon={<CheckCircle2 size={14} />}
             onClick={closeMenu}
-            disabled={company.status === "active"}
+            disabled
           >
             Activate
           </MenuItem>
           <div className="my-1 h-px bg-white/10" />
-          <MenuItem icon={<CreditCard size={14} />} onClick={closeMenu}>
+          <MenuItem icon={<CreditCard size={14} />} onClick={closeMenu} disabled>
             View Billing
           </MenuItem>
-          <MenuItem icon={<Bot size={14} />} onClick={closeMenu}>
+          <MenuItem icon={<Bot size={14} />} onClick={closeMenu} disabled>
             View AI Usage
           </MenuItem>
         </div>

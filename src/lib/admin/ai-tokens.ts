@@ -28,9 +28,27 @@ export type TokenUsageSummary = {
   trialUsersCount: number;
 };
 
+export type CompanyTokenUsageResult = {
+  companies: CompanyTokenUsage[];
+  error: string | null;
+};
+
+export function describeTokenUsageLoadError(
+  source: "companies" | "credits",
+  message: string,
+): string {
+  if (source === "companies") {
+    return "De bedrijven konden niet veilig worden geladen.";
+  }
+
+  return message.includes("token_limit")
+    ? "AI-tokenbeheer is tijdelijk geblokkeerd: het databaseschema loopt achter op de applicatie."
+    : "De AI-creditgegevens konden niet veilig worden geladen.";
+}
+
 export async function fetchCompanyTokenUsage(
   supabase: ServiceSupabase,
-): Promise<CompanyTokenUsage[]> {
+): Promise<CompanyTokenUsageResult> {
   const { data: companies, error: companiesError } = await supabase
     .from("bedrijven")
     .select("id, naam, email, created_at, last_activity_at, subscription_status, owner_user_id")
@@ -38,7 +56,10 @@ export async function fetchCompanyTokenUsage(
 
   if (companiesError) {
     console.error("fetchCompanyTokenUsage - companies:", companiesError.message);
-    return [];
+    return {
+      companies: [],
+      error: describeTokenUsageLoadError("companies", companiesError.message),
+    };
   }
 
   const { data: credits, error: creditsError } = await supabase
@@ -48,7 +69,17 @@ export async function fetchCompanyTokenUsage(
     );
 
   if (creditsError) {
-    console.error("fetchCompanyTokenUsage - credits:", creditsError.message);
+    if (creditsError.message.includes("token_limit")) {
+      console.info(
+        "AI-tokenbeheer uitgeschakeld: token_limit ontbreekt in het verbonden schema.",
+      );
+    } else {
+      console.error("fetchCompanyTokenUsage - credits:", creditsError.message);
+    }
+    return {
+      companies: [],
+      error: describeTokenUsageLoadError("credits", creditsError.message),
+    };
   }
 
   const { data: profiles } = await supabase
@@ -63,7 +94,8 @@ export async function fetchCompanyTokenUsage(
     (profiles ?? []).map((p) => [p.id, p]),
   );
 
-  return (companies ?? []).map((company) => {
+  return {
+    companies: (companies ?? []).map((company) => {
     const credit = creditsByCompany.get(company.id);
     const owner = company.owner_user_id
       ? profileById.get(company.owner_user_id)
@@ -78,22 +110,24 @@ export async function fetchCompanyTokenUsage(
         ).toISOString()
       : null;
 
-    return {
-      companyId: company.id,
-      companyName: company.naam,
-      ownerEmail: owner?.email ?? company.email ?? null,
-      creditsRemaining: credit?.credits_remaining ?? 0,
-      creditsUsed: credit?.credits_used ?? 0,
-      totalPurchased: credit?.total_purchased ?? 0,
-      totalSpent: Number(credit?.total_spent ?? 0),
-      lowBalanceThreshold: credit?.low_balance_threshold ?? null,
-      tokenLimit: credit?.token_limit ?? null,
-      isTrialUser,
-      trialExpiresAt,
-      lastActivity: company.last_activity_at ?? company.created_at,
-      createdAt: company.created_at,
-    };
-  });
+      return {
+        companyId: company.id,
+        companyName: company.naam,
+        ownerEmail: owner?.email ?? company.email ?? null,
+        creditsRemaining: credit?.credits_remaining ?? 0,
+        creditsUsed: credit?.credits_used ?? 0,
+        totalPurchased: credit?.total_purchased ?? 0,
+        totalSpent: Number(credit?.total_spent ?? 0),
+        lowBalanceThreshold: credit?.low_balance_threshold ?? null,
+        tokenLimit: credit?.token_limit ?? null,
+        isTrialUser,
+        trialExpiresAt,
+        lastActivity: company.last_activity_at ?? company.created_at,
+        createdAt: company.created_at,
+      };
+    }),
+    error: null,
+  };
 }
 
 export function getTokenUsageSummary(

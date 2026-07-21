@@ -152,7 +152,7 @@ export const TOPBAR_OBSERVEER_ITEMS: SidebarItem[] = [
 
 export const SIDEBAR_CEO_CONSOLE = {
   label: "CEO Console",
-  href: "/dashboard/admin",
+  href: "/admin",
   icon: Shield,
 } as const;
 

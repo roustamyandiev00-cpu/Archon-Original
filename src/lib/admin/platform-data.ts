@@ -288,7 +288,7 @@ export async function fetchCeoDashboardData(
   const kpis: KpiMetric[] = [
     {
       id: "mrr",
-      label: "MRR",
+      label: "Geschatte MRR",
       value: `€${mrr.toLocaleString("nl-BE")}`,
       change: `${companies.length} klanten`,
       positive: true,
@@ -413,29 +413,26 @@ export async function fetchCeoDashboardData(
     severity: "warning" as const,
   }));
 
-  const aiUsageChart: ChartPoint[] = buildGrowthChart(rawCompanies ?? []).map(
-    (point, index) => ({
-      ...point,
-      aiRequests: Math.round(aiUsed / Math.max(1, 12 - index)),
-      aiCost: Number((aiCost / 12).toFixed(2)),
-    }),
-  );
-
   return {
     kpis,
     revenueChart: buildRevenueChart(rawCompanies ?? []),
     companyGrowthChart: buildGrowthChart(rawCompanies ?? []),
-    aiUsageChart,
+    // Er is nog geen betrouwbare historische tijdreeks per maand. Toon geen
+    // kunstmatig verdeelde totalen als live trend.
+    aiUsageChart: [],
     companies: platformCompanies,
     payments: [] as Payment[],
     registrations,
     aiErrors,
     supportTickets: [] as SupportTicket[],
     systemStatus: [
-      { name: "Supabase", status: "operational" },
-      { name: "OpenAI", status: "operational" },
-      { name: "Agent executor", status: (pendingActionCount ?? 0) > 20 ? "degraded" : "operational" },
-      { name: "Peppol", status: "operational" },
+      { name: "Supabase", status: "unverified" },
+      { name: "OpenAI", status: "unverified" },
+      {
+        name: "Agent executor",
+        status: (pendingActionCount ?? 0) > 20 ? "degraded" : "unverified",
+      },
+      { name: "Peppol", status: "unverified" },
     ] as SystemService[],
     syncedAt: new Date().toISOString(),
   };

@@ -13,5 +13,5 @@ export async function actAsCompanyAction(companyId: number): Promise<void> {
 
 export async function stopImpersonationAction(): Promise<void> {
   await stopImpersonation();
-  redirect("/dashboard/admin");
+  redirect("/admin");
 }
