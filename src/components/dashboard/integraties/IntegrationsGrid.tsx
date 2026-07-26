@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Check,
   Loader2,
@@ -41,7 +42,12 @@ export default function IntegrationsGrid({
   connections: ConnState;
   slackPlatformReady?: boolean;
 }) {
-  const [active, setActive] = useState<ProviderMeta | null>(null);
+  const searchParams = useSearchParams();
+  // Deep-link: ?provider=google-calendar opent direct de juiste koppeling.
+  const [active, setActive] = useState<ProviderMeta | null>(() => {
+    const requested = searchParams.get("provider");
+    return providers.find((p) => p.id === requested) ?? null;
+  });
 
   return (
     <>
@@ -330,7 +336,7 @@ function ConnectModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl"
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -589,6 +595,27 @@ function ConnectModal({
             </>
           ) : isOAuthFlow ? (
             <>
+              <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs leading-relaxed text-zinc-400">
+                <span className="font-medium text-zinc-200">Zo werkt het:</span>{" "}
+                registreer een OAuth-app bij {provider.name}
+                {provider.id === "google-calendar" && (
+                  <>
+                    {" "}
+                    (via de{" "}
+                    <a
+                      href="https://console.cloud.google.com/apis/credentials"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-400 underline-offset-2 hover:underline"
+                    >
+                      Google Cloud Console
+                    </a>
+                    )
+                  </>
+                )}
+                , vul hieronder de Client ID en Client Secret in, sla op en klik
+                daarna op <b className="text-zinc-200">Autoriseren</b>.
+              </p>
               <div>
                 <label className={labelClass}>Client ID</label>
                 <input

@@ -13,6 +13,9 @@ export default async function WerkpostsPage() {
   const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
   const data = await loadBouwnetwerkData(supabase, companyId);
+  const { data: registrationCount } = await supabase.rpc(
+    "get_platform_registration_count",
+  );
 
   return (
     <div className="dashboard-page flex h-full min-h-0 flex-col gap-2">
@@ -75,7 +78,9 @@ export default async function WerkpostsPage() {
         </div>
       )}
 
-      <BouwnetwerkComingSoonBanner />
+      <BouwnetwerkComingSoonBanner
+        currentUsers={Number(registrationCount ?? 0)}
+      />
 
       <div className="dashboard-page-content min-h-0 flex-1">
         <BouwnetwerkHub

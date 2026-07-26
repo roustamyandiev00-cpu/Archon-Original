@@ -12,7 +12,6 @@ import {
   LineChart,
   List,
   LogOut,
-  MessageCircle,
   Receipt,
   ScrollText,
   Search,
@@ -21,7 +20,6 @@ import {
   Tags,
   Users,
   Wallet,
-  Zap,
   CheckSquare,
   type LucideIcon,
 } from "lucide-react";
@@ -34,6 +32,8 @@ export type SidebarItem = {
   badgeTone?: "info" | "warning";
   /** Optioneel label bv. "Beta" naast de link. */
   tag?: string;
+  /** Opvallende kleur, bv. voor functies die pas bij 100 gebruikers live gaan. */
+  accent?: "amber";
   available?: boolean;
   children?: SidebarItem[];
 };
@@ -55,7 +55,15 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     title: "Operatie",
     items: [
       { label: "Contacten", href: "/dashboard/contacten", icon: Users },
-      { label: "Offertes", href: "/dashboard/offertes", icon: FileText },
+      { label: "Offertes", href: "/dashboard/offertes", icon: FileText,
+        children: [
+          {
+            label: "Prijslijst",
+            href: "/dashboard/prijslijst",
+            icon: Tags,
+          },
+        ],
+      },
       {
         label: "Projecten",
         href: "/dashboard/offertes/projecten",
@@ -65,6 +73,19 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         label: "Facturen",
         href: "/dashboard/facturen",
         icon: Receipt,
+        children: [
+          {
+            label: "E-Facturen",
+            href: "/dashboard/e-facturen",
+            icon: ScrollText,
+            tag: "Beta",
+          },
+          {
+            label: "Boekhouding",
+            href: "/dashboard/boekhouding",
+            icon: Wallet,
+          },
+        ],
       },
       {
         label: "Leads / CRM",
@@ -73,29 +94,23 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         badge: 5,
         badgeTone: "info",
       },
-      { label: "Automatisaties", href: "/dashboard/automatisaties", icon: Zap },
-      { label: "Bouwnetwerk", href: "/dashboard/werkposts", icon: HardHat },
+      {
+        label: "Bouwnetwerk",
+        href: "/dashboard/werkposts",
+        icon: HardHat,
+        accent: "amber",
+      },
       {
         label: "Samenwerkingen",
         href: "/dashboard/werkposts/samenwerkingen",
         icon: Handshake,
+        accent: "amber",
       },
     ],
   },
   {
     title: "Administratie",
     items: [
-      {
-        label: "E-Facturen",
-        href: "/dashboard/e-facturen",
-        icon: ScrollText,
-        tag: "Beta",
-      },
-      {
-        label: "Boekhouding",
-        href: "/dashboard/boekhouding",
-        icon: Wallet,
-      },
       {
         label: "Agenda",
         href: "/dashboard/agenda",
@@ -107,37 +122,17 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         icon: CheckSquare,
       },
       {
-        label: "Prijslijst",
-        href: "/dashboard/prijslijst",
-        icon: Tags,
-      },
-      {
         label: "Activiteiten",
         href: "/dashboard/activiteit",
         icon: List,
       },
-      {
-        label: "Team",
-        href: "/dashboard/team",
-        icon: Users,
-      },
-      {
-        label: "Audit",
-        href: "/dashboard/audit",
-        icon: Shield,
-      },
-      {
-        label: "Telegram",
-        href: "/dashboard/telegram",
-        icon: MessageCircle,
-      },
+      // Tijdelijk verborgen: Team, Audit, Telegram
     ],
   },
   {
     title: "AI",
     items: [
       { label: "AI-agents", href: "/dashboard/command-center?view=crew", icon: Bot },
-      { label: "Comms", href: "/dashboard/comms", icon: MessageCircle },
       { label: "Geheugen", href: "/dashboard/geheugen", icon: BrainCircuit },
     ],
   },
@@ -201,7 +196,19 @@ export function sidebarItemIsActive(
   }
 
   if (target === "/dashboard/facturen") {
-    return current.startsWith("/dashboard/facturen");
+    return (
+      current.startsWith("/dashboard/facturen") &&
+      !current.startsWith("/dashboard/e-facturen") &&
+      !current.startsWith("/dashboard/boekhouding")
+    );
+  }
+
+  if (target === "/dashboard/e-facturen") {
+    return current.startsWith("/dashboard/e-facturen");
+  }
+
+  if (target === "/dashboard/boekhouding") {
+    return current.startsWith("/dashboard/boekhouding");
   }
 
   if (target === "/dashboard/werkposts") {

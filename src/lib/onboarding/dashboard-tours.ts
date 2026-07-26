@@ -49,7 +49,7 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
       id: "views",
       target: '[data-tour="dash-views"]',
       title: "Weergaven",
-      text: "Wissel tussen Command Center, Opvolging, Financiën, Projecten en AI Crew. Elke tab toont wat voor jou relevant is.",
+      text: "Wissel tussen Command Center, Opvolging, Financiën, Projecten en AI-agents. Elke tab toont wat voor jou relevant is.",
     },
     {
       id: "sidebar",

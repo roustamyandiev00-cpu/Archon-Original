@@ -183,7 +183,7 @@ export const APP_INTEGRATION_PROVIDERS: ProviderMeta[] = [
     id: "google-calendar",
     name: "Google Calendar",
     category: "Planning",
-    auth: "apikey",
+    auth: "oauth",
     description: "Synchroniseer afspraken en herinneringen.",
   },
   {
@@ -217,7 +217,7 @@ export const APP_INTEGRATION_PROVIDERS: ProviderMeta[] = [
 ];
 
 export function providerMeta(id: string): ProviderMeta | undefined {
-  return INTEGRATION_PROVIDERS.find((p) => p.id === id);
+  return allSettingsIntegrationProviders().find((p) => p.id === id);
 }
 
 /** Access points waarmee je op het Peppol-netwerk kunt aansluiten. */

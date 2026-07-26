@@ -72,10 +72,14 @@ export default function Sidebar({
       !available
         ? "cursor-default text-zinc-600 hover:bg-transparent"
         : active
-          ? "dashboard-sidebar-link--active bg-[#0c2836] font-medium text-sky-200"
-          : parentOfActive
-            ? "font-normal text-zinc-300 hover:bg-white/[0.035] hover:text-zinc-100"
-            : "font-normal text-zinc-400 hover:bg-white/[0.035] hover:text-zinc-100",
+          ? item.accent === "amber"
+            ? "bg-amber-500/10 font-medium text-amber-300"
+            : "dashboard-sidebar-link--active bg-[#0c2836] font-medium text-sky-200"
+          : item.accent === "amber"
+            ? "font-normal text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
+            : parentOfActive
+              ? "font-normal text-zinc-300 hover:bg-white/[0.035] hover:text-zinc-100"
+              : "font-normal text-zinc-400 hover:bg-white/[0.035] hover:text-zinc-100",
     );
 
     const tooltip = !available
@@ -87,7 +91,10 @@ export default function Sidebar({
         {active && available ? (
           <span
             aria-hidden
-            className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-cyan-400/80"
+            className={cn(
+              "absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full",
+              item.accent === "amber" ? "bg-amber-400/80" : "bg-cyan-400/80",
+            )}
           />
         ) : null}
         <item.icon
@@ -244,7 +251,7 @@ export default function Sidebar({
                     return (
                       <div key={item.label}>
                         {renderLink(item, itemActive, false, !!childActive)}
-                        {hasChildren ? (
+                        {hasChildren && (itemActive || childActive) ? (
                           <div className="relative ml-[19px] mt-0.5 flex flex-col gap-0.5 border-l border-white/[0.06] pl-2.5">
                             {item.children!.map((child) =>
                               renderLink(

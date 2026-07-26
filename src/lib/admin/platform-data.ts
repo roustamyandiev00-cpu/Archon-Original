@@ -250,6 +250,12 @@ export async function fetchCeoDashboardData(
     { count: pendingActionCount },
     { data: failedLogs },
     { data: recentCompanies },
+    { data: billingInvoices },
+    { data: paidInvoices },
+    { data: tokenPurchases },
+    { data: subscriptions },
+    { data: stripeEvents },
+    { data: creditTransactions },
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("bedrijven").select("id, plan, created_at, subscription_status"),
@@ -269,11 +275,54 @@ export async function fetchCeoDashboardData(
       .select("id, naam, plan, created_at, email, last_activity_at, status, subscription_status, is_active")
       .order("last_activity_at", { ascending: false, nullsFirst: false })
       .limit(8),
+    supabase
+      .from("platform_billing_invoices")
+      .select(
+        "id, company_id, number, amount_paid, amount_due, status, billing_reason, paid_at, last_event_created_at",
+      )
+      .order("last_event_created_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("platform_billing_invoices")
+      .select("amount_paid, paid_at")
+      .eq("status", "paid")
+      .not("paid_at", "is", null),
+    supabase
+      .from("ai_token_purchases")
+      .select("id, company_id, amount_eur, status, completed_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(8),
+    supabase.from("abonnementen").select("company_id, plan, prijs, status"),
+    supabase
+      .from("stripe_webhook_events")
+      .select("status, created_at")
+      .gte(
+        "created_at",
+        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      )
+      .limit(200),
+    supabase
+      .from("ai_credit_transactions")
+      .select("amount, created_at")
+      .lt("amount", 0)
+      .gte(
+        "created_at",
+        new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+      ),
   ]);
 
-  const mrr = companies
-    .filter((c) => c.status !== "suspended")
-    .reduce((sum, c) => sum + c.monthlyRevenue, 0);
+  const activeSubscriptions = (subscriptions ?? []).filter(
+    (sub) =>
+      ["active", "actief", "trialing", "trial"].includes(
+        sub.status.toLowerCase(),
+      ) && Number(sub.prijs ?? 0) > 0,
+  );
+  const hasRealMrr = activeSubscriptions.length > 0;
+  const mrr = hasRealMrr
+    ? activeSubscriptions.reduce((sum, sub) => sum + Number(sub.prijs ?? 0), 0)
+    : companies
+        .filter((c) => c.status !== "suspended")
+        .reduce((sum, c) => sum + c.monthlyRevenue, 0);
   const aiUsed = (credits ?? []).reduce((sum, row) => sum + (row.credits_used ?? 0), 0);
   const aiCost = (credits ?? []).reduce(
     (sum, row) => sum + Number(row.total_spent ?? 0),
@@ -288,9 +337,11 @@ export async function fetchCeoDashboardData(
   const kpis: KpiMetric[] = [
     {
       id: "mrr",
-      label: "Geschatte MRR",
+      label: hasRealMrr ? "MRR" : "Geschatte MRR",
       value: `€${mrr.toLocaleString("nl-BE")}`,
-      change: `${companies.length} klanten`,
+      change: hasRealMrr
+        ? `${activeSubscriptions.length} actieve abonnementen`
+        : `${companies.length} klanten`,
       positive: true,
       icon: "mrr",
       tone: "sky",
@@ -413,21 +464,76 @@ export async function fetchCeoDashboardData(
     severity: "warning" as const,
   }));
 
+  // Stripe-bedragen in platform_billing_invoices staan in centen.
+  const invoicePayments: Payment[] = (billingInvoices ?? []).map((row) => ({
+    id: `inv-${row.id}`,
+    company: companyNameById.get(row.company_id) ?? `Bedrijf ${row.company_id}`,
+    amount: (row.status === "paid" ? row.amount_paid : row.amount_due) / 100,
+    plan:
+      row.billing_reason === "subscription_cycle" ||
+      row.billing_reason === "subscription_create"
+        ? "Abonnement"
+        : row.number ?? "Factuur",
+    time: row.paid_at ?? row.last_event_created_at,
+    status:
+      row.status === "paid"
+        ? ("paid" as const)
+        : ["void", "uncollectible"].includes(row.status)
+          ? ("failed" as const)
+          : ("pending" as const),
+  }));
+
+  const creditPayments: Payment[] = (tokenPurchases ?? []).map((row) => ({
+    id: `tok-${row.id}`,
+    company: companyNameById.get(row.company_id) ?? `Bedrijf ${row.company_id}`,
+    amount: Number(row.amount_eur ?? 0),
+    plan: "AI-credits",
+    time: row.completed_at ?? row.created_at ?? new Date().toISOString(),
+    status:
+      row.status === "completed"
+        ? ("paid" as const)
+        : row.status === "failed"
+          ? ("failed" as const)
+          : ("pending" as const),
+  }));
+
+  const payments = [...invoicePayments, ...creditPayments]
+    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+    .slice(0, 6);
+
+  const hasRealRevenue = (paidInvoices ?? []).length > 0;
+  const revenueChart = hasRealRevenue
+    ? buildPaidRevenueChart(paidInvoices ?? [])
+    : buildRevenueChart(rawCompanies ?? []);
+
+  const aiUsageChart = buildAiUsageChart(creditTransactions ?? []);
+
+  const recentStripeEvents = stripeEvents ?? [];
+  const failedStripeEvents = recentStripeEvents.filter(
+    (event) => event.status === "failed",
+  ).length;
+  const stripeStatus: SystemService["status"] =
+    recentStripeEvents.length === 0
+      ? "unverified"
+      : failedStripeEvents > 0
+        ? "degraded"
+        : "operational";
+
   return {
     kpis,
-    revenueChart: buildRevenueChart(rawCompanies ?? []),
+    revenueChart,
+    revenueSource: hasRealRevenue ? "invoices" : "estimate",
     companyGrowthChart: buildGrowthChart(rawCompanies ?? []),
-    // Er is nog geen betrouwbare historische tijdreeks per maand. Toon geen
-    // kunstmatig verdeelde totalen als live trend.
-    aiUsageChart: [],
+    aiUsageChart,
     companies: platformCompanies,
-    payments: [] as Payment[],
+    payments,
     registrations,
     aiErrors,
     supportTickets: [] as SupportTicket[],
     systemStatus: [
-      { name: "Supabase", status: "unverified" },
-      { name: "OpenAI", status: "unverified" },
+      // De queries hierboven zijn net gelukt, dus de database is bereikbaar.
+      { name: "Supabase", status: "operational" },
+      { name: "Stripe webhooks", status: stripeStatus },
       {
         name: "Agent executor",
         status: (pendingActionCount ?? 0) > 20 ? "degraded" : "unverified",
@@ -436,6 +542,55 @@ export async function fetchCeoDashboardData(
     ] as SystemService[],
     syncedAt: new Date().toISOString(),
   };
+}
+
+function buildPaidRevenueChart(
+  invoices: Array<{ amount_paid: number; paid_at: string | null }>,
+): ChartPoint[] {
+  const buckets = new Map<string, number>();
+  const ordered = invoices
+    .filter((invoice) => invoice.paid_at)
+    .sort(
+      (a, b) => new Date(a.paid_at!).getTime() - new Date(b.paid_at!).getTime(),
+    );
+  for (const invoice of ordered) {
+    const key = monthKey(invoice.paid_at);
+    buckets.set(key, (buckets.get(key) ?? 0) + invoice.amount_paid / 100);
+  }
+
+  return Array.from(buckets.entries())
+    .slice(-12)
+    .map(([month, revenue]) => ({
+      month,
+      revenue: Math.round(revenue),
+      companies: 0,
+      aiRequests: 0,
+      aiCost: 0,
+    }));
+}
+
+function buildAiUsageChart(
+  transactions: Array<{ amount: number; created_at: string }>,
+): ChartPoint[] {
+  const buckets = new Map<string, number>();
+  const ordered = [...transactions].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+  for (const tx of ordered) {
+    const key = monthKey(tx.created_at);
+    buckets.set(key, (buckets.get(key) ?? 0) + Math.abs(tx.amount));
+  }
+
+  return Array.from(buckets.entries())
+    .slice(-12)
+    .map(([month, used]) => ({
+      month,
+      revenue: 0,
+      companies: 0,
+      aiRequests: used,
+      aiCost: 0,
+    }));
 }
 
 export type CrmOverview = {

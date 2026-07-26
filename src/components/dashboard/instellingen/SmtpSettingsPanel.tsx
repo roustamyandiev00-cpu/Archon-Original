@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Loader2, Mail, Send } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Loader2,
+  Mail,
+  Send,
+  ShieldCheck,
+} from "lucide-react";
 import GlowCard from "@/components/dashboard/GlowCard";
 import {
   saveSmtpSettings,
@@ -41,6 +48,20 @@ export default function SmtpSettingsPanel({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [testOk, setTestOk] = useState(false);
+  const hasPassword = initial.hasPassword || Boolean(form.smtp_pass.trim());
+  const isGmailPreset = form.preset === "gmail";
+  const fromEmailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    form.from_email.trim(),
+  );
+  const userLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    form.smtp_user.trim(),
+  );
+  const canSubmit =
+    Boolean(form.from_email.trim()) &&
+    Boolean(form.smtp_user.trim()) &&
+    Boolean(form.from_name.trim()) &&
+    (isGmailPreset || Boolean(form.smtp_host.trim())) &&
+    hasPassword;
 
   function set<K extends keyof SmtpSettingsInput>(
     key: K,
@@ -59,6 +80,21 @@ export default function SmtpSettingsPanel({
       smtp_port: GMAIL_SMTP.smtp_port,
       smtp_user: f.smtp_user || f.from_email || companyEmail,
     }));
+    setSaved(false);
+    setTestOk(false);
+  }
+
+  function applyCustomPreset() {
+    setForm((f) => ({
+      ...f,
+      preset: "custom",
+      smtp_host:
+        f.smtp_host === GMAIL_SMTP.smtp_host ? "" : f.smtp_host,
+      smtp_port:
+        f.smtp_host === GMAIL_SMTP.smtp_host ? 587 : f.smtp_port,
+    }));
+    setSaved(false);
+    setTestOk(false);
   }
 
   function handleSave() {
@@ -88,53 +124,72 @@ export default function SmtpSettingsPanel({
   }
 
   return (
-    <GlowCard className="p-5 sm:p-6">
-      <div className="mb-5 flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
-          <Mail size={18} />
-        </span>
-        <div>
-          <h2 className="text-base font-semibold text-zinc-50">
-            E-mail (SMTP / Gmail)
-          </h2>
-          <p className="mt-0.5 text-sm text-zinc-500">
-            Automatisch versturen van incasso-mails en documenten via je eigen
-            mailbox. Geen Resend nodig.
-          </p>
+    <GlowCard subtle innerClassName="p-5 sm:p-6">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
+            <Mail size={18} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-zinc-50">
+              E-mail (SMTP / Gmail)
+            </h2>
+            <p className="mt-0.5 text-sm text-zinc-500">
+              Automatisch versturen van incasso-mails en documenten via je eigen
+              mailbox. Geen Resend nodig.
+            </p>
+          </div>
         </div>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+            initial.hasPassword
+              ? "border border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+              : "border border-amber-500/25 bg-amber-500/10 text-amber-300"
+          }`}
+        >
+          {initial.hasPassword ? (
+            <>
+              <ShieldCheck size={13} /> Opgeslagen
+            </>
+          ) : (
+            <>
+              <AlertTriangle size={13} /> Nog niet actief
+            </>
+          )}
+        </span>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 inline-flex rounded-full border border-white/10 bg-zinc-950/60 p-1">
         <button
           type="button"
           onClick={applyGmailPreset}
-          className={`rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-            form.preset === "gmail"
+          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+            isGmailPreset
               ? "bg-sky-500 text-zinc-950"
-              : "border border-white/10 text-zinc-300 hover:bg-white/5"
+              : "text-zinc-300 hover:bg-white/5"
           }`}
         >
           Gmail
         </button>
         <button
           type="button"
-          onClick={() => set("preset", "custom")}
-          className={`rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+          onClick={applyCustomPreset}
+          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
             form.preset === "custom"
               ? "bg-sky-500 text-zinc-950"
-              : "border border-white/10 text-zinc-300 hover:bg-white/5"
+              : "text-zinc-300 hover:bg-white/5"
           }`}
         >
           Eigen SMTP
         </button>
       </div>
 
-      {form.preset === "gmail" && (
-        <div className="mb-4 rounded-xl border border-sky-500/20 bg-sky-500/[0.06] px-4 py-3 text-xs text-zinc-400">
+      {isGmailPreset && (
+        <div className="mb-4 rounded-xl border border-sky-500/20 bg-sky-500/[0.06] px-4 py-3 text-xs leading-5 text-zinc-400">
           Gebruik een{" "}
           <span className="font-medium text-zinc-200">Google app-wachtwoord</span>{" "}
-          (niet je normale wachtwoord). Activeer 2FA in Google en maak een
-          app-wachtwoord aan onder Beveiliging → App-wachtwoorden.
+          van 16 tekens. Gebruik niet je normale Google-wachtwoord. Activeer 2FA
+          in Google en maak een app-wachtwoord aan onder Beveiliging → App-wachtwoorden.
         </div>
       )}
 
@@ -145,6 +200,7 @@ export default function SmtpSettingsPanel({
             type="text"
             value={form.from_name}
             onChange={(e) => set("from_name", e.target.value)}
+            placeholder={companyName || "Je bedrijfsnaam"}
             className={inputClass}
           />
         </div>
@@ -154,24 +210,35 @@ export default function SmtpSettingsPanel({
             type="email"
             value={form.from_email}
             onChange={(e) => set("from_email", e.target.value)}
+            placeholder="info@jouwdomein.be"
             className={inputClass}
           />
+          {form.from_email && !fromEmailLooksValid && (
+            <p className="mt-1 text-xs text-amber-300">
+              Controleer dit e-mailadres.
+            </p>
+          )}
         </div>
         <div>
           <label className={labelClass}>
-            {form.preset === "gmail" ? "Gmail-adres" : "SMTP-gebruiker"}
+            {isGmailPreset ? "Gmail-adres" : "SMTP-gebruiker"}
           </label>
           <input
             type="email"
             value={form.smtp_user}
             onChange={(e) => set("smtp_user", e.target.value)}
-            placeholder="jij@gmail.com"
+            placeholder={isGmailPreset ? "jij@gmail.com" : "smtp-gebruiker"}
             className={inputClass}
           />
+          {form.smtp_user && !userLooksValid && isGmailPreset && (
+            <p className="mt-1 text-xs text-amber-300">
+              Vul hier je volledige Gmail-adres in.
+            </p>
+          )}
         </div>
         <div>
           <label className={labelClass}>
-            {form.preset === "gmail" ? "App-wachtwoord" : "SMTP-wachtwoord"}
+            {isGmailPreset ? "App-wachtwoord" : "SMTP-wachtwoord"}
           </label>
           <input
             type="password"
@@ -180,14 +247,20 @@ export default function SmtpSettingsPanel({
             placeholder={
               initial.hasPassword && !form.smtp_pass
                 ? "•••••••• (opgeslagen)"
-                : form.preset === "gmail"
-                  ? "16 tekens app-wachtwoord"
+                : isGmailPreset
+                  ? "abcd efgh ijkl mnop"
                   : "Wachtwoord"
             }
+            autoComplete="new-password"
             className={inputClass}
           />
           {initial.hasPassword && !form.smtp_pass && (
             <p className={hintClass}>Laat leeg om het opgeslagen wachtwoord te behouden.</p>
+          )}
+          {!hasPassword && (
+            <p className="mt-1 text-xs text-amber-300">
+              Nodig voordat verzenden of testen kan werken.
+            </p>
           )}
         </div>
 
@@ -222,6 +295,12 @@ export default function SmtpSettingsPanel({
           {error}
         </p>
       )}
+      {!error && !canSubmit && (
+        <p className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+          Vul afzender, gebruiker en wachtwoord in om deze koppeling actief te
+          maken.
+        </p>
+      )}
       {saved && !error && (
         <p className="mt-4 inline-flex items-center gap-1.5 text-sm text-emerald-400">
           <Check size={15} /> SMTP-instellingen opgeslagen
@@ -237,7 +316,7 @@ export default function SmtpSettingsPanel({
         <button
           type="button"
           onClick={handleTest}
-          disabled={pending || testing}
+          disabled={pending || testing || !canSubmit}
           className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
         >
           {testing ? (
@@ -250,7 +329,7 @@ export default function SmtpSettingsPanel({
         <button
           type="button"
           onClick={handleSave}
-          disabled={pending || testing}
+          disabled={pending || testing || !canSubmit}
           className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
         >
           {pending && <Loader2 size={15} className="animate-spin" />}

@@ -55,6 +55,9 @@ export default async function SamenwerkingenPage({
 }) {
   const { channel: initialChannelId } = await searchParams;
   const { supabase, companyId, user } = await getCompanyContext();
+  const { data: registrationCount } = await supabase.rpc(
+    "get_platform_registration_count",
+  );
 
   let samenwerkingen: Samenwerking[] = [];
   let afspraken: AfspraakRow[] = [];
@@ -333,7 +336,9 @@ export default async function SamenwerkingenPage({
         </p>
       </div>
 
-      <BouwnetwerkComingSoonBanner />
+      <BouwnetwerkComingSoonBanner
+        currentUsers={Number(registrationCount ?? 0)}
+      />
 
       {!companyId ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">

@@ -54,7 +54,7 @@ export const defaultContactColumnVisibility: ContactColumnVisibility = {
   fiscal: true,
 };
 
-const stickyActionsClass = "text-right dashboard-table-sticky-actions";
+const stickyActionsClass = "w-16 text-right dashboard-table-sticky-actions";
 
 type PeppolFilter = "all" | "ready" | "incomplete";
 type TypeFilter = "all" | "business" | "individual";

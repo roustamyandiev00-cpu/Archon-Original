@@ -23,7 +23,7 @@
 
 import type { Metadata } from "next";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
-import AdminSidebar from "@/components/dashboard/admin/AdminSidebar";
+import AdminLayoutClient from "@/components/dashboard/admin/AdminLayoutClient";
 
 export const metadata: Metadata = {
   title: {
@@ -43,7 +43,7 @@ export default async function AdminRootLayout({
   await requirePlatformAdmin();
 
   return (
-    <div className="min-h-dvh bg-zinc-950 text-zinc-100">
+    <div className="min-h-dvh bg-[#08090B] text-zinc-100">
       {/* Skip-link voor toegankelijkheid */}
       <a
         href="#admin-main"
@@ -52,23 +52,7 @@ export default async function AdminRootLayout({
         Ga naar inhoud
       </a>
 
-      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 lg:flex-row lg:px-6">
-        {/* Admin-zijbalk — hergebruikt bestaande AdminSidebar */}
-        <aside className="lg:w-64 lg:shrink-0">
-          <div className="lg:sticky lg:top-6">
-            <AdminSidebar />
-          </div>
-        </aside>
-
-        {/* Hoofdinhoud */}
-        <main
-          id="admin-main"
-          tabIndex={-1}
-          className="min-w-0 flex-1 outline-none"
-        >
-          {children}
-        </main>
-      </div>
+      <AdminLayoutClient>{children}</AdminLayoutClient>
     </div>
   );
 }

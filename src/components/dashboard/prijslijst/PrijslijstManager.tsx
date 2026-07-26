@@ -29,9 +29,17 @@ function euro(value: number) {
   });
 }
 
+export const EENHEID_OPTIONS = [
+  { value: "m²", label: "Vierkante meter (m²)" },
+  { value: "l.m.", label: "Lopende meter (l.m.)" },
+  { value: "per uur", label: "Per uur" },
+  { value: "forfait", label: "Forfaitprijs" },
+  { value: "stuks", label: "Per stuk" },
+] as const;
+
 const emptyForm = {
   omschrijving: "",
-  eenheid: "stuks",
+  eenheid: "m²",
   prijs: "",
   btwPercentage: "21",
   categorie: "",
@@ -170,32 +178,37 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
         </p>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/50">
-          <div className="hidden grid-cols-[1.4fr_0.5fr_0.6fr_0.5fr_auto] gap-3 border-b border-white/10 px-4 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 sm:grid sm:px-5">
-            <span>Omschrijving</span>
-            <span>Eenheid</span>
-            <span>Prijs</span>
-            <span>BTW</span>
-            <span />
-          </div>
           <div className="divide-y divide-white/10">
             {filtered.map((item) => (
               <article
                 key={item.id}
-                className="grid gap-3 px-4 py-4 sm:grid-cols-[1.4fr_0.5fr_0.6fr_0.5fr_auto] sm:items-center sm:px-5"
+                className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 sm:px-5"
               >
-                <div className="min-w-0">
-                  <p className="font-medium text-zinc-100">{item.omschrijving}</p>
+                <div className="min-w-0 flex-1 basis-52">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate font-medium text-zinc-100">
+                      {item.omschrijving}
+                    </p>
+                    <span className="shrink-0 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-300">
+                      {item.eenheid}
+                    </span>
+                  </div>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {item.categorie || "Algemeen"}
                     {!item.isActive ? " · inactief" : ""}
                   </p>
                 </div>
-                <p className="text-sm text-zinc-300">{item.eenheid}</p>
-                <p className="text-sm font-medium text-zinc-100">
+                <p className="shrink-0 font-mono text-sm font-semibold text-zinc-100">
                   {euro(item.prijs)}
+                  <span className="font-sans font-normal text-zinc-500">
+                    {" "}
+                    / {item.eenheid}
+                  </span>
                 </p>
-                <p className="text-sm text-zinc-400">{item.btwPercentage}%</p>
-                <div className="flex flex-wrap gap-2">
+                <p className="shrink-0 text-sm text-zinc-400">
+                  {item.btwPercentage}% btw
+                </p>
+                <div className="flex shrink-0 flex-wrap gap-2">
                   <button
                     type="button"
                     disabled={pending}
@@ -257,14 +270,22 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
                   <label className="mb-1.5 block text-sm text-zinc-300">
                     Eenheid
                   </label>
-                  <input
+                  <select
                     className={inputClass}
                     value={form.eenheid}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, eenheid: e.target.value }))
                     }
-                    placeholder="stuks / m² / u"
-                  />
+                  >
+                    {EENHEID_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                    {!EENHEID_OPTIONS.some(
+                      (option) => option.value === form.eenheid,
+                    ) && <option value={form.eenheid}>{form.eenheid}</option>}
+                  </select>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm text-zinc-300">

@@ -52,19 +52,29 @@ export type SettingsInput = {
   incasso: IncassoConfig;
 };
 
-/** Ingebouwde sjabloonstijlen om uit te kiezen. */
-export const TEMPLATE_PRESETS: { id: string; label: string }[] = [
-  { id: "modern", label: "Modern (standaard)" },
-  { id: "klassiek", label: "Klassiek" },
-  { id: "minimaal", label: "Minimaal" },
-  { id: "compact", label: "Compact" },
-  // ArchonPro-ontwerpsjablonen (met voorbeeld)
-  { id: "archon-01", label: "ArchonPro — Klassiek donker" },
-  { id: "archon-02", label: "ArchonPro — Modern minimaal" },
-  { id: "archon-03", label: "ArchonPro — Bouw bold" },
-  { id: "archon-04", label: "ArchonPro — Premium donker" },
-  { id: "archon-05", label: "ArchonPro — Zijbalk donker" },
-];
+/** Vier gecureerde documentstijlen voor offertes en facturen. */
+export const TEMPLATE_PRESETS = [
+  {
+    id: "archon-02",
+    label: "Modern",
+    description: "Licht, ruim en helder voor een eigentijdse uitstraling.",
+  },
+  {
+    id: "archon-05",
+    label: "Zakelijk",
+    description: "Gestructureerde zijbalk met alle bedrijfsgegevens in beeld.",
+  },
+  {
+    id: "archon-03",
+    label: "Bouwkracht",
+    description: "Krachtige lijnen en accenten, gemaakt voor bouwbedrijven.",
+  },
+  {
+    id: "archon-04",
+    label: "Premium",
+    description: "Elegante donkere kop met een verzorgde, luxere afwerking.",
+  },
+] as const;
 
 export const DEFAULT_TEMPLATE = "modern";
 

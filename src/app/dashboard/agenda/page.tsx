@@ -1,7 +1,6 @@
 import { CalendarDays } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
 import { PageHeader, NoCompanyNotice } from "@/components/dashboard/mission";
-import ModuleWipBanner from "@/components/dashboard/ModuleWipBanner";
 import AgendaManager, {
   type AgendaAfspraak,
 } from "@/components/dashboard/agenda/AgendaManager";
@@ -57,23 +56,20 @@ export default async function AgendaPage() {
   );
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-5">
-      <ModuleWipBanner
-        moduleId="agenda"
-        title="Agenda is nog in ontwikkeling"
-        description="Je kan afspraken al bekijken en beheren. Extra planningfuncties volgen. Verberg dit bericht als je wilt."
-      />
+    <div className="mx-auto flex h-full min-h-0 max-w-[1100px] flex-col gap-5">
       <PageHeader
         icon={<CalendarDays size={20} />}
         title="Agenda"
-        description="Plan werfbezoeken, overleggen en interne afspraken."
+        description="Plan werfbezoeken, overleggen en interne afspraken. Exporteer afspraken naar Google Calendar of verbind je Google Agenda via Integraties."
       />
       {error ? (
         <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-200">
           Agenda kon niet worden geladen: {error.message}
         </p>
       ) : (
-        <AgendaManager afspraken={afspraken} nowMs={nowMs} />
+        <div className="min-h-0 flex-1">
+          <AgendaManager afspraken={afspraken} nowMs={nowMs} />
+        </div>
       )}
     </div>
   );

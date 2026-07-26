@@ -12,7 +12,10 @@ import {
   ChevronDown,
   BarChart3,
   LineChart,
+  Zap,
+  Users,
 } from "lucide-react";
+import { BOUWNETWERK_REQUIRED_USERS } from "@/components/dashboard/werkposts/BouwnetwerkComingSoonBanner";
 import { LogoMark } from "@/components/BrandLogo";
 import {
   Command,
@@ -154,6 +157,20 @@ export default function Topbar({
             <Stat label="Verzonden" value={String(initial.verzonden)} />
             <span className="h-4 w-px bg-white/10" />
             <Stat label="Pipeline" value={euro(initial.pipeline)} />
+            <span className="h-4 w-px bg-white/10" />
+            <Link
+              href="/dashboard/werkposts"
+              title={`Bouwnetwerk gaat live bij ${BOUWNETWERK_REQUIRED_USERS} geregistreerde gebruikers`}
+              className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 transition-colors hover:bg-amber-500/15"
+            >
+              <Users size={13} className="text-amber-400" aria-hidden />
+              <span className="font-mono text-xs font-semibold text-amber-300">
+                {initial.registeredUsers}/{BOUWNETWERK_REQUIRED_USERS}
+              </span>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-amber-400/80">
+                gebruikers
+              </span>
+            </Link>
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
@@ -244,6 +261,15 @@ export default function Topbar({
                 </span>
               )}
             </IconButton>
+
+            <Link
+              href="/dashboard/automatisaties"
+              className="dashboard-topbar-icon-btn relative hidden h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100 sm:grid"
+              aria-label="Automatisaties"
+              title="Automatisaties"
+            >
+              <Zap size={16} aria-hidden />
+            </Link>
 
             <Link
               href="/dashboard/deploy"

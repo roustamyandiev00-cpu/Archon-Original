@@ -71,6 +71,8 @@ export type SystemService = {
 export type CeoDashboardData = {
   kpis: KpiMetric[];
   revenueChart: ChartPoint[];
+  /** "invoices" = echte betaalde Stripe-facturen, "estimate" = schatting op basis van plannen. */
+  revenueSource?: "invoices" | "estimate";
   companyGrowthChart: ChartPoint[];
   aiUsageChart: ChartPoint[];
   companies: PlatformCompany[];

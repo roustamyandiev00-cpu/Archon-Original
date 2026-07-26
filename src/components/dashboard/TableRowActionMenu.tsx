@@ -41,6 +41,10 @@ export default function TableRowActionMenu({
       const trigger = triggerRef.current;
       if (!trigger) return;
       const rect = trigger.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        setPosition(null);
+        return;
+      }
       const top = rect.bottom + 4;
       let left = rect.right - MENU_WIDTH;
       left = Math.max(8, Math.min(left, window.innerWidth - MENU_WIDTH - 8));

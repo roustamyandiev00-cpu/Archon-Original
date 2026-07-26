@@ -14,8 +14,6 @@ import {
   List,
   ScrollText,
   Wallet,
-  Shield,
-  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -99,9 +97,7 @@ export const MOBILE_MORE_LINKS: MoreLink[] = [
   { label: "Prijslijst", href: "/dashboard/prijslijst", icon: Tags },
   { label: "AI Assistent", href: "/dashboard/command-center?view=crew", icon: Bot },
   { label: "Activiteiten", href: "/dashboard/activiteit", icon: List },
-  { label: "Team", href: "/dashboard/team", icon: Users },
-  { label: "Audit", href: "/dashboard/audit", icon: Shield },
-  { label: "Telegram", href: "/dashboard/telegram", icon: MessageCircle },
+  // Tijdelijk verborgen: Team, Audit, Telegram
   { label: "Instellingen", href: "/dashboard/instellingen", icon: Settings },
 ];
 

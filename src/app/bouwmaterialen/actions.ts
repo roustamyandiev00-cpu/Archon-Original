@@ -16,7 +16,28 @@ const slugify = (name: string) =>
     .replace(/\s+/g, "-")
     .slice(0, 50) || "foto";
 
-export type BouwmateriaalCategorie = "dak" | "tegels";
+export type BouwmateriaalCategorie =
+  | "dak"
+  | "tegels"
+  | "hout"
+  | "isolatie"
+  | "sanitair"
+  | "elektro"
+  | "verf"
+  | "gereedschap"
+  | "algemeen";
+
+const GELDIGE_CATEGORIEEN: readonly BouwmateriaalCategorie[] = [
+  "dak",
+  "tegels",
+  "hout",
+  "isolatie",
+  "sanitair",
+  "elektro",
+  "verf",
+  "gereedschap",
+  "algemeen",
+];
 
 export type CreateBouwmateriaalWinkelInput = {
   naam: string;
@@ -34,7 +55,7 @@ export type CreateBouwmateriaalWinkelInput = {
 };
 
 /**
- * Voegt een bouwmaterialenwinkel (dak of tegels) toe aan de publieke
+ * Voegt een bouwmaterialenwinkel toe aan de publieke
  * directory. Bewust geen login vereist — de RLS-policy op
  * `bouwmateriaal_winkels` staat publieke inserts toe (zie
  * supabase/migrations/20260710_bouwmaterialen_directory.sql).
@@ -51,7 +72,9 @@ export async function createBouwmateriaalWinkel(
     .from("bouwmateriaal_winkels")
     .insert({
       naam: input.naam.trim(),
-      categorie: input.categorie || "dak",
+      categorie: GELDIGE_CATEGORIEEN.includes(input.categorie)
+        ? input.categorie
+        : "algemeen",
       adres: input.adres.trim() || null,
       postcode: input.postcode.trim() || null,
       stad: input.stad.trim() || null,

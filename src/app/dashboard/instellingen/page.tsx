@@ -125,8 +125,8 @@ export default async function InstellingenPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-4">
-      <header className="flex items-start gap-3">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-3 overflow-hidden">
+      <header className="flex shrink-0 items-start gap-3">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
           <Settings size={20} />
         </span>

@@ -136,6 +136,8 @@ export type TopbarSummary = {
   offertesVandaag: number;
   verzonden: number;
   pipeline: number;
+  /** Platform-breed aantal geregistreerde gebruikers (teller richting 100). */
+  registeredUsers: number;
   notifications: { id: string; title: string; detail: string; href: string }[];
   syncedAt: string;
 };
@@ -246,10 +248,15 @@ export async function loadTopbarSummary(
   companyId: number | null,
 ): Promise<TopbarSummary> {
   const today = new Date().toISOString().slice(0, 10);
+  const { data: registrationCount } = await supabase.rpc(
+    "get_platform_registration_count",
+  );
+  const registeredUsers = Number(registrationCount ?? 0);
   const fallback: TopbarSummary = {
     offertesVandaag: 0,
     verzonden: 0,
     pipeline: 0,
+    registeredUsers,
     notifications: [],
     syncedAt: new Date().toISOString(),
   };
@@ -302,6 +309,7 @@ export async function loadTopbarSummary(
     offertesVandaag: offertesToday.count ?? 0,
     verzonden: sentToday.count ?? 0,
     pipeline,
+    registeredUsers,
     notifications,
     syncedAt: new Date().toISOString(),
   };

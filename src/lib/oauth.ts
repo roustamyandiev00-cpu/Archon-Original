@@ -56,6 +56,28 @@ export const OAUTH_CONFIGS: Record<string, OAuthConfig> = {
       },
     },
   },
+  "google-calendar": {
+    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    scope:
+      "openid email profile https://www.googleapis.com/auth/calendar.events",
+    extraAuthParams: {
+      access_type: "offline",
+      prompt: "consent",
+    },
+    identity: {
+      url: "https://openidconnect.googleapis.com/v1/userinfo",
+      method: "GET",
+      accountName: (json) => {
+        const data = json as Record<string, unknown>;
+        return (
+          (data.email as string | undefined) ??
+          (data.name as string | undefined) ??
+          null
+        );
+      },
+    },
+  },
 };
 
 export function hasOAuth(provider: string): boolean {

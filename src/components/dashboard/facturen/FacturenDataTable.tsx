@@ -13,6 +13,7 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
+import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
 import {
   DashboardMobileCard,
   DashboardMobileEmpty,
@@ -53,18 +54,20 @@ export type FactuurListItem = {
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20] as const;
 
-export type FactuurColumnKey = "date" | "dueDate";
+export type FactuurColumnKey = "date" | "dueDate" | "send";
 
 export type FactuurColumnVisibility = Record<FactuurColumnKey, boolean>;
 
 export const FACTUUR_COLUMN_OPTIONS = [
   { id: "date", label: "Factuurdatum" },
   { id: "dueDate", label: "Vervaldatum" },
+  { id: "send", label: "Versturen" },
 ] as const;
 
 export const defaultFactuurColumnVisibility: FactuurColumnVisibility = {
   date: true,
   dueDate: true,
+  send: true,
 };
 
 const stickyActionsClass =
@@ -263,7 +266,20 @@ export default function FacturenDataTable({
                       {formatDate(f.datum)}
                       {f.vervaldatum ? ` · verval ${formatDate(f.vervaldatum)}` : ""}
                     </p>
-                    <div className="mt-3 flex items-center justify-end border-t border-white/10 pt-2">
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2">
+                      <DocumentContactActions
+                        soort={
+                          f.document_type === "proforma" ? "proforma" : "factuur"
+                        }
+                        nummer={f.nummer ?? `#${f.id}`}
+                        klant={f.klant ?? "klant"}
+                        bedrag={f.totaal_bedrag}
+                        email={f.email}
+                        phone={f.phone}
+                        detailPath={
+                          isDemo ? undefined : `/dashboard/facturen/${f.id}`
+                        }
+                      />
                       <FactuurRowMenu
                         id={f.id}
                         nummer={f.nummer ?? `#${f.id}`}
@@ -340,6 +356,15 @@ export default function FacturenDataTable({
                 <TableHead className="text-right text-zinc-400">Bedrag</TableHead>
                 <TableHead className="text-zinc-400">Status</TableHead>
                 <TableHead
+                  className={tableColumnClass(
+                    columnVisibility.send,
+                    "2xl",
+                    "text-right text-zinc-400",
+                  )}
+                >
+                  Versturen
+                </TableHead>
+                <TableHead
                   className={`${stickyActionsClass} bg-zinc-900/95 group-hover:bg-zinc-900/95`}
                 >
                   <span className="sr-only">Acties</span>
@@ -408,6 +433,29 @@ export default function FacturenDataTable({
                           {meta.label}
                         </Badge>
                       </TableCell>
+                      <TableCell
+                        className={tableColumnClass(
+                          columnVisibility.send,
+                          "2xl",
+                          "text-right",
+                        )}
+                      >
+                        <DocumentContactActions
+                          soort={
+                            f.document_type === "proforma"
+                              ? "proforma"
+                              : "factuur"
+                          }
+                          nummer={f.nummer ?? `#${f.id}`}
+                          klant={f.klant ?? "klant"}
+                          bedrag={f.totaal_bedrag}
+                          email={f.email}
+                          phone={f.phone}
+                          detailPath={
+                            isDemo ? undefined : `/dashboard/facturen/${f.id}`
+                          }
+                        />
+                      </TableCell>
                       <TableCell className={stickyActionsClass}>
                         <FactuurRowMenu
                           id={f.id}
@@ -436,7 +484,7 @@ export default function FacturenDataTable({
                 })
               ) : (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={8} className="py-14 text-center">
+                  <TableCell colSpan={9} className="py-14 text-center">
                     <div className="mx-auto flex max-w-sm flex-col items-center">
                       <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/[0.08] bg-zinc-900 text-sky-400">
                         <Receipt size={22} />

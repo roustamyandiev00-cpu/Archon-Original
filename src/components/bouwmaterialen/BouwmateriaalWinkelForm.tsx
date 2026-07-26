@@ -9,6 +9,10 @@ import {
   type BouwmateriaalCategorie,
 } from "@/app/bouwmaterialen/actions";
 import { REGIOS } from "@/lib/werkposts";
+import {
+  BOUWMATERIAAL_CATEGORIEEN,
+  CATEGORIE_META,
+} from "@/lib/bouwmaterialen";
 import LocationPicker from "@/components/dakbedrijven/LocationPicker";
 
 const inputClass =
@@ -138,8 +142,11 @@ export default function BouwmateriaalWinkelForm() {
               onChange={(e) => setCategorie(e.target.value as BouwmateriaalCategorie)}
               className={inputClass}
             >
-              <option value="dak">Dak</option>
-              <option value="tegels">Tegels</option>
+              {BOUWMATERIAAL_CATEGORIEEN.map((cat) => (
+                <option key={cat} value={cat}>
+                  {CATEGORIE_META[cat].label}
+                </option>
+              ))}
             </select>
           </div>
 

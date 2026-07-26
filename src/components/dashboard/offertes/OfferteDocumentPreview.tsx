@@ -87,6 +87,59 @@ function DocumentFrame({
   );
 }
 
+/**
+ * Read-only A4-weergave voor een reeds opgeslagen offerte. Dezelfde HTML gaat
+ * ook naar de PDF-renderer, zodat het detailbeeld het gekozen sjabloon volgt.
+ */
+export function OfferteDocumentSheet({ html }: { html: string }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.6);
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const widthScale = (el.clientWidth - 16) / A4_W;
+      const heightScale = (window.innerHeight - 190) / A4_H;
+      setScale(Math.min(Math.max(Math.min(widthScale, heightScale), 0.25), 1));
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={boxRef}
+      className="flex min-h-0 w-full justify-center overflow-auto rounded-2xl border border-white/10 bg-zinc-900/60 p-2 sm:p-4"
+    >
+      <div
+        className="relative shrink-0 overflow-hidden bg-white shadow-[0_24px_80px_-28px_rgba(0,0,0,0.9)]"
+        style={{ width: A4_W * scale, height: A4_H * scale }}
+      >
+        <iframe
+          title="Offerte volgens gekozen sjabloon"
+          srcDoc={html}
+          tabIndex={-1}
+          className="pointer-events-none absolute left-0 top-0 origin-top-left border-0 bg-white"
+          style={{
+            width: A4_W,
+            height: A4_H,
+            transform: `scale(${scale})`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function ZoomControls({
   zoom,
   onZoomOut,
