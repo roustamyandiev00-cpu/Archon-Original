@@ -22,12 +22,14 @@ export default function ModuleWipBanner({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    try {
-      const dismissed = window.localStorage.getItem(storageKey(moduleId));
-      setVisible(dismissed !== "1");
-    } catch {
-      setVisible(true);
-    }
+    queueMicrotask(() => {
+      try {
+        const dismissed = window.localStorage.getItem(storageKey(moduleId));
+        setVisible(dismissed !== "1");
+      } catch {
+        setVisible(true);
+      }
+    });
   }, [moduleId]);
 
   function dismiss() {

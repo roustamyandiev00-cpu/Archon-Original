@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   Bot,
   Check,
@@ -73,9 +73,11 @@ export default function SamenwerkingContractPanel({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
+  const [prevInitialContract, setPrevInitialContract] = useState(initialContract);
+  if (prevInitialContract !== initialContract) {
+    setPrevInitialContract(initialContract);
     setContract(initialContract);
-  }, [initialContract, channelId]);
+  }
 
   const isPartyA = companyId === contract?.partyACompanyId;
   const isPartyB = companyId === contract?.partyBCompanyId;

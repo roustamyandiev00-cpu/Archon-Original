@@ -3,24 +3,31 @@
 import { useEffect, useState } from "react";
 import { Rocket, Users, X } from "lucide-react";
 
-const REQUIRED_USERS = 100;
-// Pas dit getal aan via de admin zodra het platform groeit
-const CURRENT_USERS = 12;
+export const BOUWNETWERK_REQUIRED_USERS = 100;
+const REQUIRED_USERS = BOUWNETWERK_REQUIRED_USERS;
 const STORAGE_KEY = "archonpro:wip-dismissed:bouwnetwerk";
 
-export function BouwnetwerkComingSoonBanner() {
+export function BouwnetwerkComingSoonBanner({
+  currentUsers,
+}: {
+  /** Echt aantal geregistreerde gebruikers (get_platform_registration_count). */
+  currentUsers: number;
+}) {
   const [visible, setVisible] = useState(false);
+  const remaining = Math.max(REQUIRED_USERS - currentUsers, 0);
   const progressPercent = Math.min(
-    Math.round((CURRENT_USERS / REQUIRED_USERS) * 100),
+    Math.round((currentUsers / REQUIRED_USERS) * 100),
     100,
   );
 
   useEffect(() => {
-    try {
-      setVisible(window.localStorage.getItem(STORAGE_KEY) !== "1");
-    } catch {
-      setVisible(true);
-    }
+    queueMicrotask(() => {
+      try {
+        setVisible(window.localStorage.getItem(STORAGE_KEY) !== "1");
+      } catch {
+        setVisible(true);
+      }
+    });
   }, []);
 
   function dismiss() {
@@ -35,22 +42,24 @@ export function BouwnetwerkComingSoonBanner() {
   if (!visible) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-sky-500/5 px-5 py-5">
+    <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-amber-500/5 px-5 py-5">
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl"
+        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-amber-500/10 blur-3xl"
       />
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-400">
+          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-400">
             <Rocket size={17} />
           </span>
           <div>
             <div className="flex items-start justify-between gap-3">
               <p className="font-semibold text-zinc-100">
                 Bouwnetwerk wordt actief bij{" "}
-                <span className="text-sky-400">{REQUIRED_USERS} gebruikers</span>
+                <span className="text-amber-400">
+                  {REQUIRED_USERS} gebruikers
+                </span>
               </p>
               <button
                 type="button"
@@ -62,14 +71,21 @@ export function BouwnetwerkComingSoonBanner() {
               </button>
             </div>
             <p className="mt-0.5 max-w-xl text-sm text-zinc-400">
-              Je kan alles al bekijken en instellen. Zodra het platform{" "}
-              {REQUIRED_USERS} actieve bouwbedrijven bereikt, gaat het netwerk
-              live en kan je echt samenwerken en matchen.
+              Er zijn nu{" "}
+              <span className="font-semibold text-zinc-200">
+                {currentUsers} geregistreerde gebruikers
+              </span>
+              {" — "}nog{" "}
+              <span className="font-semibold text-amber-300">
+                {remaining}
+              </span>{" "}
+              te gaan, dan kan je deze optie gebruiken. Je kan intussen alles
+              al bekijken en instellen.
             </p>
             <button
               type="button"
               onClick={dismiss}
-              className="mt-3 inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-200 transition-colors hover:bg-sky-500/15"
+              className="mt-3 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition-colors hover:bg-amber-500/15"
             >
               Begrepen, verberg dit
             </button>
@@ -85,14 +101,14 @@ export function BouwnetwerkComingSoonBanner() {
               </span>
             </div>
             <p className="text-2xl font-bold text-zinc-50">
-              {CURRENT_USERS}
+              {currentUsers}
               <span className="text-sm font-normal text-zinc-500">
                 /{REQUIRED_USERS}
               </span>
             </p>
             <div className="h-1.5 w-28 overflow-hidden rounded-full bg-zinc-800">
               <div
-                className="h-full rounded-full bg-sky-500 transition-all duration-500"
+                className="h-full rounded-full bg-amber-500 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>

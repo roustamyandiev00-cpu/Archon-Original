@@ -292,34 +292,41 @@ export function AgentChatProvider({
   const messages = historyByAgent[activeAgent.id] ?? starterFor(activeAgent);
 
   useEffect(() => {
-    setActiveAgent((prev) => {
-      if (prev.id === "nova") return primaryAgent;
-      const refreshed = chatAgentFromId(companyAgents, prev.id, userAgentName);
-      return refreshed ?? prev;
-    });
-    setHistoryByAgent((prev) => {
-      const welcome = prev.nova?.[0];
-      if (!welcome || welcome.id !== "welcome-nova") return prev;
-      return { ...prev, nova: starterFor(primaryAgent) };
+    queueMicrotask(() => {
+      setActiveAgent((prev) => {
+        if (prev.id === "nova") return primaryAgent;
+        const refreshed = chatAgentFromId(companyAgents, prev.id, userAgentName);
+        return refreshed ?? prev;
+      });
+      setHistoryByAgent((prev) => {
+        const welcome = prev.nova?.[0];
+        if (!welcome || welcome.id !== "welcome-nova") return prev;
+        return { ...prev, nova: starterFor(primaryAgent) };
+      });
     });
   }, [primaryAgent, companyAgents, userAgentName]);
 
-  useEffect(() => {
-    if (!initialCompanyAgents?.length) return;
-    setCompanyAgents(initialCompanyAgents);
-  }, [initialCompanyAgents]);
+  const [prevInitialAgents, setPrevInitialAgents] = useState(initialCompanyAgents);
+  if (prevInitialAgents !== initialCompanyAgents) {
+    setPrevInitialAgents(initialCompanyAgents);
+    if (initialCompanyAgents?.length) {
+      setCompanyAgents(initialCompanyAgents);
+    }
+  }
 
   const syncCompanyAgents = useCallback((agents: CustomAgent[]) => {
     setCompanyAgents(agents);
   }, []);
 
   useEffect(() => {
-    setView(readStoredView());
-    const storedPosition = readStoredPosition();
-    setPositionState(
-      storedPosition ? clampChatPosition(storedPosition) : defaultChatPosition(),
-    );
-    setPositionReady(true);
+    queueMicrotask(() => {
+      setView(readStoredView());
+      const storedPosition = readStoredPosition();
+      setPositionState(
+        storedPosition ? clampChatPosition(storedPosition) : defaultChatPosition(),
+      );
+      setPositionReady(true);
+    });
   }, []);
 
   useEffect(() => {

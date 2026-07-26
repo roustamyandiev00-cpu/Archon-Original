@@ -54,7 +54,9 @@ export default function BouwnetwerkHub({
   const [filter, setFilter] = useState<ChannelFilter>("alles");
 
   useEffect(() => {
-    setActiveView(readStoredView());
+    queueMicrotask(() => {
+      setActiveView(readStoredView());
+    });
   }, []);
 
   const selectView = useCallback((id: BouwnetwerkViewId) => {

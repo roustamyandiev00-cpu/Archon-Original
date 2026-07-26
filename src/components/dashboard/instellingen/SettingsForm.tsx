@@ -21,6 +21,7 @@ import {
   ImageIcon,
   Database,
   Plug,
+  Gift,
 } from "lucide-react";
 import GlowCard from "@/components/dashboard/GlowCard";
 import ApiKeysManager from "@/components/dashboard/instellingen/ApiKeysManager";
@@ -47,7 +48,6 @@ import {
   type AiToestemming,
 } from "@/app/dashboard/instellingen/settings";
 import {
-  isArchonTemplate,
   archonTemplateMeta,
   archonTemplatePreviewHtml,
 } from "@/components/dashboard/instellingen/templatePreview";
@@ -71,7 +71,15 @@ const inputClass =
 const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
 const hintClass = "mt-1 text-xs text-zinc-500";
 
-type Section = "bedrijf" | "documenten" | "ai" | "import" | "api" | "integraties" | "weergave";
+type Section =
+  | "bedrijf"
+  | "documenten"
+  | "ai"
+  | "import"
+  | "api"
+  | "integraties"
+  | "weergave"
+  | "uitnodigen";
 
 const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "bedrijf", label: "Bedrijfsgegevens", icon: <Building2 size={15} /> },
@@ -85,6 +93,7 @@ const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "ai", label: "AI-agent", icon: <Bot size={15} /> },
   { id: "api", label: "API", icon: <KeyRound size={15} /> },
   { id: "weergave", label: "Weergave", icon: <Globe size={15} /> },
+  { id: "uitnodigen", label: "Uitnodigen", icon: <Gift size={15} /> },
 ];
 
 function isSection(value: string | null): value is Section {
@@ -167,6 +176,94 @@ function ArchonThumb({ html, title }: { html: string; title: string }) {
   );
 }
 
+function TemplateStyleThumbnail({ templateId }: { templateId: string }) {
+  if (templateId === "archon-05") {
+    return (
+      <div className="flex h-full bg-white">
+        <div className="w-[30%] bg-slate-900 p-2">
+          <div className="h-1.5 w-10 rounded-full bg-sky-400" />
+          <div className="mt-4 space-y-1.5">
+            <div className="h-1 rounded-full bg-white/35" />
+            <div className="h-1 w-4/5 rounded-full bg-white/20" />
+            <div className="h-1 w-3/5 rounded-full bg-white/20" />
+          </div>
+        </div>
+        <div className="flex-1 p-2.5">
+          <div className="h-2 w-14 rounded-full bg-slate-800" />
+          <div className="mt-4 h-px bg-slate-200" />
+          <div className="mt-2 space-y-1.5">
+            <div className="h-1 rounded-full bg-slate-200" />
+            <div className="h-1 rounded-full bg-slate-100" />
+            <div className="h-1 w-3/4 rounded-full bg-slate-100" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (templateId === "archon-03") {
+    return (
+      <div className="h-full bg-white p-2.5">
+        <div className="-mx-2.5 -mt-2.5 flex h-9 items-end justify-between bg-slate-950 px-2.5 pb-2">
+          <div className="h-2 w-14 rounded-full bg-white" />
+          <div className="h-1.5 w-8 rounded-full bg-amber-400" />
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-1.5">
+          <div className="col-span-2 h-1.5 rounded-full bg-slate-800" />
+          <div className="h-1.5 rounded-full bg-amber-400" />
+        </div>
+        <div className="mt-3 space-y-1.5 border-t-2 border-slate-900 pt-2">
+          <div className="h-1 rounded-full bg-slate-200" />
+          <div className="h-1 rounded-full bg-slate-100" />
+          <div className="h-1 w-4/5 rounded-full bg-slate-100" />
+        </div>
+      </div>
+    );
+  }
+
+  if (templateId === "archon-04") {
+    return (
+      <div className="h-full bg-white">
+        <div className="h-[42%] bg-slate-950 p-2.5">
+          <div className="h-1.5 w-12 rounded-full bg-sky-400" />
+          <div className="mt-3 h-2 w-20 rounded-full bg-white" />
+        </div>
+        <div className="p-2.5">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <div className="h-1 rounded-full bg-slate-300" />
+              <div className="h-1 w-4/5 rounded-full bg-slate-100" />
+            </div>
+            <div className="space-y-1 border-l border-slate-200 pl-2">
+              <div className="h-1 rounded-full bg-slate-300" />
+              <div className="h-1 w-3/4 rounded-full bg-slate-100" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full bg-white p-2.5">
+      <div className="flex items-start justify-between">
+        <div className="h-2 w-16 rounded-full bg-slate-900" />
+        <div className="h-1.5 w-10 rounded-full bg-sky-400" />
+      </div>
+      <div className="mt-5 grid grid-cols-3 gap-2 border-y border-slate-200 py-2">
+        <div className="h-5 rounded bg-slate-50" />
+        <div className="h-5 rounded bg-slate-50" />
+        <div className="h-5 rounded bg-slate-50" />
+      </div>
+      <div className="mt-3 space-y-1.5">
+        <div className="h-1 rounded-full bg-slate-200" />
+        <div className="h-1 rounded-full bg-slate-100" />
+        <div className="h-1 w-3/4 rounded-full bg-slate-100" />
+      </div>
+    </div>
+  );
+}
+
 function TemplatePicker({
   label,
   soort,
@@ -187,7 +284,6 @@ function TemplatePicker({
   const renderId = resolveTemplateId(value);
   const renderMeta = archonTemplateMeta(renderId);
   const thumbHtml = uploaded ? null : archonTemplatePreviewHtml(renderId, soort);
-  const mappedFromLegacy = !uploaded && !isArchonTemplate(value);
 
   function openFullPreview() {
     const html = archonTemplatePreviewHtml(renderId, "both");
@@ -218,32 +314,57 @@ function TemplatePicker({
   }
 
   return (
-    <div>
-      <label className={labelClass}>{label}</label>
-      <select
-        value={uploaded ? "__upload__" : value}
-        onChange={(e) => {
-          if (e.target.value !== "__upload__") onChange(e.target.value);
-        }}
-        className={inputClass}
-      >
-        {TEMPLATE_PRESETS.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.label}
-          </option>
-        ))}
-        {uploaded && <option value="__upload__">Eigen sjabloon</option>}
-      </select>
+    <fieldset>
+      <legend className="text-base font-semibold text-zinc-100">{label}</legend>
+      <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+        Kies het ontwerp dat standaard wordt gebruikt voor nieuwe {soort === "quote" ? "offertes" : "facturen"}.
+      </p>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {TEMPLATE_PRESETS.map((preset) => {
+          const selected = !uploaded && renderId === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange(preset.id)}
+              className={`group overflow-hidden rounded-2xl border text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 ${
+                selected
+                  ? "border-sky-400/70 bg-sky-500/10 shadow-[0_0_0_1px_rgba(56,189,248,0.18),0_12px_30px_rgba(14,165,233,0.12)]"
+                  : "border-white/10 bg-zinc-950/50 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.04]"
+              }`}
+            >
+              <span className="relative block h-28 overflow-hidden border-b border-black/10 bg-zinc-200">
+                <TemplateStyleThumbnail templateId={preset.id} />
+                {selected && (
+                  <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-sky-500 px-2 py-1 text-[10px] font-bold text-zinc-950 shadow-lg">
+                    <Check size={11} strokeWidth={3} /> Gekozen
+                  </span>
+                )}
+              </span>
+              <span className="block p-3">
+                <span className="block text-sm font-semibold text-zinc-100">
+                  {preset.label}
+                </span>
+                <span className="mt-1 block text-[11px] leading-relaxed text-zinc-500">
+                  {preset.description}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {uploaded && (
-        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-sky-500/25 bg-sky-500/[0.06] px-3 py-2 text-xs">
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-sky-500/25 bg-sky-500/[0.06] px-3 py-2.5 text-xs">
           <span className="flex min-w-0 items-center gap-1.5 text-sky-300">
             <FileText size={13} className="shrink-0" />
             <span className="truncate">{templateFileName(value)}</span>
           </span>
           <button
             type="button"
-            onClick={() => onChange("modern")}
+            onClick={() => onChange("archon-02")}
             title="Eigen sjabloon verwijderen"
             className="grid h-6 w-6 shrink-0 place-items-center rounded text-zinc-400 transition-colors hover:bg-white/10 hover:text-rose-400"
           >
@@ -253,25 +374,28 @@ function TemplatePicker({
       )}
 
       {thumbHtml && (
-        <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60">
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-zinc-100">
+                Voorbeeld · {renderMeta?.label ?? label}
+              </p>
+              <p className="mt-0.5 text-[11px] text-zinc-500">
+                Voorbeeldgegevens — je eigen logo en bedrijfsgegevens worden automatisch gebruikt.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openFullPreview}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-medium text-sky-300 transition-colors hover:border-sky-500/40 hover:bg-sky-500/10"
+            >
+              <ExternalLink size={12} /> Volledig voorbeeld
+            </button>
+          </div>
           <ArchonThumb
             html={thumbHtml}
             title={`Voorbeeld ${renderMeta?.label ?? value}`}
           />
-          <div className="flex items-center justify-between gap-2 border-t border-white/10 px-3 py-2">
-            <span className="min-w-0 truncate text-xs text-zinc-400">
-              {mappedFromLegacy
-                ? `Wordt weergegeven als “${renderMeta?.label}”`
-                : renderMeta?.description}
-            </span>
-            <button
-              type="button"
-              onClick={openFullPreview}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-sky-300 transition-colors hover:border-sky-500/40 hover:bg-sky-500/10"
-            >
-              <ExternalLink size={12} /> Op ware grootte
-            </button>
-          </div>
         </div>
       )}
 
@@ -282,12 +406,13 @@ function TemplatePicker({
         onChange={handleFile}
         className="hidden"
       />
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        disabled={uploading}
-        className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
-      >
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+        >
         {uploading ? (
           <>
             <Loader2 size={13} className="animate-spin" /> Uploaden…
@@ -297,10 +422,14 @@ function TemplatePicker({
             <Upload size={13} /> Eigen sjabloon uploaden
           </>
         )}
-      </button>
+        </button>
+        <span className="text-[11px] text-zinc-600">
+          PDF, Word of afbeelding · maximaal 10 MB
+        </span>
+      </div>
 
       {error && <p className="mt-1.5 text-xs text-rose-400">{error}</p>}
-    </div>
+    </fieldset>
   );
 }
 
@@ -463,8 +592,10 @@ export default function SettingsForm({
 
   // Hydrate from localStorage on mount
   useEffect(() => {
-    setSelectedLanguageState(readLanguage());
-    setSelectedFontState(readFont());
+    queueMicrotask(() => {
+      setSelectedLanguageState(readLanguage());
+      setSelectedFontState(readFont());
+    });
   }, []);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -482,12 +613,14 @@ export default function SettingsForm({
   const integrationError = searchParams.get("error");
 
   useEffect(() => {
-    const requestedTab = searchParams.get("tab");
-    if (isSection(requestedTab)) {
-      setTab(requestedTab);
-    } else if (connectedParam || integrationError) {
-      setTab(INTEGRATIES_SETTINGS_TAB);
-    }
+    queueMicrotask(() => {
+      const requestedTab = searchParams.get("tab");
+      if (isSection(requestedTab)) {
+        setTab(requestedTab);
+      } else if (connectedParam || integrationError) {
+        setTab(INTEGRATIES_SETTINGS_TAB);
+      }
+    });
   }, [searchParams, connectedParam, integrationError]);
 
   function handleLanguageChange(lang: AppLanguage) {
@@ -566,32 +699,53 @@ export default function SettingsForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {referralCode && <ReferralInvitePanel referralCode={referralCode} />}
-
-      <p className="text-sm text-zinc-500">
-        Kies een categorie — alle instellingen staan in de tabs hieronder.
-      </p>
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+    <form
+      onSubmit={handleSubmit}
+      className="flex min-h-0 flex-1 flex-col gap-3"
+    >
+      <div
+        className="flex shrink-0 snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label="Instellingencategorieën"
+      >
         {sections.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`inline-flex min-h-10 shrink-0 snap-start items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-sm font-medium leading-tight transition-colors ${
               tab === t.id
                 ? "bg-sky-500 text-zinc-950 shadow-sm"
                 : "border border-white/10 text-zinc-300 hover:bg-white/5"
             }`}
           >
             {t.icon}
-            <span className="truncate">{t.label}</span>
+            <span>{t.label}</span>
           </button>
         ))}
       </div>
 
-      <GlowCard subtle innerClassName="p-4 sm:p-6">
+      <GlowCard
+        subtle
+        className="min-h-0 flex-1 overflow-hidden"
+        innerClassName="h-full overflow-y-auto overscroll-contain p-4 sm:p-6"
+      >
+        {tab === "uitnodigen" && referralCode && (
+          <ReferralInvitePanel referralCode={referralCode} />
+        )}
+
+        {tab === "uitnodigen" && !referralCode && (
+          <div className="grid h-full min-h-64 place-items-center text-center">
+            <div>
+              <Gift size={24} className="mx-auto text-violet-400" />
+              <h2 className="mt-3 text-base font-semibold text-zinc-100">
+                Uitnodigen is niet beschikbaar
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Er is nog geen persoonlijke uitnodigingscode gevonden.
+              </p>
+            </div>
+          </div>
+        )}
         {tab === "bedrijf" && (
           <div className="space-y-6">
             <SectionHeader
@@ -782,17 +936,18 @@ export default function SettingsForm({
 
             {/* Sjablonen */}
             <div className="space-y-4 border-t border-white/10 pt-6">
-              <div>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+              <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-r from-sky-500/10 via-violet-500/[0.06] to-transparent p-4">
+                <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-100">
                   <FileUp size={15} className="text-sky-400" />
-                  Sjablonen
+                  Documentontwerp
                 </h3>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Kies een kant-en-klaar ArchonPro-ontwerp (met voorbeeld) of
-                  upload je eigen sjabloon (PDF, Word of afbeelding, max. 10 MB).
+                <p className="mt-1 max-w-3xl text-sm leading-relaxed text-zinc-400">
+                  Geef offertes en facturen een professionele, herkenbare uitstraling.
+                  Kies per documenttype één van vier ontwerpen; de gekozen stijl wordt
+                  automatisch gebruikt voor nieuwe documenten.
                 </p>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-8">
                 <TemplatePicker
                   label="Offerte-sjabloon"
                   soort="quote"
@@ -1218,7 +1373,11 @@ export default function SettingsForm({
         )}
       </GlowCard>
 
-      {tab !== "api" && tab !== "import" && tab !== "integraties" && tab !== "weergave" && (
+      {tab !== "api" &&
+        tab !== "import" &&
+        tab !== "integraties" &&
+        tab !== "weergave" &&
+        tab !== "uitnodigen" && (
       <div className="flex items-center justify-end gap-3">
         {error && (
           <p className="mr-auto rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">

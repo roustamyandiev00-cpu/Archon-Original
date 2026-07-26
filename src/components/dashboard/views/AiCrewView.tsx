@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -38,9 +38,11 @@ export default function AiCrewView({
     mission.agents.find((a) => a.id === "nova") ?? mission.agents[0];
   const activeCount = companyAgents.filter((a) => a.enabled).length;
 
-  useEffect(() => {
+  const [prevInitialPanel, setPrevInitialPanel] = useState(initialPanel);
+  if (prevInitialPanel !== initialPanel) {
+    setPrevInitialPanel(initialPanel);
     if (initialPanel) setOpenPanel(initialPanel);
-  }, [initialPanel]);
+  }
 
   function toggleKnowledge() {
     setOpenPanel((current) => (current === "knowledge" ? null : "knowledge"));
@@ -55,7 +57,7 @@ export default function AiCrewView({
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden lg:gap-3">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-zinc-100">AI Crew</h2>
+          <h2 className="text-xl font-semibold text-zinc-100">AI-agents</h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-zinc-500">
             Maak agents aan, voeg kennisdocumenten toe en start direct een
             gesprek. Alles wat je hier instelt onthouden je agents in het

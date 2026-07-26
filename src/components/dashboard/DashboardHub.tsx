@@ -72,7 +72,7 @@ const VIEWS: ViewDef[] = [
   },
   {
     id: "crew",
-    label: "AI Crew",
+    label: "AI-agents",
     icon: Users,
     shortcut: "⌘5",
     badge: (m) => m.agents.filter((a) => a.pending > 0).length,
@@ -117,15 +117,16 @@ export default function DashboardHub({
 }: DashboardHubProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [activeView, setActiveView] = useState<DashboardViewId>(defaultView);
+  const [activeView, setActiveView] = useState<DashboardViewId>(() =>
+    defaultView !== "command" ? defaultView : readStoredView(defaultView),
+  );
+  const [prevDefaultView, setPrevDefaultView] = useState(defaultView);
+  if (prevDefaultView !== defaultView) {
+    setPrevDefaultView(defaultView);
+    setActiveView(defaultView !== "command" ? defaultView : readStoredView(defaultView));
+  }
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
   const [updatedLabel, setUpdatedLabel] = useState("zojuist bijgewerkt");
-
-  useEffect(() => {
-    setActiveView(
-      defaultView !== "command" ? defaultView : readStoredView(defaultView),
-    );
-  }, [defaultView]);
 
   useEffect(() => {
     const tick = () => setUpdatedLabel(formatLastUpdated(lastUpdated));

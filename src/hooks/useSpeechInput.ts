@@ -51,7 +51,9 @@ export function useSpeechInput(options: UseSpeechInputOptions = {}) {
   }, [onResult, onFinal]);
 
   useEffect(() => {
-    setSupported(isSpeechRecognitionSupported());
+    queueMicrotask(() => {
+      setSupported(isSpeechRecognitionSupported());
+    });
     const recognition = createSpeechRecognition();
     if (!recognition) return;
 

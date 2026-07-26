@@ -345,7 +345,9 @@ export default function SamenwerkingenClient({
   );
   const [contractModalOpen, setContractModalOpen] = useState(false);
 
-  useEffect(() => {
+  const [prevInitialChannelId, setPrevInitialChannelId] = useState(initialChannelId);
+  if (prevInitialChannelId !== initialChannelId) {
+    setPrevInitialChannelId(initialChannelId);
     if (
       initialChannelId &&
       samenwerkingen.some((s) => s.channelId === initialChannelId)
@@ -353,7 +355,7 @@ export default function SamenwerkingenClient({
       setSelectedId(initialChannelId);
       setMobileChatOpen(true);
     }
-  }, [initialChannelId, samenwerkingen]);
+  }
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("alle");
   const [profileTab, setProfileTab] = useState<ProfileTab>("details");
   const [composerMode, setComposerMode] = useState<ComposerMode>("reply");

@@ -61,10 +61,12 @@ export function DashboardSidePanelProvider({
   const userInteractedRef = useRef(false);
 
   useEffect(() => {
-    if (!userInteractedRef.current) {
-      setCollapsed(readStoredCollapsed());
-    }
-    setHydrated(true);
+    queueMicrotask(() => {
+      if (!userInteractedRef.current) {
+        setCollapsed(readStoredCollapsed());
+      }
+      setHydrated(true);
+    });
   }, []);
 
   useEffect(() => {
