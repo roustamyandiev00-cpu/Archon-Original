@@ -1,8 +1,7 @@
 "use client";
 
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import type { PlatformCompany } from "@/components/dashboard/admin/ceo-demo-data";
 import { useRouter } from "next/navigation";
 

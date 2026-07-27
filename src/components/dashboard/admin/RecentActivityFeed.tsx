@@ -6,7 +6,6 @@ import {
   Plus,
   Settings,
   User,
-  Shield,
   Download,
   AlertTriangle,
   CheckCircle,

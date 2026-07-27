@@ -1,8 +1,7 @@
 "use client";
 
-import { Activity, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { Activity } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import type { SystemService } from "@/components/dashboard/admin/ceo-demo-data";
 
 interface PlatformHealthCardProps {

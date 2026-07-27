@@ -22,9 +22,17 @@ function Frame({
   );
 }
 
-function Initial({ letter, bg }: { letter: string; bg: string }) {
+function Initial({
+  letter,
+  bg,
+  className,
+}: {
+  letter: string;
+  bg: string;
+  className?: string;
+}) {
   return (
-    <Frame bg={bg}>
+    <Frame className={className} bg={bg}>
       <span className="text-sm font-bold text-white">{letter}</span>
     </Frame>
   );
@@ -83,15 +91,33 @@ const LOGO: Record<string, (p: LogoProps) => React.ReactNode> = {
       </svg>
     </Frame>
   ),
-  billit: ({ className }) => <Initial letter="B" bg="bg-[#1E88E5]" />,
-  yuki: ({ className }) => <Initial letter="Y" bg="bg-[#00A3A1]" />,
-  "exact-online": ({ className }) => <Initial letter="E" bg="bg-[#ED1C24]" />,
-  teamleader: ({ className }) => <Initial letter="T" bg="bg-[#00B2A9]" />,
-  octopus: ({ className }) => <Initial letter="O" bg="bg-[#5C6BC0]" />,
-  winbooks: ({ className }) => <Initial letter="W" bg="bg-[#1565C0]" />,
-  silverfin: ({ className }) => <Initial letter="S" bg="bg-[#00A0DC]" />,
-  codabox: ({ className }) => <Initial letter="C" bg="bg-[#FF6B00]" />,
-  horus: ({ className }) => <Initial letter="H" bg="bg-[#37474F]" />,
+  billit: ({ className }) => (
+    <Initial letter="B" bg="bg-[#1E88E5]" className={className} />
+  ),
+  yuki: ({ className }) => (
+    <Initial letter="Y" bg="bg-[#00A3A1]" className={className} />
+  ),
+  "exact-online": ({ className }) => (
+    <Initial letter="E" bg="bg-[#ED1C24]" className={className} />
+  ),
+  teamleader: ({ className }) => (
+    <Initial letter="T" bg="bg-[#00B2A9]" className={className} />
+  ),
+  octopus: ({ className }) => (
+    <Initial letter="O" bg="bg-[#5C6BC0]" className={className} />
+  ),
+  winbooks: ({ className }) => (
+    <Initial letter="W" bg="bg-[#1565C0]" className={className} />
+  ),
+  silverfin: ({ className }) => (
+    <Initial letter="S" bg="bg-[#00A0DC]" className={className} />
+  ),
+  codabox: ({ className }) => (
+    <Initial letter="C" bg="bg-[#FF6B00]" className={className} />
+  ),
+  horus: ({ className }) => (
+    <Initial letter="H" bg="bg-[#37474F]" className={className} />
+  ),
   "sage-bob-50": ({ className }) => (
     <Frame className={className} bg="bg-[#00DC00]">
       <span className="text-[10px] font-black tracking-tight text-[#003300]">
@@ -114,7 +140,9 @@ const LOGO: Record<string, (p: LogoProps) => React.ReactNode> = {
       <span className="text-xs font-bold text-white">Vz</span>
     </Frame>
   ),
-  "isabel-6": ({ className }) => <Initial letter="I" bg="bg-[#003366]" />,
+  "isabel-6": ({ className }) => (
+    <Initial letter="I" bg="bg-[#003366]" className={className} />
+  ),
 };
 
 export function ProviderLogo({
@@ -132,6 +160,7 @@ export function ProviderLogo({
     <Initial
       letter={(name ?? id).charAt(0).toUpperCase()}
       bg="bg-zinc-700"
+      className={className}
     />
   );
 }

@@ -119,10 +119,12 @@ export default function AgentKnowledgeForm({
 
   const selected = agents.find((a) => a.id === agentId);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Afgeleide state uit de prop; tijdens render i.p.v. in een effect.
+  const [prevDefaultAgentId, setPrevDefaultAgentId] = useState(defaultAgentId);
+  if (prevDefaultAgentId !== defaultAgentId) {
+    setPrevDefaultAgentId(defaultAgentId);
     if (defaultAgentId) setAgentId(defaultAgentId);
-  }, [defaultAgentId]);
+  }
 
   const loadDocuments = useCallback(async (id: string) => {
     if (!id) {
@@ -138,6 +140,8 @@ export default function AgentKnowledgeForm({
   }, []);
 
   useEffect(() => {
+    // Echte externe synchronisatie (documenten ophalen), geen afgeleide state.
+    // loadDocuments zet direct een laadvlag, vandaar de regel-uitzondering.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDocuments(agentId);
   }, [agentId, loadDocuments]);

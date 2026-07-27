@@ -291,8 +291,14 @@ export function AgentChatProvider({
 
   const messages = historyByAgent[activeAgent.id] ?? starterFor(activeAgent);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Afgeleide state: ververs de actieve agent zodra de agentgegevens wijzigen.
+  // Tijdens render i.p.v. in een effect, zodat er geen extra renderronde ontstaat.
+  const agentSourceKey = `${primaryAgent.id}|${userAgentName}|${companyAgents
+    .map((agent) => agent.id)
+    .join(",")}`;
+  const [prevAgentSourceKey, setPrevAgentSourceKey] = useState(agentSourceKey);
+  if (prevAgentSourceKey !== agentSourceKey) {
+    setPrevAgentSourceKey(agentSourceKey);
     setActiveAgent((prev) => {
       if (prev.id === "nova") return primaryAgent;
       const refreshed = chatAgentFromId(companyAgents, prev.id, userAgentName);
@@ -303,26 +309,32 @@ export function AgentChatProvider({
       if (!welcome || welcome.id !== "welcome-nova") return prev;
       return { ...prev, nova: starterFor(primaryAgent) };
     });
-  }, [primaryAgent, companyAgents, userAgentName]);
+  }
 
-  useEffect(() => {
-    if (!initialCompanyAgents?.length) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCompanyAgents(initialCompanyAgents);
-  }, [initialCompanyAgents]);
+  // Idem voor de serverzijdige agentlijst.
+  const [prevInitialCompanyAgents, setPrevInitialCompanyAgents] =
+    useState(initialCompanyAgents);
+  if (prevInitialCompanyAgents !== initialCompanyAgents) {
+    setPrevInitialCompanyAgents(initialCompanyAgents);
+    if (initialCompanyAgents?.length) setCompanyAgents(initialCompanyAgents);
+  }
 
   const syncCompanyAgents = useCallback((agents: CustomAgent[]) => {
     setCompanyAgents(agents);
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setView(readStoredView());
-    const storedPosition = readStoredPosition();
-    setPositionState(
-      storedPosition ? clampChatPosition(storedPosition) : defaultChatPosition(),
-    );
-    setPositionReady(true);
+    // Voorkeuren uit localStorage pas na hydratatie toepassen.
+    queueMicrotask(() => {
+      setView(readStoredView());
+      const storedPosition = readStoredPosition();
+      setPositionState(
+        storedPosition
+          ? clampChatPosition(storedPosition)
+          : defaultChatPosition(),
+      );
+      setPositionReady(true);
+    });
   }, []);
 
   useEffect(() => {

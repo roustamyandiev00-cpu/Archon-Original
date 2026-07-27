@@ -62,16 +62,6 @@ function parseDate(value: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function formatDate(start: string) {
-  const date = parseDate(start);
-  if (!date) return "Onbekende datum";
-  return date.toLocaleDateString("nl-BE", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  });
-}
-
 function formatTime(start: string, end: string | null) {
   const startDate = parseDate(start);
   if (!startDate) return "--:--";
@@ -272,15 +262,6 @@ export default function AgendaManager({
       weekCount: weekItems,
     };
   }, [filtered, nowMs]);
-
-  const groupedUpcoming = useMemo(() => {
-    const groups = new Map<string, AgendaAfspraak[]>();
-    for (const afspraak of upcoming) {
-      const key = afspraak.startTijd.slice(0, 10);
-      groups.set(key, [...(groups.get(key) ?? []), afspraak]);
-    }
-    return [...groups.entries()];
-  }, [upcoming]);
 
   const weekStart = useMemo(() => startOfWeek(visibleDate), [visibleDate]);
   const visibleDays = useMemo(

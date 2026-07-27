@@ -122,12 +122,16 @@ export default function DashboardHub({
   const [updatedLabel, setUpdatedLabel] = useState("zojuist bijgewerkt");
   const [isRefreshing, startRefreshTransition] = useTransition();
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Afgeleide state: volg een gewijzigde defaultView tijdens render in plaats
+  // van in een effect. De tak draait alleen wanneer de prop wijzigt — dus nooit
+  // tijdens SSR, waar readStoredView() geen localStorage heeft.
+  const [prevDefaultView, setPrevDefaultView] = useState(defaultView);
+  if (prevDefaultView !== defaultView) {
+    setPrevDefaultView(defaultView);
     setActiveView(
       defaultView !== "command" ? defaultView : readStoredView(defaultView),
     );
-  }, [defaultView]);
+  }
 
   useEffect(() => {
     const tick = () => setUpdatedLabel(formatLastUpdated(lastUpdated));

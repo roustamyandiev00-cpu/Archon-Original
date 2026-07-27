@@ -479,15 +479,20 @@ export default function SettingsForm({
   const connectedParam = searchParams.get("connected");
   const integrationError = searchParams.get("error");
 
-  useEffect(() => {
-    const requestedTab = searchParams.get("tab");
+  // Afgeleide state uit de URL: het actieve tabblad volgt de queryparameters.
+  // Tijdens render i.p.v. in een effect, zodat het juiste tabblad meteen bij de
+  // eerste paint staat en er geen zichtbare sprong is.
+  const requestedTab = searchParams.get("tab");
+  const tabSourceKey = `${requestedTab}|${connectedParam}|${integrationError}`;
+  const [prevTabSourceKey, setPrevTabSourceKey] = useState(tabSourceKey);
+  if (prevTabSourceKey !== tabSourceKey) {
+    setPrevTabSourceKey(tabSourceKey);
     if (isSection(requestedTab)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTab(requestedTab);
     } else if (connectedParam || integrationError) {
       setTab(INTEGRATIES_SETTINGS_TAB);
     }
-  }, [searchParams, connectedParam, integrationError]);
+  }
 
   function handleLanguageChange(lang: AppLanguage) {
     persistLanguage(lang);

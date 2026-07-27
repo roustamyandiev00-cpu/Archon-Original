@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { Search, Bell, HelpCircle, Server, Settings } from "lucide-react";
-import { cn } from "@/components/ui/utils";
 
 export default function AdminTopbar() {
   const pathname = usePathname();

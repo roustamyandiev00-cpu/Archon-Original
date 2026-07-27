@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -41,10 +41,12 @@ export default function AiCrewView({
     mission.agents.find((a) => a.id === "nova") ?? mission.agents[0];
   const activeCount = companyAgents.filter((a) => a.enabled).length;
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Afgeleide state uit de prop; tijdens render i.p.v. in een effect.
+  const [prevInitialPanel, setPrevInitialPanel] = useState(initialPanel);
+  if (prevInitialPanel !== initialPanel) {
+    setPrevInitialPanel(initialPanel);
     if (initialPanel) setOpenPanel(initialPanel);
-  }, [initialPanel]);
+  }
 
   function toggleKnowledge() {
     setOpenPanel((current) => (current === "knowledge" ? null : "knowledge"));

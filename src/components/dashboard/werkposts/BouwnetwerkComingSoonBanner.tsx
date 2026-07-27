@@ -26,16 +26,18 @@ export function BouwnetwerkComingSoonBanner({
   const unlocked = isBouwnetwerkUnlocked(registeredUsers, requiredUsers);
 
   useEffect(() => {
-    if (unlocked) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setVisible(false);
-      return;
-    }
-    try {
-      setVisible(window.localStorage.getItem(STORAGE_KEY) !== "1");
-    } catch {
-      setVisible(true);
-    }
+    // Na mount bepalen: server kent localStorage niet, dus pas na hydratatie.
+    queueMicrotask(() => {
+      if (unlocked) {
+        setVisible(false);
+        return;
+      }
+      try {
+        setVisible(window.localStorage.getItem(STORAGE_KEY) !== "1");
+      } catch {
+        setVisible(true);
+      }
+    });
   }, [unlocked]);
 
   function dismiss() {

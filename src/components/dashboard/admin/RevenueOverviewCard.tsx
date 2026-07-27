@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { TrendingUp, DollarSign } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { RevenueChart } from "@/components/dashboard/admin/CeoCharts";
 import type { ChartPoint } from "@/components/dashboard/admin/ceo-demo-data";
