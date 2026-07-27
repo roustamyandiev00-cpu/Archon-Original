@@ -5,6 +5,24 @@ Branch: `feature/tasks-module` (lokaal, HEAD `3f44cb3`)
 
 ---
 
+## Voortgang sinds deze analyse (2026-07-27)
+
+| Stap | Status |
+|---|---|
+| 1. Branch-divergentie oplossen | **KLAAR** — zie `consolidate/tasks-module`, merge `f1aee4b`. Keuze onderbouwd in `docs/TAKEN_MODULE_KEUZE.md` |
+| 5. Bootstrap-adminlek dichten | **KLAAR** — commit `835f981`; de vlag wordt nu gelezen én bootstrap sluit database-admins niet meer buit |
+| 2. Merge naar `main` + staging deploy | OPEN — vereist jouw akkoord om te pushen |
+| 3. Env-sleutels invullen | OPEN — vereist jouw secrets |
+| 4. Supabase linken + migraties + `types:generate` | OPEN — vereist projectref/credentials |
+| 6. Handmatige kernflow-test op staging | OPEN — kan pas na 2–4 |
+
+Status na consolidatie: lint 0 errors, typecheck groen, **148 tests groen**, build groen.
+
+Nog niet geverifieerd: het live schema. De conclusie over `tasks.project_id`
+steunt op `supabase/recovered_migrations/`, niet op de echte database.
+
+---
+
 ## 0. Samenvatting in één alinea
 
 De code is technisch groen: typecheck, 99 tests, build en lint slagen allemaal.
