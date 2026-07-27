@@ -11,15 +11,68 @@ Branch: `feature/tasks-module` (lokaal, HEAD `3f44cb3`)
 |---|---|
 | 1. Branch-divergentie oplossen | **KLAAR** — zie `consolidate/tasks-module`, merge `f1aee4b`. Keuze onderbouwd in `docs/TAKEN_MODULE_KEUZE.md` |
 | 5. Bootstrap-adminlek dichten | **KLAAR** — commit `835f981`; de vlag wordt nu gelezen én bootstrap sluit database-admins niet meer buit |
-| 2. Merge naar `main` + staging deploy | OPEN — vereist jouw akkoord om te pushen |
+| 2. Merge naar `main` | KLAAR — [PR #3](https://github.com/roustamyandiev00-cpu/Archon-Original/pull/3), wacht op jouw review |
 | 3. Env-sleutels invullen | OPEN — vereist jouw secrets |
-| 4. Supabase linken + migraties + `types:generate` | OPEN — vereist projectref/credentials |
-| 6. Handmatige kernflow-test op staging | OPEN — kan pas na 2–4 |
+| 4. Supabase linken + migraties + `types:generate` | **GEBLOKKEERD** — zie sectie hieronder; niet uitvoerbaar zoals oorspronkelijk beschreven |
+| 6. Handmatige kernflow-test op staging | OPEN — kan pas na 3–4 |
 
-Status na consolidatie: lint 0 errors, typecheck groen, **148 tests groen**, build groen.
+Status na consolidatie: lint volledig schoon, typecheck groen, **148 tests groen**,
+build groen. Securityreview op de PR: geen HIGH/MEDIUM-bevindingen.
 
 Nog niet geverifieerd: het live schema. De conclusie over `tasks.project_id`
 steunt op `supabase/recovered_migrations/`, niet op de echte database.
+
+---
+
+## CORRECTIE — stap 4 klopte niet
+
+Mijn oorspronkelijke advies bij stap 4 was "op staging: `supabase db push`".
+**Dat werkt niet**, en het is belangrijk dat je dat weet vóór je het probeert.
+
+De actieve keten in `supabase/migrations/` is **niet zelfstandig**. Hij verwijst
+naar tien tabellen die hij nergens aanmaakt:
+
+```
+agent_actions   bedrijven   bouwnetwerk_channels   customers   facturen
+offertes        projecten   tasks                  werkposts   werkpost_reacties
+```
+
+Waaronder `bedrijven` — de kerntenanttabel, doelwit van 30 foreign keys. Die
+tabellen worden alleen aangemaakt in `supabase/recovered_migrations/`
+(o.a. `20260327174810_002_initial_schema.sql`), en dat archief zegt expliciet:
+niet uitvoeren, niet verplaatsen naar de actieve keten.
+
+### Wat dit betekent
+
+- Een **verse Supabase-database kan niet uit deze repository worden opgebouwd**.
+- Er is dus geen staging te maken die op productie lijkt.
+- `supabase db push` of `db reset` op een leeg project faalt bij de eerste
+  foreign key naar `bedrijven`.
+- De enige database die het volledige schema heeft, is productie — opgebouwd
+  door historie die nu alleen nog als archief bestaat.
+
+Dit is geen gevolg van de consolidatie; het gold al vóór deze PR. Het betekent
+wel dat stap 4 en 6 niet uitvoerbaar zijn zoals ze er stonden.
+
+### De weg vooruit: één baseline-migratie
+
+1. Dump het schema van productie (structuur, geen data):
+   ```
+   npx supabase db dump --linked --schema public -f supabase/baseline.sql
+   ```
+2. Leg dat vast als `supabase/migrations/00000000000000_baseline.sql`, met een
+   tijdstempel vóór alle bestaande migraties.
+3. Markeer op productie de bestaande migraties als toegepast (`supabase migration repair`)
+   zodat de keten daar niet opnieuw draait.
+4. Pas dán kan een leeg project de hele keten draaien en heb je staging.
+
+Stap 1 en 3 vereisen toegang tot het productieproject. Zie ook de waarschuwing
+in `supabase/recovered_migrations/README.md`, die precies dit
+"consolidatie- en herstelplan" aankondigt.
+
+> **Let op bij de Supabase-connector:** de gekoppelde account ziet alleen project
+> `dtuemhsnerzmzsrzycss` ("Webaisite"). De app draait op `vqiyftyqfpfbpwhadpvn`.
+> Autoriseer de connector voor de account die dát project bezit.
 
 ---
 
@@ -133,13 +186,26 @@ databasepunten zijn `BLOCKED_BY_PRODUCTION_ACCESS`. Concreet:
 **Wat je moet doen:**
 
 ```bash
-npx supabase link --project-ref <jouw-project-ref>
+npx supabase link --project-ref vqiyftyqfpfbpwhadpvn
 npx supabase migration list
 ```
 
-Dan op **staging** eerst `supabase db push`, de controlequery's uit
-`PRODUCTION_READINESS_CHECKLIST.md` sectie 1 draaien, en daarna
-`npx supabase gen types typescript --linked > src/types/database.types.ts`.
+Daarmee zie je welke van de 51 migraties live al zijn toegepast.
+
+> **Niet doen: `supabase db push` naar een leeg staging-project.** Dat faalt —
+> zie de correctie bovenaan dit document. De actieve keten kan geen database
+> vanaf nul opbouwen; er moet eerst een baseline-migratie uit productie komen.
+
+Draai eerst `supabase/scripts/verify-live-schema.sql` (alleen lezen) om de
+werkelijke stand vast te stellen. Zodra het project gelinkt is, kan ook:
+
+```bash
+npx supabase gen types typescript --linked > src/types/database.types.ts
+```
+
+Dat is meteen de opruiming van de resterende `untyped()`-aanroepen uit
+`docs/UNTYPED_REDUCTION_PLAN.md`, en het bevestigt of `tasks.project_id`
+werkelijk `bigint` is.
 
 ---
 
