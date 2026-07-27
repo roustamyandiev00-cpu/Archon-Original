@@ -27,6 +27,13 @@ export async function createAiTokenCheckoutSession(
   const origin = getAppOrigin();
   const admin = createServiceClient();
 
+  const { data: creditAccount } = await untyped(admin)
+    .from("company_ai_credits")
+    .select("stripe_customer_id")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  const existingCustomerId = creditAccount?.stripe_customer_id?.trim() || null;
+
   const { data: purchase, error: purchaseError } = await untyped(admin)
     .from("ai_token_purchases")
     .insert({
@@ -54,7 +61,24 @@ export async function createAiTokenCheckoutSession(
       mode: "payment",
       success_url: `${origin}/dashboard/instellingen?tab=ai&credits=success`,
       cancel_url: `${origin}/dashboard/instellingen?tab=ai&credits=cancel`,
-      customer_email: user.email ?? undefined,
+      ...(existingCustomerId
+        ? { customer: existingCustomerId }
+        : {
+            customer_email: user.email ?? undefined,
+            customer_creation: "always" as const,
+          }),
+      billing_address_collection: "required",
+      invoice_creation: {
+        enabled: true,
+        invoice_data: {
+          description: `${pkg.name} — ArchonPro AI-tegoed`,
+          metadata: {
+            companyId: String(companyId),
+            purchaseId: String(purchase.id),
+            purchaseType: "ai_tokens",
+          },
+        },
+      },
       line_items: [
         {
           quantity: 1,

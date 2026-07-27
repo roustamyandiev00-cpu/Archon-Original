@@ -2,6 +2,7 @@ import {
   getCompaniesManagementData,
   type ManagedCompany,
 } from "@/components/dashboard/admin/companies-data";
+import type { PlatformBillingInvoice } from "@/lib/admin/platform-billing";
 
 export type CompanyUser = {
   id: string;
@@ -126,6 +127,7 @@ export type CompanyDetail = {
   aiUsageChart: AiUsagePoint[];
   providerBreakdown: ProviderUsage[];
   paymentHistory: PaymentRecord[];
+  platformInvoices: PlatformBillingInvoice[];
   failedPayments: PaymentRecord[];
   activity: ActivityEvent[];
   auditLog: SecurityEvent[];
@@ -216,6 +218,7 @@ function buildCompanyDetail(company: ManagedCompany): CompanyDetail {
     aiUsageChart: buildAiUsageChart(company),
     providerBreakdown: buildProviderBreakdown(company),
     paymentHistory: buildPaymentHistory(company),
+    platformInvoices: [],
     failedPayments,
     activity: buildActivity(company),
     auditLog: buildAuditLog(company),

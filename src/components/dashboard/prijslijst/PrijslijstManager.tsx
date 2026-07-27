@@ -1,8 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { Check, Loader2, Plus, Tags, X } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  Check,
+  CircleCheck,
+  Loader2,
+  Package,
+  PackagePlus,
+  Plus,
+  RotateCcw,
+  Search,
+  Tags,
+  X,
+} from "lucide-react";
 import {
   createPrijslijstItem,
   setPrijslijstItemActive,
@@ -29,17 +40,9 @@ function euro(value: number) {
   });
 }
 
-export const EENHEID_OPTIONS = [
-  { value: "m²", label: "Vierkante meter (m²)" },
-  { value: "l.m.", label: "Lopende meter (l.m.)" },
-  { value: "per uur", label: "Per uur" },
-  { value: "forfait", label: "Forfaitprijs" },
-  { value: "stuks", label: "Per stuk" },
-] as const;
-
 const emptyForm = {
   omschrijving: "",
-  eenheid: "m²",
+  eenheid: "stuks",
   prijs: "",
   btwPercentage: "21",
   categorie: "",
@@ -54,19 +57,63 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
   const [showInactive, setShowInactive] = useState(false);
+
+  const activeCount = useMemo(
+    () => items.filter((item) => item.isActive).length,
+    [items],
+  );
+  const categories = useMemo(
+    () =>
+      [...new Set(items.map((item) => item.categorie || "Algemeen"))].sort(
+        (a, b) => a.localeCompare(b, "nl"),
+      ),
+    [items],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((item) => {
       if (!showInactive && !item.isActive) return false;
+      if (category && (item.categorie || "Algemeen") !== category) return false;
       if (!q) return true;
       return (
         item.omschrijving.toLowerCase().includes(q) ||
+        item.eenheid.toLowerCase().includes(q) ||
         (item.categorie ?? "").toLowerCase().includes(q)
       );
     });
-  }, [items, query, showInactive]);
+  }, [category, items, query, showInactive]);
+
+  const hasFilters = Boolean(query || category || showInactive);
+
+  function resetFilters() {
+    setQuery("");
+    setCategory("");
+    setShowInactive(false);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape" || pending) return;
+      setOpen(false);
+      setEditingId(null);
+      setForm(emptyForm);
+      setError(null);
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open, pending]);
 
   function close() {
     setOpen(false);
@@ -78,6 +125,8 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm);
+    setError(null);
+    setSuccess(null);
     setOpen(true);
   }
 
@@ -90,17 +139,37 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
       btwPercentage: String(item.btwPercentage),
       categorie: item.categorie ?? "",
     });
+    setError(null);
+    setSuccess(null);
     setOpen(true);
   }
 
   function submit() {
     setError(null);
     setSuccess(null);
+    const normalizedPrice = form.prijs.trim().replace(",", ".");
+    const normalizedVat = form.btwPercentage.trim().replace(",", ".");
+    const price = Number(normalizedPrice);
+    const vatPercentage = Number(normalizedVat);
+
+    if (!form.omschrijving.trim()) {
+      setError("Vul een omschrijving in.");
+      return;
+    }
+    if (!normalizedPrice || !Number.isFinite(price) || price < 0) {
+      setError("Vul een geldige prijs van nul euro of meer in.");
+      return;
+    }
+    if (!Number.isFinite(vatPercentage) || vatPercentage < 0 || vatPercentage > 100) {
+      setError("Vul een btw-tarief tussen 0 en 100% in.");
+      return;
+    }
+
     const payload = {
       omschrijving: form.omschrijving,
       eenheid: form.eenheid,
-      prijs: Number(form.prijs.replace(",", ".")),
-      btwPercentage: Number(form.btwPercentage.replace(",", ".")),
+      prijs: price,
+      btwPercentage: vatPercentage,
       categorie: form.categorie,
     };
 
@@ -119,6 +188,9 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
   }
 
   function toggleActive(item: PrijslijstItem) {
+    if (item.isActive && !confirm(`Artikel \"${item.omschrijving}\" deactiveren?`)) {
+      return;
+    }
     setError(null);
     setSuccess(null);
     startTransition(async () => {
@@ -134,81 +206,191 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Zoek op omschrijving of categorie…"
-          className={`${inputClass} max-w-md`}
-        />
-        <label className="inline-flex items-center gap-2 text-sm text-zinc-400">
-          <input
-            type="checkbox"
-            checked={showInactive}
-            onChange={(e) => setShowInactive(e.target.checked)}
-            className="rounded border-white/20"
-          />
-          Toon inactief
-        </label>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="ml-auto inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400"
-        >
-          <Plus size={16} />
-          Nieuw artikel
-        </button>
-      </div>
+      {items.length > 0 ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/50 p-4">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                <Package size={15} aria-hidden="true" />
+                Artikelen
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-zinc-100">{items.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/50 p-4">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                <CircleCheck size={15} aria-hidden="true" />
+                Actief
+              </div>
+              <p className="mt-2 text-2xl font-semibold text-zinc-100">{activeCount}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-zinc-950/30 p-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <label className="relative min-w-0 flex-1 lg:max-w-md">
+                <span className="sr-only">Zoek artikelen</span>
+                <Search
+                  size={16}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+                />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Zoek op omschrijving, categorie of eenheid…"
+                  className={`${inputClass} pl-9`}
+                />
+              </label>
+              <label className="min-w-40">
+                <span className="sr-only">Filter op categorie</span>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Alle categorieën</option>
+                  {categories.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="inline-flex min-h-10 items-center gap-2 px-1 text-sm text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={showInactive}
+                  onChange={(e) => setShowInactive(e.target.checked)}
+                  className="rounded border-white/20"
+                />
+                Toon inactief
+              </label>
+              <button
+                type="button"
+                onClick={resetFilters}
+                disabled={!hasFilters}
+                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-sm text-zinc-400 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <RotateCcw size={14} aria-hidden="true" />
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={openCreate}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-sky-500 px-4 text-sm font-semibold text-zinc-950 hover:bg-sky-400 lg:ml-auto"
+              >
+                <Plus size={16} aria-hidden="true" />
+                Nieuw artikel
+              </button>
+            </div>
+            <p className="mt-3 px-1 text-xs text-zinc-500" aria-live="polite">
+              {filtered.length} van {items.length} artikelen zichtbaar
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {error && (
-        <p className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+        <p
+          role="alert"
+          className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
+        >
           {error}
         </p>
       )}
       {success && (
-        <p className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+        <p
+          role="status"
+          className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
+        >
           <Check size={16} />
           {success}
         </p>
       )}
 
-      {filtered.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-white/10 bg-zinc-950/40 px-4 py-12 text-center text-sm text-zinc-500">
-          Nog geen prijslijstartikelen. Voeg standaardwerken of materialen toe.
-        </p>
+      {items.length === 0 ? (
+        <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-zinc-950/40 px-4 py-12 text-center">
+          <span className="grid h-12 w-12 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
+            <PackagePlus size={22} />
+          </span>
+          <h2 className="mt-4 text-base font-semibold text-zinc-100">
+            Bouw je eerste prijslijst op
+          </h2>
+          <p className="mt-1 max-w-sm text-sm leading-6 text-zinc-500">
+            Voeg materialen, werkuren of diensten toe. Je gebruikt ze daarna
+            opnieuw in je offertes en facturen.
+          </p>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400"
+          >
+            <Plus size={16} />
+            Eerste artikel toevoegen
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/10 bg-zinc-950/40 px-4 py-12 text-center">
+          <p className="text-sm font-medium text-zinc-200">Geen artikelen gevonden</p>
+          <p className="mt-1 text-sm text-zinc-500">Pas je zoekopdracht of filters aan.</p>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-sky-400 hover:text-sky-300"
+          >
+            <RotateCcw size={14} />
+            Filters wissen
+          </button>
+        </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/50">
+          <div className="hidden grid-cols-[1.4fr_0.5fr_0.6fr_0.5fr_auto] gap-3 border-b border-white/10 px-5 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500 md:grid">
+            <span>Omschrijving</span>
+            <span>Eenheid</span>
+            <span>Prijs</span>
+            <span>BTW</span>
+            <span />
+          </div>
           <div className="divide-y divide-white/10">
             {filtered.map((item) => (
               <article
                 key={item.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-4 sm:px-5"
+                className="grid gap-3 px-4 py-4 md:grid-cols-[1.4fr_0.5fr_0.6fr_0.5fr_auto] md:items-center md:px-5"
               >
-                <div className="min-w-0 flex-1 basis-52">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate font-medium text-zinc-100">
-                      {item.omschrijving}
-                    </p>
-                    <span className="shrink-0 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-300">
-                      {item.eenheid}
-                    </span>
-                  </div>
+                <div className="min-w-0">
+                  <p className="font-medium text-zinc-100">{item.omschrijving}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {item.categorie || "Algemeen"}
                     {!item.isActive ? " · inactief" : ""}
                   </p>
                 </div>
-                <p className="shrink-0 font-mono text-sm font-semibold text-zinc-100">
-                  {euro(item.prijs)}
-                  <span className="font-sans font-normal text-zinc-500">
-                    {" "}
-                    / {item.eenheid}
-                  </span>
-                </p>
-                <p className="shrink-0 text-sm text-zinc-400">
-                  {item.btwPercentage}% btw
-                </p>
-                <div className="flex shrink-0 flex-wrap gap-2">
+                <dl className="grid grid-cols-3 gap-3 md:contents">
+                  <div className="min-w-0 md:contents">
+                    <dt className="text-[11px] uppercase tracking-wide text-zinc-600 md:sr-only">
+                      Eenheid
+                    </dt>
+                    <dd className="mt-1 truncate text-sm text-zinc-300 md:mt-0">
+                      {item.eenheid}
+                    </dd>
+                  </div>
+                  <div className="min-w-0 md:contents">
+                    <dt className="text-[11px] uppercase tracking-wide text-zinc-600 md:sr-only">
+                      Prijs
+                    </dt>
+                    <dd className="mt-1 truncate text-sm font-medium text-zinc-100 md:mt-0">
+                      {euro(item.prijs)}
+                    </dd>
+                  </div>
+                  <div className="min-w-0 md:contents">
+                    <dt className="text-[11px] uppercase tracking-wide text-zinc-600 md:sr-only">
+                      BTW
+                    </dt>
+                    <dd className="mt-1 text-sm text-zinc-400 md:mt-0">
+                      {item.btwPercentage}%
+                    </dd>
+                  </div>
+                </dl>
+                <div className="flex flex-wrap gap-2 border-t border-white/5 pt-3 md:border-0 md:pt-0">
                   <button
                     type="button"
                     disabled={pending}
@@ -234,17 +416,27 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl">
+          <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="prijslijst-form-title"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submit();
+            }}
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl"
+          >
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Tags size={18} className="text-sky-400" />
-                <h2 className="text-lg font-semibold text-zinc-100">
+                <h2 id="prijslijst-form-title" className="text-lg font-semibold text-zinc-100">
                   {editingId ? "Artikel bewerken" : "Nieuw artikel"}
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={close}
+                aria-label="Sluit formulier"
                 className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
               >
                 <X size={18} />
@@ -253,11 +445,14 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
 
             <div className="space-y-3">
               <div>
-                <label className="mb-1.5 block text-sm text-zinc-300">
-                  Omschrijving
+                <label htmlFor="prijslijst-omschrijving" className="mb-1.5 block text-sm text-zinc-300">
+                  Omschrijving <span aria-hidden="true">*</span>
                 </label>
                 <input
+                  id="prijslijst-omschrijving"
                   className={inputClass}
+                  autoFocus
+                  required
                   value={form.omschrijving}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, omschrijving: e.target.value }))
@@ -267,33 +462,28 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1.5 block text-sm text-zinc-300">
-                    Eenheid
-                  </label>
-                  <select
+                <label htmlFor="prijslijst-eenheid" className="mb-1.5 block text-sm text-zinc-300">
+                  Eenheid
+                </label>
+                <input
+                  id="prijslijst-eenheid"
                     className={inputClass}
                     value={form.eenheid}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, eenheid: e.target.value }))
                     }
-                  >
-                    {EENHEID_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                    {!EENHEID_OPTIONS.some(
-                      (option) => option.value === form.eenheid,
-                    ) && <option value={form.eenheid}>{form.eenheid}</option>}
-                  </select>
+                    placeholder="stuks / m² / u"
+                  />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm text-zinc-300">
-                    Prijs (€)
-                  </label>
-                  <input
-                    className={inputClass}
-                    inputMode="decimal"
+                <label htmlFor="prijslijst-prijs" className="mb-1.5 block text-sm text-zinc-300">
+                  Prijs (€) <span aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="prijslijst-prijs"
+                  className={inputClass}
+                  inputMode="decimal"
+                  required
                     value={form.prijs}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, prijs: e.target.value }))
@@ -304,10 +494,11 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1.5 block text-sm text-zinc-300">
-                    BTW %
-                  </label>
-                  <input
+                <label htmlFor="prijslijst-btw" className="mb-1.5 block text-sm text-zinc-300">
+                  BTW %
+                </label>
+                <input
+                  id="prijslijst-btw"
                     className={inputClass}
                     inputMode="decimal"
                     value={form.btwPercentage}
@@ -317,10 +508,11 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm text-zinc-300">
-                    Categorie
-                  </label>
-                  <input
+                <label htmlFor="prijslijst-categorie" className="mb-1.5 block text-sm text-zinc-300">
+                  Categorie
+                </label>
+                <input
+                  id="prijslijst-categorie"
                     className={inputClass}
                     value={form.categorie}
                     onChange={(e) =>
@@ -341,9 +533,8 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
                 Annuleren
               </button>
               <button
-                type="button"
+                type="submit"
                 disabled={pending || !form.omschrijving.trim()}
-                onClick={submit}
                 className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400 disabled:opacity-50"
               >
                 {pending ? (
@@ -354,7 +545,7 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
                 Opslaan
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

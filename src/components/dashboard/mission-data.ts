@@ -9,7 +9,10 @@ import {
   type AgentCapability,
   type CustomAgent,
 } from "@/components/dashboard/agents/config";
-import { untyped } from "@/lib/integraties";
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  fetchPlatformRegistrationCount,
+} from "@/lib/bouwnetwerk-gate";
 
 /** Actieve pipeline-stadia — alles behalve gesloten deals. */
 const OPEN_STADIA = STADIA.filter(
@@ -136,8 +139,9 @@ export type TopbarSummary = {
   offertesVandaag: number;
   verzonden: number;
   pipeline: number;
-  /** Platform-breed aantal geregistreerde gebruikers (teller richting 100). */
+  /** Echte platform-registraties (profiles). */
   registeredUsers: number;
+  requiredUsers: number;
   notifications: { id: string; title: string; detail: string; href: string }[];
   syncedAt: string;
 };
@@ -248,15 +252,13 @@ export async function loadTopbarSummary(
   companyId: number | null,
 ): Promise<TopbarSummary> {
   const today = new Date().toISOString().slice(0, 10);
-  const { data: registrationCount } = await supabase.rpc(
-    "get_platform_registration_count",
-  );
-  const registeredUsers = Number(registrationCount ?? 0);
+  const registeredUsers = await fetchPlatformRegistrationCount(supabase);
   const fallback: TopbarSummary = {
     offertesVandaag: 0,
     verzonden: 0,
     pipeline: 0,
     registeredUsers,
+    requiredUsers: BOUWNETWERK_REQUIRED_USERS,
     notifications: [],
     syncedAt: new Date().toISOString(),
   };
@@ -310,6 +312,7 @@ export async function loadTopbarSummary(
     verzonden: sentToday.count ?? 0,
     pipeline,
     registeredUsers,
+    requiredUsers: BOUWNETWERK_REQUIRED_USERS,
     notifications,
     syncedAt: new Date().toISOString(),
   };
@@ -369,6 +372,7 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
       deals,
       recentAccepted,
       recentPaid,
+      crmTasksRes,
     ] = await Promise.all([
       supabase
         .from("offertes")
@@ -428,6 +432,15 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
         .not("paid_at", "is", null)
         .order("paid_at", { ascending: false })
         .limit(3),
+      supabase
+        .from("tasks")
+        .select("id, title, status, priority, due_at, assigned_to_user_id")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .neq("status", "completed")
+        .neq("status", "cancelled")
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .limit(12),
     ]);
 
     const overdueFacturen = openFacturen.filter(
@@ -464,60 +477,6 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
         priority: "high",
         label: "Urgent",
       });
-    }
-
-    // Echte CRM-taken (soft-delete aware). Fail open als migratie nog niet live is.
-    try {
-      const { data: crmTasks } = await untyped(supabase)
-        .from("tasks")
-        .select(
-          "id, title, status, priority, due_at, assigned_to_user_id, ai_generated",
-        )
-        .eq("company_id", companyId)
-        .is("deleted_at", null)
-        .not("status", "in", '("completed","cancelled")')
-        .order("due_at", { ascending: true, nullsFirst: false })
-        .limit(20);
-
-      const endOfToday = new Date();
-      endOfToday.setHours(23, 59, 59, 999);
-      const nowIso = new Date().toISOString();
-
-      for (const t of crmTasks ?? []) {
-        const due = t.due_at as string | null;
-        const overdue = Boolean(due && due < nowIso);
-        const dueToday = Boolean(
-          due && due <= endOfToday.toISOString() && !overdue,
-        );
-        const priority =
-          t.priority === "urgent" || t.priority === "high" || overdue
-            ? "high"
-            : t.priority === "low"
-              ? "low"
-              : "medium";
-        const item: MissionTask = {
-          id: `crm-task-${t.id}`,
-          title: t.title,
-          detail: overdue
-            ? "Achterstallig"
-            : dueToday
-              ? "Deadline vandaag"
-              : due
-                ? `Deadline ${shortDateFmt.format(new Date(due))}`
-                : t.status,
-          kind: "opvolging",
-          href: `/dashboard/taken/${t.id}`,
-          priority,
-          label: overdue ? "Achterstallig" : dueToday ? "Vandaag" : "Taak",
-        };
-        if (overdue || t.priority === "urgent") important.unshift(item);
-        else tasks.unshift(item);
-      }
-    } catch (error) {
-      console.error(
-        "CRM tasks mission load:",
-        error instanceof Error ? error.message : "onbekend",
-      );
     }
 
     for (const o of followUpOffertes.data ?? []) {
@@ -594,6 +553,38 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
           label: "Lead",
         });
       }
+    }
+
+    const crmTasks = (crmTasksRes.data ?? []) as {
+      id: number;
+      title: string;
+      status: string;
+      priority: string;
+      due_at: string | null;
+    }[];
+    for (const t of crmTasks) {
+      const overdue =
+        t.due_at != null &&
+        Date.parse(t.due_at) < Date.now() &&
+        t.status !== "completed";
+      const item: MissionTask = {
+        id: `crm-task-${t.id}`,
+        title: t.title,
+        detail: t.due_at
+          ? `Deadline ${shortDateFmt.format(new Date(t.due_at))} · ${t.status}`
+          : `Status ${t.status}`,
+        kind: "opvolging",
+        href: `/dashboard/taken/${t.id}`,
+        priority:
+          t.priority === "urgent" || overdue
+            ? "high"
+            : t.priority === "high"
+              ? "medium"
+              : "low",
+        label: overdue ? "Achterstallig" : t.priority,
+      };
+      if (overdue || t.priority === "urgent") important.unshift(item);
+      else tasks.unshift(item);
     }
 
     if (offertesCount === 0 && klantenCount > 0) {

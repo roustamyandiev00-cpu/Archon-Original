@@ -45,6 +45,7 @@ export default function FinancienView({
           <MetricStat
             label="Offertes"
             value={mission.offertesCount}
+            sublabel="deze maand"
             tone="orange"
             icon={TrendingUp}
           />
@@ -82,18 +83,18 @@ export default function FinancienView({
                 gebaseerd is.
               </p>
               <PrimaryButton href="/dashboard/facturen" className="mt-4">
-                Opnieuw controleren
+                Facturen bekijken
               </PrimaryButton>
             </>
           )}
         </DashboardPanel>
 
-        <DashboardPanel title="BTW-Compliance" icon={ShieldCheck}>
+        <DashboardPanel title="BTW-overzicht" icon={ShieldCheck}>
           <p className="text-sm leading-relaxed text-zinc-500">
-            Controleer je projecten en offertes op correcte BTW-tarieven
+            Bekijk de offertegegevens waarop je BTW-tarieven zijn gebaseerd.
           </p>
           <PrimaryButton href="/dashboard/offertes" className="mt-4">
-            Start BTW-controle
+            Offertes bekijken
           </PrimaryButton>
         </DashboardPanel>
       </div>

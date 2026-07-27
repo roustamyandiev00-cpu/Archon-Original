@@ -1,73 +1,56 @@
 import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { untyped } from "@/lib/integraties";
+import type { Database } from "@/types/database.types";
 
-export type StripeWebhookClaimResult =
-  | { outcome: "claimed"; rowId: string }
-  | { outcome: "duplicate"; status: string }
-  | { outcome: "retry"; rowId: string; attempts: number }
-  | { outcome: "error"; error: string };
+export type StripeWebhookEventStatus =
+  | "processing"
+  | "processed"
+  | "failed"
+  | "ignored";
+
+export type ClaimResult =
+  | { outcome: "claimed"; rowId: string; attempts: number }
+  | { outcome: "duplicate"; status: StripeWebhookEventStatus }
+  | { outcome: "retry"; rowId: string; attempts: number };
+
+type StripeWebhookEventRow =
+  Database["public"]["Tables"]["stripe_webhook_events"]["Row"];
 
 export function hashStripePayload(rawBody: string): string {
   return crypto.createHash("sha256").update(rawBody).digest("hex");
 }
 
 /**
- * Registers a Stripe event before business processing.
- * - New event → claimed (status=processing)
- * - Already processed/ignored → duplicate
- * - Previously failed → retry (attempts++)
- * Unique stripe_event_id prevents races.
+ * Registreert een Stripe event vóór business processing.
+ * - Nieuw → claimed (processing)
+ * - Al processed/ignored → duplicate
+ * - Failed → retry (attempts++)
+ * - Processing (race) → duplicate
  */
 export async function claimStripeWebhookEvent(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   input: {
     stripeEventId: string;
     eventType: string;
     livemode: boolean;
     payloadHash: string;
   },
-): Promise<StripeWebhookClaimResult> {
-  const db = untyped(supabase);
-
-  const { data: existing, error: readError } = await db
+): Promise<ClaimResult> {
+  const { data: existing, error: readError } = await supabase
     .from("stripe_webhook_events")
-    .select("id, status, attempts")
+    .select("*")
     .eq("stripe_event_id", input.stripeEventId)
     .maybeSingle();
 
   if (readError) {
-    return { outcome: "error", error: readError.message };
+    throw new Error(`stripe_webhook_events read: ${readError.message}`);
   }
 
   if (existing) {
-    if (existing.status === "processed" || existing.status === "ignored") {
-      return { outcome: "duplicate", status: existing.status };
-    }
-    if (existing.status === "failed" || existing.status === "processing") {
-      const attempts = Number(existing.attempts ?? 1) + 1;
-      const { error: updateError } = await db
-        .from("stripe_webhook_events")
-        .update({
-          status: "processing",
-          attempts,
-          processing_started_at: new Date().toISOString(),
-          last_error: null,
-          failed_at: null,
-          payload_hash: input.payloadHash,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id)
-        .eq("status", existing.status);
-      if (updateError) {
-        return { outcome: "error", error: updateError.message };
-      }
-      return { outcome: "retry", rowId: existing.id, attempts };
-    }
-    return { outcome: "duplicate", status: String(existing.status) };
+    return handleExisting(supabase, existing);
   }
 
-  const { data: inserted, error: insertError } = await db
+  const { data: inserted, error: insertError } = await supabase
     .from("stripe_webhook_events")
     .insert({
       stripe_event_id: input.stripeEventId,
@@ -77,49 +60,92 @@ export async function claimStripeWebhookEvent(
       payload_hash: input.payloadHash,
       attempts: 1,
     })
-    .select("id")
+    .select("id, attempts")
     .maybeSingle();
 
   if (insertError) {
-    // Race: another worker inserted first
-    if (insertError.code === "23505" || /duplicate|unique/i.test(insertError.message)) {
-      return { outcome: "duplicate", status: "processing" };
+    // Unique race: andere worker won
+    if (insertError.code === "23505") {
+      const { data: raced } = await supabase
+        .from("stripe_webhook_events")
+        .select("*")
+        .eq("stripe_event_id", input.stripeEventId)
+        .maybeSingle();
+      if (raced) return handleExisting(supabase, raced);
     }
-    return { outcome: "error", error: insertError.message };
+    throw new Error(`stripe_webhook_events insert: ${insertError.message}`);
   }
 
-  if (!inserted?.id) {
-    return { outcome: "error", error: "Kon Stripe-event niet claimen." };
+  if (!inserted) {
+    throw new Error("stripe_webhook_events insert: geen rij terug");
   }
 
-  return { outcome: "claimed", rowId: inserted.id };
+  return {
+    outcome: "claimed",
+    rowId: inserted.id,
+    attempts: inserted.attempts,
+  };
+}
+
+async function handleExisting(
+  supabase: SupabaseClient<Database>,
+  existing: StripeWebhookEventRow,
+): Promise<ClaimResult> {
+  if (existing.status === "processed" || existing.status === "ignored") {
+    return { outcome: "duplicate", status: existing.status };
+  }
+
+  if (existing.status === "processing") {
+    return { outcome: "duplicate", status: "processing" };
+  }
+
+  // failed → retry
+  const nextAttempts = existing.attempts + 1;
+  const { error } = await supabase
+    .from("stripe_webhook_events")
+    .update({
+      status: "processing",
+      attempts: nextAttempts,
+      processing_started_at: new Date().toISOString(),
+      failed_at: null,
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", existing.id)
+    .eq("status", "failed");
+
+  if (error) {
+    throw new Error(`stripe_webhook_events retry: ${error.message}`);
+  }
+
+  return { outcome: "retry", rowId: existing.id, attempts: nextAttempts };
 }
 
 export async function completeStripeWebhookEvent(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   rowId: string,
   status: "processed" | "ignored" = "processed",
 ): Promise<void> {
-  const { error } = await untyped(supabase)
+  const { error } = await supabase
     .from("stripe_webhook_events")
     .update({
       status,
       processed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      last_error: null,
     })
     .eq("id", rowId);
+
   if (error) {
-    console.error("stripe webhook complete:", error.message);
+    console.error("stripe_webhook_events complete:", error.message);
   }
 }
 
 export async function failStripeWebhookEvent(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   rowId: string,
   lastError: string,
 ): Promise<void> {
-  const { error } = await untyped(supabase)
+  const { error } = await supabase
     .from("stripe_webhook_events")
     .update({
       status: "failed",
@@ -128,7 +154,8 @@ export async function failStripeWebhookEvent(
       updated_at: new Date().toISOString(),
     })
     .eq("id", rowId);
+
   if (error) {
-    console.error("stripe webhook fail:", error.message);
+    console.error("stripe_webhook_events fail:", error.message);
   }
 }

@@ -1,35 +1,42 @@
 # Untyped() Reduction Plan
 
 Datum: 2026-07-20  
-Branch: `feature/tasks-module`
+Doel: `untyped()` alleen behouden waar gegenereerde types ontbreken; geen `any`/`ts-ignore`.
 
-## Doel
+## Inventaris (hoogste volume eerst)
 
-`untyped()` terugdringen zonder fictieve types, `any` of `@ts-ignore`.
-
-## Inventaris (hoogste counts eerst)
-
-| Bestand | Tabel/RPC (typisch) | Huidige reden | Type beschikbaar | Actie | Prioriteit |
-|---------|---------------------|---------------|------------------|-------|------------|
-| `src/app/dashboard/integraties/actions.ts` | `integraties` | config JSON flexibel | deels | regenereer types; typed select | P1 |
-| `src/app/dashboard/facturen/peppolActions.ts` | peppol/inbox | nieuwere kolommen | deels | gen types na migraties | P1 |
-| `src/app/dashboard/geschillen/actions.ts` | geschillen | schema drift | onzeker | bevestig live schema | P1 |
-| `src/lib/agents/events/store.ts` | agent events | drift | deels | gen types | P2 |
-| `src/lib/peppol/inbox.ts` | integraties/inbox | drift | deels | gen types | P2 |
-| `src/lib/accounting/tokens.ts` | accounting tokens | drift | deels | gen types | P2 |
-| `src/app/dashboard/boekhouding/page.tsx` | bank/exports | drift | deels | gen types | P2 |
-| `src/app/api/webhooks/stripe/route.ts` | purchases/credits | drift | deels | na `stripe_webhook_events` typed helper | P1 |
-| `src/app/api/cron/peppol-inbox/route.ts` | integraties | drift | deels | gen types | P2 |
-| Overige 1–2 hits | diverse | lokale drift | wisselend | case-by-case | P3 |
+| Bestand | Tabel/RPC | Huidige reden | Type beschikbaar | Actie | Prioriteit |
+|---------|-----------|---------------|------------------|-------|------------|
+| `src/app/dashboard/integraties/actions.ts` | `integraties` | Config JSON / ontbrekende kolommen | Deels | Regenereer types; typed select | P1 |
+| `src/app/dashboard/facturen/peppolActions.ts` | peppol/integraties | Nieuwere velden | Deels | Types + typed client | P1 |
+| `src/app/dashboard/geschillen/actions.ts` | geschillen | Migratie na types snapshot | Waarschijnlijk ja in DB | Gen types + vervang | P1 |
+| `src/lib/agents/events/store.ts` | agent events | Ontbrekende tables in types | Onzeker | Bevestig schema | P2 |
+| `src/lib/impersonation.ts` | `admin_impersonation_log`, `audit_logs`, `company_memberships`, `platform_admins` | Mix | Ja voor meeste | Vervang waar typed | P1 |
+| `src/lib/admin/platform-billing.ts` | platform billing | Nieuwe tabellen | Migratie aanwezig | Gen types | P1 |
+| `src/lib/peppol/*` | peppol inbox/build | Untyped config | Deels | Incremental | P2 |
+| `src/lib/accounting/*` | accounting tokens | Provider tokens JSON | Deels | Incremental | P2 |
+| `src/app/api/webhooks/stripe/route.ts` | purchases / credits | Historisch | Deels | Na `stripe_webhook_events` typed gebruiken | P0 (deze branch) |
+| `src/app/dashboard/prijslijst/*` | `prijslijst_items` | Types mogelijk aanwezig | Ja (migratie 20260716) | Vervang | P1 |
+| `src/app/dashboard/team/*` | memberships | Types aanwezig | Ja | Vervang | P1 |
+| Overige (bouwnetwerk, e-facturen, …) | diverse | Snapshot achterstand | Wisselend | Batch na `types:generate` | P2 |
 
 ## Regels
 
-1. Geen handgeschreven fictieve tabellen in `database.types.ts`.
-2. Wel: kolommen/tabellen toevoegen die in **lokale migraties** in deze branch staan (`stripe_webhook_events`, tasks-satellites).
-3. `pnpm types:generate` (linked Supabase) wanneer credentials beschikbaar zijn.
-4. Typecheck na elke vervanggroep.
+1. Geen handgeschreven fictieve tabellen.
+2. Geen `any` als vervanging voor `untyped()`.
+3. Geen `@ts-ignore`.
+4. Voorkeur: `pnpm types:generate` (linked Supabase) → diff review → vervangen.
+5. Typecheck na iedere groep.
 
 ## Deze branch
 
-- `stripe_webhook_events` + tasks-tabellen: types handmatig gesynchroniseerd met migraties.
-- Massale `untyped()`-verwijdering **niet** gedaan zonder live schema-bevestiging.
+- `stripe_webhook_events` krijgt types in `database.types.ts` en helper gebruikt typed service client waar mogelijk.
+- Taken-tabellen krijgen types mee; Taken-code vermijdt `untyped()`.
+- Geen massale vervanging van alle historische call sites (risico + geen live schema-confirm).
+
+## Volgende batch (na linked gen types)
+
+1. prijslijst + team  
+2. impersonation + platform-billing  
+3. integraties/peppol  
+4. rest

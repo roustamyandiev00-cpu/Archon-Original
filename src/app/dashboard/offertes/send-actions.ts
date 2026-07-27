@@ -5,8 +5,12 @@ import { requireWriteAccess } from "@/components/dashboard/context";
 import { statusMeta, formatEuro } from "@/lib/offertes";
 import { emitDomainEvent } from "@/lib/agents/events/emit";
 import { SITE_URL } from "@/lib/seo";
-import { sendEmailViaCompanySmtp } from "@/app/dashboard/instellingen/smtp-actions";
+import {
+  loadEmailDeliveryPreference,
+  sendEmailViaCompanySmtp,
+} from "@/app/dashboard/instellingen/smtp-actions";
 import { getPublicOffertePdf } from "@/lib/offertes/publicOfferte";
+import { loadCompanySmtpSettings } from "@/components/dashboard/email/smtp";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -141,6 +145,16 @@ export async function sendOfferteByEmail(
   const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId, user } = access;
+
+  const deliveryMode = await loadEmailDeliveryPreference(supabase, companyId);
+  if (deliveryMode !== "smtp") {
+    return {
+      error:
+        "Automatische e-mail staat uit. Kies in Instellingen → Integraties voor «Automatisch via SMTP / Gmail», of gebruik «E-mail openen».",
+      smtpMissing: false,
+      deliveryMode,
+    };
+  }
 
   const { data: offerte } = await supabase
     .from("offertes")
@@ -312,6 +326,11 @@ export async function prepareOfferteShare(offerteId: number) {
     ? `https://wa.me/${toWhatsappNumber(phone)}?text=${encodeURIComponent(bericht)}`
     : null;
 
+  const deliveryMode = await loadEmailDeliveryPreference(supabase, companyId);
+  const smtpConfigured = Boolean(
+    await loadCompanySmtpSettings(supabase, companyId),
+  );
+
   return {
     ok: true as const,
     shareUrl,
@@ -322,6 +341,9 @@ export async function prepareOfferteShare(offerteId: number) {
     nummer,
     klant,
     customerEmail: email,
+    deliveryMode,
+    smtpConfigured,
+    canSendViaSmtp: deliveryMode === "smtp" && smtpConfigured,
   };
 }
 

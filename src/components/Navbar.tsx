@@ -161,7 +161,11 @@ export default function Navbar({ theme = "dark" }: { theme?: NavbarTheme }) {
             aria-expanded={open}
             onPointerDown={(e) => {
               e.preventDefault();
-              open ? closeMenu() : setOpen(true);
+              if (open) {
+                closeMenu();
+              } else {
+                setOpen(true);
+              }
             }}
             className={`grid h-10 w-10 place-items-center rounded-xl border touch-manipulation select-none md:hidden ${
               isLight

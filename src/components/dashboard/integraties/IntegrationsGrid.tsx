@@ -4,6 +4,7 @@ import { useSyncExternalStore, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Check,
+  Copy,
   Loader2,
   Plug,
   X,
@@ -14,10 +15,14 @@ import {
 import {
   connectIntegration,
   disconnectIntegration,
+  ensureZapierWebhook,
   sendSlackTestNotification,
   testIntegration,
+  testZapierWebhook,
 } from "@/app/dashboard/integraties/actions";
 import {
+  isPartnerOnlyProvider,
+  isPlatformOAuthProvider,
   PEPPOL_ACCESS_POINTS,
   type ProviderMeta,
 } from "@/lib/integraties";
@@ -25,6 +30,8 @@ import {
   evaluateSlackSetup,
   slackCardLabel,
 } from "@/components/dashboard/integraties/slackSetup";
+import { platformOAuthConnectLabel } from "@/components/dashboard/integraties/platformOAuth";
+import { ProviderLogo } from "@/components/dashboard/integraties/providerLogos";
 import { hasOAuth } from "@/lib/oauth";
 
 type ConnState = Record<string, { status: string; config: Record<string, unknown> }>;
@@ -67,43 +74,51 @@ export default function IntegrationsGrid({
           if (p.id === "slack" && slackSetup) {
             slackSetup.platformReady = slackPlatformReady;
           }
+          const partner = isPartnerOnlyProvider(p);
           const slackBadge =
             slackSetup != null ? slackCardLabel(slackSetup) : null;
-          const badgeLabel = slackBadge?.label ?? (
-            connected
-              ? "Verbonden"
-              : configured
-                ? "Autorisatie nodig"
-                : "Niet verbonden"
-          );
-          const badgeTone = slackBadge?.tone ?? (
-            connected ? "ok" : configured ? "warn" : "idle"
-          );
+          const badgeLabel = partner
+            ? "Binnenkort"
+            : slackBadge?.label ?? (
+                connected
+                  ? "Verbonden"
+                  : configured
+                    ? "Autorisatie nodig"
+                    : "Niet verbonden"
+              );
+          const badgeTone = partner
+            ? "idle"
+            : slackBadge?.tone ?? (
+                connected ? "ok" : configured ? "warn" : "idle"
+              );
           const badgeClass =
             badgeTone === "ok"
               ? "bg-emerald-500/15 text-emerald-300"
               : badgeTone === "warn"
                 ? "bg-amber-500/15 text-amber-300"
-                : "bg-zinc-500/15 text-zinc-400";
+                : partner
+                  ? "bg-sky-500/15 text-sky-300"
+                  : "bg-zinc-500/15 text-zinc-400";
           const dotClass =
             badgeTone === "ok"
               ? "bg-emerald-400"
               : badgeTone === "warn"
                 ? "bg-amber-400"
-                : "bg-zinc-500";
+                : partner
+                  ? "bg-sky-400"
+                  : "bg-zinc-500";
           const showManage =
-            connected ||
-            configured ||
-            (p.id === "slack" && slackSetup?.platformReady);
+            !partner &&
+            (connected ||
+              configured ||
+              (p.id === "slack" && slackSetup?.platformReady));
           return (
             <div
               key={p.id}
               className="flex flex-col justify-between rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition-colors hover:border-zinc-700"
             >
               <div className="flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300">
-                  {p.name.charAt(0)}
-                </span>
+                <ProviderLogo id={p.id} name={p.name} />
                 <div className="min-w-0">
                   <p className="font-semibold text-zinc-50">{p.name}</p>
                   <p className="text-[11px] uppercase tracking-wide text-zinc-500">
@@ -124,12 +139,16 @@ export default function IntegrationsGrid({
                   type="button"
                   onClick={() => setActive(p)}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    showManage
-                      ? "border border-white/10 text-zinc-200 hover:bg-white/5"
-                      : "bg-sky-500 text-zinc-950 hover:bg-sky-400"
+                    partner
+                      ? "border border-white/10 text-zinc-300 hover:bg-white/5"
+                      : showManage
+                        ? "border border-white/10 text-zinc-200 hover:bg-white/5"
+                        : "bg-sky-500 text-zinc-950 hover:bg-sky-400"
                   }`}
                 >
-                  {showManage ? (
+                  {partner ? (
+                    <>Info</>
+                  ) : showManage ? (
                     <>
                       <Plug size={13} /> Beheren
                     </>
@@ -170,8 +189,11 @@ function ConnectModal({
 }) {
   const cfg = current?.config ?? {};
   const connected = current?.status === "connected";
+  const partnerOnly = isPartnerOnlyProvider(provider);
+  const platformOAuth = isPlatformOAuthProvider(provider.id);
   const isOAuthFlow = provider.auth === "oauth" && hasOAuth(provider.id);
   const isConnectFlow = provider.auth === "connect";
+  const isWebhookFlow = provider.auth === "webhook";
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [configured, setConfigured] = useState(
@@ -180,6 +202,10 @@ function ConnectModal({
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
   const [testErr, setTestErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState(
+    typeof cfg.webhookUrl === "string" ? cfg.webhookUrl : "",
+  );
   const origin = useSyncExternalStore(
     () => () => {},
     () => window.location.origin,
@@ -330,6 +356,49 @@ function ConnectModal({
     });
   }
 
+  function activateZapier() {
+    setError(null);
+    startTransition(async () => {
+      const res = await ensureZapierWebhook(origin || undefined);
+      if (res && "error" in res && res.error) {
+        setError(res.error);
+        return;
+      }
+      if (res && "webhookUrl" in res && res.webhookUrl) {
+        setWebhookUrl(res.webhookUrl);
+      }
+    });
+  }
+
+  function runZapierTest() {
+    setTestErr(null);
+    setTestMsg(null);
+    setTesting(true);
+    startTransition(async () => {
+      const res = await testZapierWebhook(origin || undefined);
+      setTesting(false);
+      if (res && "error" in res && res.error) {
+        setTestErr(res.error);
+        return;
+      }
+      setTestMsg("Test-POST ontvangen. Webhook werkt.");
+    });
+  }
+
+  async function copyWebhook() {
+    if (!webhookUrl) return;
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Kopiëren mislukt.");
+    }
+  }
+
+  const hidePrimarySave =
+    partnerOnly || platformOAuth || isWebhookFlow;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
@@ -341,9 +410,7 @@ function ConnectModal({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300">
-              {provider.name.charAt(0)}
-            </span>
+            <ProviderLogo id={provider.id} name={provider.name} />
             <div>
               <h2 className="text-base font-semibold text-zinc-50">
                 {provider.name}
@@ -361,7 +428,15 @@ function ConnectModal({
         </div>
 
         <div className="mt-5 space-y-4">
-          {provider.auth === "peppol" ? (
+          {partnerOnly ? (
+            <div className="space-y-3">
+              <p className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-100">
+                Partner-API vereist. Deze koppeling is nog niet beschikbaar —
+                er is geen nep-verbinding of sync.
+              </p>
+              <p className="text-xs text-zinc-500">{provider.description}</p>
+            </div>
+          ) : provider.auth === "peppol" ? (
             <>
               <div>
                 <label className={labelClass}>Access point</label>
@@ -593,6 +668,141 @@ function ConnectModal({
                 </>
               )}
             </>
+          ) : isOAuthFlow && platformOAuth ? (
+            <>
+              <p className="text-xs text-zinc-500">
+                Koppel je <b>eigen account</b> via ArchonPro. Geen Client ID
+                nodig — platform-credentials staan in de omgeving.
+              </p>
+              {connected && typeof cfg.accountEmail === "string" && (
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+                  Verbonden als <b>{cfg.accountEmail}</b>
+                </p>
+              )}
+              {connected &&
+                provider.id === "quickbooks" &&
+                typeof cfg.realmId === "string" && (
+                  <p className="text-xs text-zinc-500">
+                    Company ID (realm): {cfg.realmId}
+                  </p>
+                )}
+              <a
+                href={`/dashboard/integraties/${provider.id}/authorize`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400"
+              >
+                <ExternalLink size={15} />
+                {connected
+                  ? `Opnieuw ${platformOAuthConnectLabel(provider.id).toLowerCase()}`
+                  : platformOAuthConnectLabel(provider.id)}
+              </a>
+              {connected && provider.id === "google-calendar" && (
+                <a
+                  href="/dashboard/agenda"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
+                >
+                  Naar agenda
+                </a>
+              )}
+              {connected && (
+                <button
+                  type="button"
+                  onClick={runTest}
+                  disabled={testing}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
+                >
+                  {testing ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" /> Testen…
+                    </>
+                  ) : (
+                    <>
+                      <Link2 size={15} /> Test verbinding
+                    </>
+                  )}
+                </button>
+              )}
+              {testMsg && (
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+                  {testMsg}
+                </p>
+              )}
+              {testErr && (
+                <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+                  {testErr}
+                </p>
+              )}
+            </>
+          ) : isWebhookFlow && provider.id === "zapier" ? (
+            <>
+              <p className="text-xs text-zinc-500">
+                Gebruik deze URL als Catch Hook in Zapier. Events die ArchonPro
+                of jij POST, komen daar binnen.
+              </p>
+              {webhookUrl ? (
+                <>
+                  <div>
+                    <label className={labelClass}>Webhook-URL</label>
+                    <input
+                      value={webhookUrl}
+                      readOnly
+                      onFocus={(e) => e.currentTarget.select()}
+                      className={`${inputClass} text-zinc-300`}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={copyWebhook}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
+                  >
+                    <Copy size={15} />
+                    {copied ? "Gekopieerd" : "Kopieer URL"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={runZapierTest}
+                    disabled={testing || pending}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5 disabled:opacity-60"
+                  >
+                    {testing ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" /> Testen…
+                      </>
+                    ) : (
+                      <>
+                        <Link2 size={15} /> Stuur test-POST
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={activateZapier}
+                  disabled={pending}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
+                >
+                  {pending ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" /> Activeren…
+                    </>
+                  ) : (
+                    <>
+                      <Link2 size={15} /> Webhook activeren
+                    </>
+                  )}
+                </button>
+              )}
+              {testMsg && (
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+                  {testMsg}
+                </p>
+              )}
+              {testErr && (
+                <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+                  {testErr}
+                </p>
+              )}
+            </>
           ) : isOAuthFlow ? (
             <>
               <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs leading-relaxed text-zinc-400">
@@ -782,7 +992,7 @@ function ConnectModal({
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-3">
-          {connected || configured ? (
+          {(connected || configured) && !partnerOnly ? (
             <button
               type="button"
               onClick={remove}
@@ -794,27 +1004,37 @@ function ConnectModal({
           ) : (
             <span />
           )}
-          <button
-            type="button"
-            onClick={submit}
-            disabled={pending}
-            className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
-          >
-            {pending ? (
-              <>
-                <Loader2 size={15} className="animate-spin" /> Opslaan…
-              </>
-            ) : (
-              <>
-                <Check size={15} />{" "}
-                {connected
-                  ? "Bijwerken"
-                  : isOAuthFlow || isConnectFlow
-                    ? "Opslaan"
-                    : "Verbinden"}
-              </>
-            )}
-          </button>
+          {hidePrimarySave ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
+            >
+              Sluiten
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={submit}
+              disabled={pending}
+              className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
+            >
+              {pending ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" /> Opslaan…
+                </>
+              ) : (
+                <>
+                  <Check size={15} />{" "}
+                  {connected
+                    ? "Bijwerken"
+                    : isOAuthFlow || isConnectFlow
+                      ? "Opslaan"
+                      : "Verbinden"}
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

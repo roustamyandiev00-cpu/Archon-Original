@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -12,6 +12,8 @@ import {
   Users,
 } from "lucide-react";
 import AgentChatOpenButton from "@/components/dashboard/agent-chat/AgentChatOpenButton";
+import { AgentFleetGrid } from "@/components/dashboard/AgentFleet";
+import MissionOverview from "@/components/dashboard/MissionOverview";
 import AgentsManager, {
   type AgentsManagerHandle,
 } from "@/components/dashboard/nova-agents/AgentsManager";
@@ -24,9 +26,10 @@ type CrewPanel = "agents" | "knowledge" | null;
 
 export default function AiCrewView({
   mission,
+  agentName,
   companyAgents,
   initialPanel = null,
-}: Pick<DashboardHomeProps, "mission"> & {
+}: Pick<DashboardHomeProps, "mission" | "agentName"> & {
   companyAgents: CustomAgent[];
   initialPanel?: CrewPanel;
 }) {
@@ -38,11 +41,10 @@ export default function AiCrewView({
     mission.agents.find((a) => a.id === "nova") ?? mission.agents[0];
   const activeCount = companyAgents.filter((a) => a.enabled).length;
 
-  const [prevInitialPanel, setPrevInitialPanel] = useState(initialPanel);
-  if (prevInitialPanel !== initialPanel) {
-    setPrevInitialPanel(initialPanel);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initialPanel) setOpenPanel(initialPanel);
-  }
+  }, [initialPanel]);
 
   function toggleKnowledge() {
     setOpenPanel((current) => (current === "knowledge" ? null : "knowledge"));
@@ -57,7 +59,7 @@ export default function AiCrewView({
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden lg:gap-3">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-zinc-100">AI-agents</h2>
+          <h2 className="text-xl font-semibold text-zinc-100">AI Crew</h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-zinc-500">
             Maak agents aan, voeg kennisdocumenten toe en start direct een
             gesprek. Alles wat je hier instelt onthouden je agents in het
@@ -112,65 +114,80 @@ export default function AiCrewView({
         </div>
       </div>
 
-      {crewMode && novaAgent ? (
-        <DashboardPanel
-          title="Crew Mode — gezamenlijke briefing"
-          icon={Bot}
-          className="shrink-0"
-        >
-          <p className="text-sm text-zinc-400">
-            Je agents staan klaar. Stuur één vraag en Ela coördineert de crew.
-          </p>
-          <AgentChatOpenButton
-            agent={{
-              id: novaAgent.id,
-              name: novaAgent.name,
-              role: novaAgent.role,
-              gradient: novaAgent.gradient,
-            }}
-            className="mt-3 inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400"
-          >
-            <MessageCircle size={14} />
-            Vraag aan de hele crew
-            <ArrowRight size={14} />
-          </AgentChatOpenButton>
-        </DashboardPanel>
-      ) : null}
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pb-2 lg:space-y-5">
+        {crewMode && novaAgent ? (
+          <DashboardPanel title="Crew Mode — gezamenlijke briefing" icon={Bot}>
+            <p className="text-sm text-zinc-400">
+              Je agents staan klaar. Stuur één vraag en Ela coördineert de crew.
+            </p>
+            <AgentChatOpenButton
+              agent={{
+                id: novaAgent.id,
+                name: novaAgent.name,
+                role: novaAgent.role,
+                gradient: novaAgent.gradient,
+              }}
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400"
+            >
+              <MessageCircle size={14} />
+              Vraag aan de hele crew
+              <ArrowRight size={14} />
+            </AgentChatOpenButton>
+          </DashboardPanel>
+        ) : null}
 
-      {openPanel === "knowledge" && (
-        <DashboardPanel
-          title="Kennis & geheugen"
-          icon={BrainCircuit}
-          className="shrink-0 max-h-[min(46vh,22rem)] overflow-y-auto lg:max-h-[min(40vh,20rem)]"
-        >
-          <AgentKnowledgeForm
-            companyAgents={companyAgents}
-            defaultAgentId={knowledgeAgentId}
-          />
-          <p className="mt-4 text-xs text-zinc-500">
-            Bekijk alles in{" "}
-            <Link href="/dashboard/geheugen" className="text-violet-400 hover:underline">
-              geheugen
-            </Link>
-            .
-          </p>
-        </DashboardPanel>
-      )}
+        {openPanel === "knowledge" && (
+          <DashboardPanel title="Kennis & geheugen" icon={BrainCircuit}>
+            <AgentKnowledgeForm
+              companyAgents={companyAgents}
+              defaultAgentId={knowledgeAgentId}
+            />
+            <p className="mt-4 text-xs text-zinc-500">
+              Bekijk alles in{" "}
+              <Link
+                href="/dashboard/geheugen"
+                className="text-violet-400 hover:underline"
+              >
+                geheugen
+              </Link>
+              .
+            </p>
+          </DashboardPanel>
+        )}
 
-      <DashboardPanel
-        title="Agents beheren"
-        icon={Bot}
-        className="flex min-h-0 flex-1 flex-col overflow-hidden"
-      >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-base font-semibold text-zinc-100">AI-agents</h3>
+            <p className="mt-0.5 text-sm text-zinc-500">
+              {mission.agents.length} agents in je crew
+              {activeCount > 0
+                ? ` — ${activeCount} actief`
+                : " — schakel agents in om te starten"}
+              .
+            </p>
+          </div>
+          <AgentFleetGrid agents={mission.agents} />
+        </section>
+
+        <MissionOverview
+          actionItems={mission.actionItems}
+          tasks={mission.tasks}
+          important={mission.important}
+          activity={mission.activity}
+          nova={mission.nova}
+          agentName={agentName}
+          isDemo={mission.isDemo}
+        />
+
+        <DashboardPanel title="Agents beheren" icon={Bot}>
           <AgentsManager
             ref={agentsRef}
             initialAgents={companyAgents}
             embedded
             onAddDocument={openDocumentForAgent}
           />
-        </div>
-      </DashboardPanel>
+        </DashboardPanel>
+      </div>
     </div>
   );
 }

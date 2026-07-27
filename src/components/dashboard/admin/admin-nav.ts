@@ -1,40 +1,18 @@
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  UserCheck,
-  Flag,
-  Scale,
   Bot,
+  Building2,
   Coins,
-  CheckSquare,
-  GitBranch,
+  Flag,
+  LayoutDashboard,
   Radar,
-  Headphones,
-  MessageSquare,
-  BookOpen,
-  Settings,
-  ClipboardList,
-  Layers,
-  Database,
-  type LucideIcon,
+  Scale,
+  ScrollText,
+  Users,
 } from "lucide-react";
 
-export interface NavItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  exact?: boolean;
-}
-
-export interface NavSection {
-  title: string;
-  items: NavItem[];
-}
-
-export const adminNavSections: NavSection[] = [
+export const adminNavGroups = [
   {
-    title: "Platform",
+    label: "Platform",
     items: [
       {
         href: "/admin",
@@ -52,16 +30,36 @@ export const adminNavSections: NavSection[] = [
         label: "Gebruikers",
         icon: Users,
       },
+    ],
+  },
+  {
+    label: "AI",
+    items: [
       {
-        href: "/admin/crm-platform",
-        label: "CRM",
-        icon: UserCheck,
+        href: "/admin/ai-agents",
+        label: "AI Control Center",
+        icon: Bot,
       },
       {
-        href: "/admin/rapportages",
-        label: "Rapportages",
-        icon: Flag,
+        href: "/admin/ai-tokens",
+        label: "AI-tokens",
+        icon: Coins,
       },
+      {
+        href: "/admin/proactive",
+        label: "Agentacties",
+        icon: Radar,
+      },
+      {
+        href: "/admin/ai-logs",
+        label: "AI-logs",
+        icon: ScrollText,
+      },
+    ],
+  },
+  {
+    label: "Toezicht",
+    items: [
       {
         href: "/admin/geschillen",
         label: "Geschillen",
@@ -70,78 +68,13 @@ export const adminNavSections: NavSection[] = [
     ],
   },
   {
-    title: "AI & Automatisering",
+    label: "Analytics",
     items: [
       {
-        href: "/admin/ai-agents",
-        label: "AI Agents",
-        icon: Bot,
-      },
-      {
-        href: "/admin/ai-tokens",
-        label: "AI Tokens",
-        icon: Coins,
-      },
-      {
-        href: "/admin/goedkeuringen",
-        label: "Goedkeuringen",
-        icon: CheckSquare,
-      },
-      {
-        href: "/admin/workflows",
-        label: "Workflows",
-        icon: GitBranch,
-      },
-      {
-        href: "/admin/proactive",
-        label: "Proactief",
-        icon: Radar,
+        href: "/admin/rapportages",
+        label: "Rapportages",
+        icon: Flag,
       },
     ],
   },
-  {
-    title: "Support",
-    items: [
-      {
-        href: "/admin/support-tickets",
-        label: "Supporttickets",
-        icon: Headphones,
-      },
-      {
-        href: "/admin/feedback",
-        label: "Feedback",
-        icon: MessageSquare,
-      },
-      {
-        href: "/admin/kennisbank",
-        label: "Kennisbank",
-        icon: BookOpen,
-      },
-    ],
-  },
-  {
-    title: "Systeem",
-    items: [
-      {
-        href: "/admin/instellingen",
-        label: "Instellingen",
-        icon: Settings,
-      },
-      {
-        href: "/admin/auditlogs",
-        label: "Auditlogs",
-        icon: ClipboardList,
-      },
-      {
-        href: "/admin/integraties",
-        label: "Integraties",
-        icon: Layers,
-      },
-      {
-        href: "/admin/backups",
-        label: "Back-ups",
-        icon: Database,
-      },
-    ],
-  },
-];
+] as const;

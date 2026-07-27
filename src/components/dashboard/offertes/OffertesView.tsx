@@ -58,7 +58,7 @@ export default function OffertesView({
 
   if (createMode) {
     return (
-      <div className="space-y-4">
+      <div className="flex h-full min-h-0 flex-col gap-4">
         {createMode === "ai" && (
           <Button
             type="button"

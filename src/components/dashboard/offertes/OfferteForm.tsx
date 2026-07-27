@@ -9,7 +9,6 @@ import {
   Copy,
   ImageIcon,
   Loader2,
-  Paperclip,
   Plus,
   Send,
   Trash2,
@@ -24,13 +23,14 @@ import type { PrijslijstPickItem } from "@/components/dashboard/prijslijst/types
 import { Combobox } from "@/components/ui/combobox";
 import { createOfferte, updateOfferte } from "@/app/dashboard/offertes/actions";
 import { createKlant } from "@/app/dashboard/contacten/actions";
-import { uploadOffertePhotosFromBase64 } from "@/app/dashboard/offertes/projecten/bestanden-actions";
+import { uploadProjectBestanden } from "@/app/dashboard/offertes/projecten/bestanden-actions";
 import {
   formatEuro,
   lineTotals,
   statusMeta,
   type OfferteLijnInput,
   type OfferteStatus,
+  validateOfferteInput,
 } from "@/lib/offertes";
 import type { BedrijfLite } from "@/lib/documentData";
 
@@ -86,12 +86,6 @@ function plusDays(days: number) {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
-}
-
-function hasValidLines(lines: OfferteLijnInput[]) {
-  return lines.some(
-    (l) => l.omschrijving.trim() !== "" && Number(l.aantal) > 0,
-  );
 }
 
 function approxDataUrlBytes(dataUrl: string) {
@@ -164,10 +158,10 @@ export default function OfferteForm({
   const [newKlantBtw, setNewKlantBtw] = useState("");
   const [newKlantBusy, setNewKlantBusy] = useState(false);
   const [notesOpen, setNotesOpen] = useState(Boolean(initial?.notes));
-  const [pendingPhotos, setPendingPhotos] = useState<
+  const [pendingFiles, setPendingFiles] = useState<
     { name: string; dataUrl: string; size: number }[]
   >([]);
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [sendAfterSave, setSendAfterSave] = useState(false);
   const [sendModalOpen, setSendModalOpen] = useState(false);
@@ -253,10 +247,20 @@ export default function OfferteForm({
     (c) => String(c.id) === customerId,
   );
   const klantName = selectedCustomer?.name?.trim() || klantVrij.trim();
-  const canSave = Boolean(klantName) && hasValidLines(lines);
+  const validationIssues = validateOfferteInput({
+    klant: klantName,
+    datum,
+    geldigTot,
+    lines,
+  });
+  const canSave = validationIssues.length === 0;
   const canSend =
     canSave &&
     Boolean(selectedCustomer?.email?.trim() || klantName);
+  const issueFor = (field: string) =>
+    touched
+      ? validationIssues.find((issue) => issue.field === field)?.message
+      : undefined;
 
   const customerOptions = useMemo(
     () =>
@@ -350,13 +354,31 @@ export default function OfferteForm({
     }
   }
 
-  function addPhotoFiles(fileList: FileList | File[] | null) {
+  function addFiles(fileList: FileList | File[] | null) {
     const files = fileList ? Array.from(fileList) : [];
-    files.forEach((file) => {
+    const allowedExtensions = /\.(jpe?g|png|pdf)$/i;
+    const rejected = files.filter(
+      (file) =>
+        file.size > 15 * 1024 * 1024 || !allowedExtensions.test(file.name),
+    );
+    const accepted = files
+      .filter(
+        (file) =>
+          file.size <= 15 * 1024 * 1024 && allowedExtensions.test(file.name),
+      )
+      .slice(0, Math.max(0, 20 - pendingFiles.length));
+
+    if (rejected.length > 0 || accepted.length < files.length - rejected.length) {
+      setError(
+        "Sommige bestanden zijn geweigerd. Gebruik maximaal 20 JPG-, PNG- of PDF-bestanden van maximaal 15 MB.",
+      );
+    }
+
+    accepted.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
-        setPendingPhotos((prev) => [
+        setPendingFiles((prev) => [
           ...prev,
           {
             name: file.name,
@@ -370,11 +392,7 @@ export default function OfferteForm({
   }
 
   function validateForSave(): string | null {
-    if (!klantName) return "Kies een klant of maak een nieuwe klant aan.";
-    if (!hasValidLines(lines)) {
-      return "Voeg minstens één offertelijn toe met omschrijving en aantal.";
-    }
-    return null;
+    return validationIssues[0]?.message ?? null;
   }
 
   function validateForSend(): string | null {
@@ -423,18 +441,43 @@ export default function OfferteForm({
     }
 
     if ("id" in res && res.id) {
-      if (pendingPhotos.length > 0) {
-        await uploadOffertePhotosFromBase64({
-          offerteId: res.id,
-          customerId: selectedCustomer?.id ?? null,
-          photos: pendingPhotos.map(({ name, dataUrl }) => ({ name, dataUrl })),
-        });
-        setPendingPhotos([]);
-      }
-
       setSavedOfferteId(res.id);
       if ("nummer" in res && typeof res.nummer === "string") {
         setSavedNummer(res.nummer);
+      }
+
+      if (pendingFiles.length > 0) {
+        const failedFiles: typeof pendingFiles = [];
+        for (const pendingFile of pendingFiles) {
+          const response = await fetch(pendingFile.dataUrl);
+          const blob = await response.blob();
+          const formData = new FormData();
+          formData.append(
+            "bestanden",
+            new File([blob], pendingFile.name, { type: blob.type }),
+          );
+          const uploadResult = await uploadProjectBestanden({
+            offerteId: res.id,
+            customerId: selectedCustomer?.id ?? null,
+            formData,
+          });
+          if ("error" in uploadResult && uploadResult.error) {
+            failedFiles.push(pendingFile);
+          }
+        }
+        setPendingFiles(failedFiles);
+        if (failedFiles.length > 0) {
+          setError(
+            `De offerte is opgeslagen, maar ${failedFiles.length} bijlage${failedFiles.length === 1 ? "" : "n"} kon${failedFiles.length === 1 ? "" : "den"} niet worden geüpload. De mislukte bestanden blijven klaarstaan om opnieuw te proberen.`,
+          );
+          setLoading(false);
+          setSendAfterSave(false);
+          if (!isEdit) {
+            router.replace(`/dashboard/offertes/${res.id}/bewerken`);
+          }
+          router.refresh();
+          return;
+        }
       }
 
       if (andSend) {
@@ -457,8 +500,11 @@ export default function OfferteForm({
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-4" id="offerte-form-root">
-      <header className="sticky top-0 z-30 -mx-1 border-b border-white/10 bg-[#07070a]/90 px-1 py-3 backdrop-blur-md">
+    <div
+      className="mx-auto flex h-full min-h-0 w-full max-w-[1600px] flex-1 flex-col overflow-hidden"
+      id="offerte-form-root"
+    >
+      <header className="z-30 shrink-0 border-b border-white/10 bg-[#07070a]/95 px-1 py-3 backdrop-blur-md">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {!hideBackLink ? (
@@ -489,6 +535,14 @@ export default function OfferteForm({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <div className="mr-1 text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Totaal incl. btw
+              </p>
+              <p className="font-mono text-base font-semibold text-zinc-100">
+                {formatEuro(totals.totaal)}
+              </p>
+            </div>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${statusInfo.tone}`}
               title="Offertestatus"
@@ -500,6 +554,31 @@ export default function OfferteForm({
                   · {workingNummer}
                 </span>
               ) : null}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs ${
+                loading
+                  ? "border-sky-500/25 bg-sky-500/10 text-sky-300"
+                  : error
+                    ? "border-rose-500/25 bg-rose-500/10 text-rose-300"
+                    : success
+                      ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+                      : "border-white/10 bg-white/5 text-zinc-400"
+              }`}
+              aria-live="polite"
+            >
+              {loading ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+              )}
+              {loading
+                ? "Opslaan…"
+                : error
+                  ? "Actie vereist"
+                  : success
+                    ? "Opgeslagen"
+                    : "Nog niet opgeslagen"}
             </span>
 
             <button
@@ -543,25 +622,36 @@ export default function OfferteForm({
         </div>
       </header>
 
-      {error && (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
-          <Check size={15} />
-          {success}
-        </p>
-      )}
+      <div className="shrink-0" aria-live="polite">
+        {error && (
+          <p
+            className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+        {success && (
+          <p
+            className="mt-3 inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300"
+            role="status"
+          >
+            <Check size={15} />
+            {success}
+          </p>
+        )}
+      </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-        <div className="space-y-6">
+      <div className="grid min-h-0 flex-1 items-start gap-5 overflow-y-auto overscroll-contain pb-8 pt-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)] xl:overflow-hidden">
+        <div className="order-2 space-y-6 xl:order-1 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:pb-8 xl:pr-2">
           {/* Sectie A — Klant en project */}
           <section className={sectionClass}>
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
               Klant en project
             </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Kies de ontvanger en leg de context van de opdracht vast.
+            </p>
 
             <div className="mt-4 space-y-4">
               <div>
@@ -604,7 +694,13 @@ export default function OfferteForm({
                     className={`${fieldClass} ${
                       touched && !klantName ? fieldInvalidClass : ""
                     }`}
+                    aria-invalid={Boolean(issueFor("klant"))}
                   />
+                )}
+                {issueFor("klant") && (
+                  <p className="mt-1.5 text-xs text-rose-300">
+                    {issueFor("klant")}
+                  </p>
                 )}
 
                 {selectedCustomer && (
@@ -741,8 +837,16 @@ export default function OfferteForm({
                     type="date"
                     value={datum}
                     onChange={(e) => setDatum(e.target.value)}
-                    className={fieldClass}
+                    className={`${fieldClass} ${
+                      issueFor("datum") ? fieldInvalidClass : ""
+                    }`}
+                    aria-invalid={Boolean(issueFor("datum"))}
                   />
+                  {issueFor("datum") && (
+                    <p className="mt-1.5 text-xs text-rose-300">
+                      {issueFor("datum")}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass}>Geldig tot</label>
@@ -750,8 +854,16 @@ export default function OfferteForm({
                     type="date"
                     value={geldigTot}
                     onChange={(e) => setGeldigTot(e.target.value)}
-                    className={fieldClass}
+                    className={`${fieldClass} ${
+                      issueFor("geldigTot") ? fieldInvalidClass : ""
+                    }`}
+                    aria-invalid={Boolean(issueFor("geldigTot"))}
                   />
+                  {issueFor("geldigTot") && (
+                    <p className="mt-1.5 text-xs text-rose-300">
+                      {issueFor("geldigTot")}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -771,6 +883,10 @@ export default function OfferteForm({
                 <Plus size={13} /> Lijn toevoegen
               </button>
             </div>
+            <p className="mt-1 text-sm text-zinc-500">
+              Voeg minstens één volledige werkpost toe. Bedragen worden direct
+              herberekend in de preview.
+            </p>
 
             <div className="mt-3">
               <PrijslijstPicker
@@ -805,13 +921,16 @@ export default function OfferteForm({
                     const lineTotal =
                       (Number(l.aantal) || 0) *
                       (Number(l.prijs_per_eenheid) || 0);
-                    const invalidDesc =
-                      touched &&
-                      !l.omschrijving.trim() &&
-                      Number(l.prijs_per_eenheid) > 0;
+                    const descIssue = issueFor(`lines.${i}.omschrijving`);
+                    const amountIssue = issueFor(`lines.${i}.aantal`);
+                    const priceIssue = issueFor(`lines.${i}.prijs`);
+                    const vatIssue = issueFor(`lines.${i}.btw`);
                     return (
-                      <tr key={i} className="border-b border-white/5 align-top">
-                        <td className="py-2 pr-2">
+                      <tr
+                        key={i}
+                        className="border-b border-white/5 align-top transition-colors odd:bg-white/[0.015] hover:bg-white/[0.035]"
+                      >
+                        <td className="py-3 pr-2">
                           <input
                             value={l.omschrijving}
                             onChange={(e) =>
@@ -819,25 +938,31 @@ export default function OfferteForm({
                             }
                             placeholder="Werkpost"
                             className={`${fieldClass} ${
-                              invalidDesc ? fieldInvalidClass : ""
+                              descIssue ? fieldInvalidClass : ""
                             }`}
+                            aria-invalid={Boolean(descIssue)}
+                            title={descIssue}
                           />
                         </td>
-                        <td className="py-2 pr-2">
+                        <td className="py-3 pr-2">
                           <input
                             type="number"
                             step="any"
-                            min={0}
+                            min={0.01}
                             value={l.aantal}
                             onChange={(e) =>
                               updateLine(i, {
                                 aantal: Number(e.target.value),
                               })
                             }
-                            className={`${fieldClass} text-right`}
+                            className={`${fieldClass} text-right ${
+                              amountIssue ? fieldInvalidClass : ""
+                            }`}
+                            aria-invalid={Boolean(amountIssue)}
+                            title={amountIssue}
                           />
                         </td>
-                        <td className="py-2 pr-2">
+                        <td className="py-3 pr-2">
                           <input
                             value={l.eenheid}
                             onChange={(e) =>
@@ -846,7 +971,7 @@ export default function OfferteForm({
                             className={fieldClass}
                           />
                         </td>
-                        <td className="py-2 pr-2">
+                        <td className="py-3 pr-2">
                           <input
                             type="number"
                             step="any"
@@ -857,27 +982,36 @@ export default function OfferteForm({
                                 prijs_per_eenheid: Number(e.target.value),
                               })
                             }
-                            className={`${fieldClass} text-right`}
+                            className={`${fieldClass} text-right ${
+                              priceIssue ? fieldInvalidClass : ""
+                            }`}
+                            aria-invalid={Boolean(priceIssue)}
+                            title={priceIssue}
                           />
                         </td>
-                        <td className="py-2 pr-2">
+                        <td className="py-3 pr-2">
                           <input
                             type="number"
                             step="any"
                             min={0}
+                            max={100}
                             value={l.btw_percentage}
                             onChange={(e) =>
                               updateLine(i, {
                                 btw_percentage: Number(e.target.value),
                               })
                             }
-                            className={`${fieldClass} text-right`}
+                            className={`${fieldClass} text-right ${
+                              vatIssue ? fieldInvalidClass : ""
+                            }`}
+                            aria-invalid={Boolean(vatIssue)}
+                            title={vatIssue}
                           />
                         </td>
-                        <td className="py-2 pr-2 pt-4 text-right font-mono text-xs text-zinc-300">
+                        <td className="py-3 pr-2 pt-5 text-right font-mono text-xs text-zinc-300">
                           {formatEuro(lineTotal)}
                         </td>
-                        <td className="py-2">
+                        <td className="py-3">
                           <div className="flex items-center gap-1 pt-1">
                             <button
                               type="button"
@@ -909,28 +1043,44 @@ export default function OfferteForm({
               {lines.map((l, i) => {
                 const lineTotal =
                   (Number(l.aantal) || 0) * (Number(l.prijs_per_eenheid) || 0);
+                const descIssue = issueFor(`lines.${i}.omschrijving`);
+                const amountIssue = issueFor(`lines.${i}.aantal`);
+                const priceIssue = issueFor(`lines.${i}.prijs`);
+                const vatIssue = issueFor(`lines.${i}.btw`);
                 return (
                   <div
                     key={i}
-                    className="space-y-2 rounded-xl border border-white/8 bg-zinc-900/40 p-3"
+                    className="space-y-3 rounded-xl border border-white/8 bg-zinc-900/40 p-3"
                   >
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                      Werkpost {i + 1}
+                    </p>
                     <input
                       value={l.omschrijving}
                       onChange={(e) =>
                         updateLine(i, { omschrijving: e.target.value })
                       }
                       placeholder="Omschrijving"
-                      className={fieldClass}
+                      className={`${fieldClass} ${
+                        descIssue ? fieldInvalidClass : ""
+                      }`}
+                      aria-label={`Omschrijving werkpost ${i + 1}`}
+                      aria-invalid={Boolean(descIssue)}
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <input
                         type="number"
                         value={l.aantal}
+                        min={0.01}
+                        step="any"
                         onChange={(e) =>
                           updateLine(i, { aantal: Number(e.target.value) })
                         }
-                        className={`${fieldClass} text-right`}
+                        className={`${fieldClass} text-right ${
+                          amountIssue ? fieldInvalidClass : ""
+                        }`}
                         aria-label="Aantal"
+                        aria-invalid={Boolean(amountIssue)}
                       />
                       <input
                         value={l.eenheid}
@@ -943,26 +1093,46 @@ export default function OfferteForm({
                       <input
                         type="number"
                         value={l.prijs_per_eenheid}
+                        min={0}
+                        step="any"
                         onChange={(e) =>
                           updateLine(i, {
                             prijs_per_eenheid: Number(e.target.value),
                           })
                         }
-                        className={`${fieldClass} text-right`}
+                        className={`${fieldClass} text-right ${
+                          priceIssue ? fieldInvalidClass : ""
+                        }`}
                         aria-label="Prijs"
+                        aria-invalid={Boolean(priceIssue)}
                       />
                       <input
                         type="number"
                         value={l.btw_percentage}
+                        min={0}
+                        max={100}
+                        step="any"
                         onChange={(e) =>
                           updateLine(i, {
                             btw_percentage: Number(e.target.value),
                           })
                         }
-                        className={`${fieldClass} text-right`}
+                        className={`${fieldClass} text-right ${
+                          vatIssue ? fieldInvalidClass : ""
+                        }`}
                         aria-label="BTW"
+                        aria-invalid={Boolean(vatIssue)}
                       />
                     </div>
+                    {[descIssue, amountIssue, priceIssue, vatIssue].find(
+                      Boolean,
+                    ) && (
+                      <p className="text-xs text-rose-300">
+                        {[descIssue, amountIssue, priceIssue, vatIssue].find(
+                          Boolean,
+                        )}
+                      </p>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs text-zinc-400">
                         {formatEuro(lineTotal)}
@@ -972,6 +1142,7 @@ export default function OfferteForm({
                           type="button"
                           onClick={() => duplicateLine(i)}
                           className="grid h-9 w-9 place-items-center rounded-lg text-zinc-500 hover:bg-white/5"
+                          aria-label={`Werkpost ${i + 1} dupliceren`}
                         >
                           <Copy size={14} />
                         </button>
@@ -980,6 +1151,7 @@ export default function OfferteForm({
                           disabled={lines.length <= 1}
                           onClick={() => removeLine(i)}
                           className="grid h-9 w-9 place-items-center rounded-lg text-zinc-500 hover:text-rose-400 disabled:opacity-30"
+                          aria-label={`Werkpost ${i + 1} verwijderen`}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -989,6 +1161,19 @@ export default function OfferteForm({
                 );
               })}
             </div>
+
+            {touched &&
+              validationIssues.find((issue) =>
+                issue.field.startsWith("lines."),
+              ) && (
+                <p className="mt-3 text-xs text-rose-300" role="alert">
+                  {
+                    validationIssues.find((issue) =>
+                      issue.field.startsWith("lines."),
+                    )?.message
+                  }
+                </p>
+              )}
 
             <div className="mt-4 ml-auto max-w-xs space-y-1.5 border-t border-white/10 pt-4 text-sm">
               <div className="flex justify-between text-zinc-400">
@@ -1017,6 +1202,8 @@ export default function OfferteForm({
               type="button"
               onClick={() => setNotesOpen((o) => !o)}
               className="flex w-full items-center justify-between gap-2 text-left"
+              aria-expanded={notesOpen}
+              aria-controls="offerte-notities"
             >
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                 Voorwaarden en notities
@@ -1029,7 +1216,7 @@ export default function OfferteForm({
               />
             </button>
             {notesOpen && (
-              <div className="mt-4">
+              <div className="mt-4" id="offerte-notities">
                 <label className={labelClass}>Klantgerichte notitie</label>
                 <textarea
                   value={notes}
@@ -1054,28 +1241,20 @@ export default function OfferteForm({
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={() => photoInputRef.current?.click()}
+                onClick={() => fileInputRef.current?.click()}
                 className="inline-flex h-11 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-zinc-900/40 px-4 text-sm text-zinc-200 hover:border-sky-500/40 hover:bg-sky-500/5"
               >
                 <Upload size={15} className="text-sky-400" />
-                Foto&apos;s of documenten toevoegen
-              </button>
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5"
-              >
-                <Paperclip size={14} />
                 Bestanden kiezen
               </button>
               <input
-                ref={photoInputRef}
+                ref={fileInputRef}
                 type="file"
-                accept="image/*,.pdf"
+                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
                 multiple
                 className="hidden"
                 onChange={(e) => {
-                  addPhotoFiles(e.target.files);
+                  addFiles(e.target.files);
                   e.target.value = "";
                 }}
               />
@@ -1084,9 +1263,9 @@ export default function OfferteForm({
               </span>
             </div>
 
-            {pendingPhotos.length > 0 && (
+            {pendingFiles.length > 0 && (
               <ul className="mt-3 divide-y divide-white/5 rounded-xl border border-white/10">
-                {pendingPhotos.map((p, i) => (
+                {pendingFiles.map((p, i) => (
                   <li
                     key={`${p.name}-${i}`}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm"
@@ -1105,7 +1284,7 @@ export default function OfferteForm({
                       className="text-zinc-500 hover:text-rose-400"
                       aria-label={`${p.name} verwijderen`}
                       onClick={() =>
-                        setPendingPhotos((prev) =>
+                        setPendingFiles((prev) =>
                           prev.filter((_, idx) => idx !== i),
                         )
                       }
@@ -1119,10 +1298,11 @@ export default function OfferteForm({
           </section>
         </div>
 
-        <aside className="min-w-0 xl:sticky xl:top-[5.5rem]">
-          <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4 sm:p-5">
+        <aside className="order-1 min-w-0 xl:order-2 xl:h-full xl:min-h-0">
+          <div className="rounded-2xl border border-white/10 bg-[#0b0b0f] p-4 shadow-xl shadow-black/10 sm:p-5 xl:h-full xl:overflow-hidden">
             <OfferteDocumentPreview
               embedded
+              collapsibleOnMobile
               templateId={documentContext.templateId}
               defaultTemplate={documentContext.defaultTemplate}
               bedrijf={documentContext.bedrijf}

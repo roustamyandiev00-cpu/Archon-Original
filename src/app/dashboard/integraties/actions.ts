@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getToken } from "@vercel/connect";
-import { requireWriteAccess } from "@/components/dashboard/context";
+import { requireAdminAccess } from "@/components/dashboard/context";
 import {
   resolveSlackConnectorUid,
   slackTokenParams,
@@ -12,7 +12,13 @@ import {
   resolveSlackConnectorForCompany,
 } from "@/components/dashboard/integraties/slackSetup";
 import { sendSlackNotification } from "@/components/dashboard/integraties/slackNotify";
-import { providerMeta, untyped } from "@/lib/integraties";
+import {
+  isPartnerOnlyProvider,
+  isPlatformOAuthProvider,
+  providerMeta,
+  untyped,
+} from "@/lib/integraties";
+import { getPlatformOAuthCredentials } from "@/components/dashboard/integraties/platformOAuth";
 import { defaultSupplierPeppolId } from "@/lib/peppol/be";
 import { getPeppolConfig } from "@/lib/peppol/build";
 import { testPeppolAccessPoint } from "@/lib/peppol/send";
@@ -23,17 +29,35 @@ import {
   fetchAccountName,
   type OAuthTokens,
 } from "@/lib/oauth";
+import {
+  generateZapierWebhookToken,
+  zapierWebhookUrl,
+  ZAPIER_PROVIDER,
+} from "@/lib/zapier-webhook";
 
 /** Koppelt (of werkt) een provider bij met de opgegeven configuratie. */
 export async function connectIntegration(
   provider: string,
   config: Record<string, string>,
 ) {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
   const meta = providerMeta(provider);
   if (!meta) return { error: "Onbekende provider." };
+
+  if (isPartnerOnlyProvider(meta)) {
+    return {
+      error:
+        "Deze koppeling vereist een partner-API en is nog niet beschikbaar.",
+    };
+  }
+
+  if (meta.auth === "webhook") {
+    return {
+      error: "Gebruik de Zapier-webhookactie om deze koppeling te activeren.",
+    };
+  }
 
   // OAuth-providers met volledige flow: bewaar client-gegevens en zet de
   // status op "configured". De koppeling wordt "connected" na autorisatie.
@@ -80,7 +104,7 @@ export async function connectIntegration(
       };
     }
     config.connectorUid = connectorUid;
-  } else if (isOAuthFlow) {
+  } else if (isOAuthFlow && !isPlatformOAuthProvider(provider)) {
     if (!config.clientId?.trim() || !config.clientSecret?.trim()) {
       return { error: "Vul Client ID en Client Secret in." };
     }
@@ -162,7 +186,7 @@ export async function connectIntegration(
 
 /** Verbreekt de koppeling met een provider (config wordt gewist). */
 export async function disconnectIntegration(provider: string) {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
   const now = new Date().toISOString();
@@ -192,7 +216,7 @@ export async function disconnectIntegration(provider: string) {
  * accountnaam op bij de provider. Bewijst dat de volledige keten werkt.
  */
 export async function testIntegration(provider: string) {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 
@@ -236,8 +260,12 @@ export async function testIntegration(provider: string) {
 
   const config = (data?.config ?? {}) as Record<string, unknown>;
   const tokens = config.tokens as OAuthTokens | undefined;
-  const clientId = config.clientId as string | undefined;
-  const clientSecret = config.clientSecret as string | undefined;
+  const platformCredentials = getPlatformOAuthCredentials(provider);
+  const clientId =
+    platformCredentials?.clientId ?? (config.clientId as string | undefined);
+  const clientSecret =
+    platformCredentials?.clientSecret ??
+    (config.clientSecret as string | undefined);
 
   if (!tokens?.access_token) {
     return { error: "Nog niet geautoriseerd. Klik eerst op Autoriseren." };
@@ -263,15 +291,170 @@ export async function testIntegration(provider: string) {
       .eq("provider", provider);
   }
 
+  if (provider === "quickbooks") {
+    const realmId =
+      typeof config.realmId === "string" ? config.realmId.trim() : "";
+    if (realmId) {
+      const sandbox =
+        config.sandbox === true || config.sandbox === "true";
+      const base = sandbox
+        ? "https://sandbox-quickbooks.api.intuit.com"
+        : "https://quickbooks.api.intuit.com";
+      try {
+        const res = await fetch(
+          `${base}/v3/company/${realmId}/companyinfo/${realmId}?minorversion=65`,
+          {
+            headers: {
+              Authorization: `Bearer ${active.access_token}`,
+              Accept: "application/json",
+            },
+          },
+        );
+        const json = (await res.json().catch(() => ({}))) as {
+          CompanyInfo?: { CompanyName?: string; LegalName?: string };
+          Fault?: { Error?: { Message?: string }[] };
+        };
+        if (!res.ok) {
+          const msg =
+            json.Fault?.Error?.[0]?.Message || `HTTP ${res.status}`;
+          return { error: `QuickBooks-test mislukt: ${msg}` };
+        }
+        const name =
+          json.CompanyInfo?.CompanyName ||
+          json.CompanyInfo?.LegalName ||
+          realmId;
+        return { ok: true, account: name };
+      } catch (e) {
+        return {
+          error: `QuickBooks-test mislukt: ${
+            e instanceof Error ? e.message : String(e)
+          }`,
+        };
+      }
+    }
+  }
+
   const result = await fetchAccountName(provider, active.access_token);
   if (!result.ok) return { error: result.error };
 
   return { ok: true, account: result.account };
 }
 
+/**
+ * Maakt of hergebruikt een unieke Zapier inbound webhook-URL voor dit bedrijf.
+ */
+export async function ensureZapierWebhook(origin?: string) {
+  const access = await requireAdminAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const { data: existing } = await untyped(supabase)
+    .from("integraties")
+    .select("config, status, connected_at")
+    .eq("bedrijf_id", companyId)
+    .eq("provider", ZAPIER_PROVIDER)
+    .maybeSingle();
+
+  const prev = (existing?.config ?? {}) as Record<string, unknown>;
+  const token =
+    typeof prev.webhookToken === "string" && prev.webhookToken.length >= 16
+      ? prev.webhookToken
+      : generateZapierWebhookToken();
+
+  const baseOrigin =
+    origin?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    "";
+  if (!baseOrigin) {
+    return { error: "App-URL ontbreekt (NEXT_PUBLIC_APP_URL)." };
+  }
+
+  const webhookUrl = zapierWebhookUrl(baseOrigin, token);
+  const now = new Date().toISOString();
+  const config = {
+    ...prev,
+    webhookToken: token,
+    webhookUrl,
+  };
+
+  const { error } = await untyped(supabase)
+    .from("integraties")
+    .upsert(
+      {
+        bedrijf_id: companyId,
+        provider: ZAPIER_PROVIDER,
+        status: "connected",
+        config,
+        connected_at:
+          (existing?.connected_at as string | null) ?? now,
+        updated_at: now,
+      },
+      { onConflict: "bedrijf_id,provider" },
+    );
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/instellingen");
+  return { ok: true, webhookUrl, token };
+}
+
+/** Optionele test-POST naar de eigen Zapier-webhook (bewijst bereikbaarheid). */
+export async function testZapierWebhook(origin?: string) {
+  const access = await requireAdminAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const { data } = await untyped(supabase)
+    .from("integraties")
+    .select("config, status")
+    .eq("bedrijf_id", companyId)
+    .eq("provider", ZAPIER_PROVIDER)
+    .maybeSingle();
+
+  if (data?.status !== "connected") {
+    return { error: "Activeer eerst je Zapier-webhook." };
+  }
+
+  const config = (data.config ?? {}) as Record<string, unknown>;
+  const token =
+    typeof config.webhookToken === "string" ? config.webhookToken : "";
+  if (!token) return { error: "Webhook-token ontbreekt." };
+
+  const baseOrigin =
+    origin?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    "";
+  if (!baseOrigin) {
+    return { error: "App-URL ontbreekt (NEXT_PUBLIC_APP_URL)." };
+  }
+
+  const url = zapierWebhookUrl(baseOrigin, token);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "archonpro",
+        type: "test",
+        at: new Date().toISOString(),
+        companyId,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return { error: `Test mislukt (HTTP ${res.status}): ${text.slice(0, 200)}` };
+    }
+    return { ok: true, account: url };
+  } catch (e) {
+    return {
+      error: `Test mislukt: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
+}
+
 /** Setup-status voor Slack per bedrijf (SaaS — elke tenant apart). */
 export async function getSlackSetupStatus() {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const status = await loadSlackSetupStatus(access.supabase, access.companyId);
   return { ok: true, status };
@@ -279,7 +462,7 @@ export async function getSlackSetupStatus() {
 
 /** Stuurt een testmelding naar het kanaal van dit bedrijf. */
 export async function sendSlackTestNotification() {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 

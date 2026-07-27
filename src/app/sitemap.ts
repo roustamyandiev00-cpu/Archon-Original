@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { PUBLIC_ROUTES, SITE_URL, absoluteUrl } from "@/lib/seo";
+import { PUBLIC_ROUTES, absoluteUrl } from "@/lib/seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

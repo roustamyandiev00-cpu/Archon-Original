@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Companies — CEO Dashboard — ArchonPro",
+  title: "Bedrijven — Platformbeheer — ArchonPro",
 };
 
 const statIcons = {
@@ -48,18 +48,18 @@ export default async function CompaniesPage() {
       <header className="flex flex-col gap-4 border-b border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-            CEO Dashboard / Companies
+            Platform / Bedrijven
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
-            Companies Management
+            Bedrijvenbeheer
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-zinc-400">
             Live overzicht van alle klanten, abonnementen, AI-verbruik en status.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="info">CEO module</Badge>
-          <Badge variant="success">Live data</Badge>
+          <Badge variant="info">Platformbeheer</Badge>
+          <Badge variant="success">Live gegevens</Badge>
         </div>
       </header>
 

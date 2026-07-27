@@ -1,13 +1,13 @@
 import {
   Zap,
   Clock,
-  Calendar,
   CheckCircle2,
   AlertTriangle,
-  Timer,
   Activity,
-  Mail,
+  ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
+import Link from "next/link";
 import { Panel } from "@/components/dashboard/widgets";
 import {
   PageHeader,
@@ -67,17 +67,20 @@ export default async function AutomatisatiesPage() {
     action_type: string;
     agent_name: string;
     created_at: string;
+    target_route: string | null;
   }[] = [];
-  let executions30d = 0;
-  let scheduledJobs = 0;
+  let activity30d = 0;
   let skillCounts: { label: string; value: number; hint?: string }[] = [];
   let hourly: { hour: number; count: number }[] = [];
+  let loadFailed = false;
 
   if (companyId) {
-    const [approvalsRes, execRes, scheduledRes, skillRes, hourRes] = await Promise.all([
+    const [approvalsRes, activityRes, skillRes, hourRes] = await Promise.all([
       supabase
         .from("agent_actions")
-        .select("id, title, reason, action_type, agent_name, created_at")
+        .select(
+          "id, title, reason, action_type, agent_name, created_at, target_route",
+        )
         .eq("company_id", companyId)
         .eq("status", "pending")
         .order("created_at", { ascending: false })
@@ -87,11 +90,6 @@ export default async function AutomatisatiesPage() {
         .select("id", { count: "exact", head: true })
         .eq("company_id", companyId)
         .gte("created_at", monthAgo),
-      supabase
-        .from("reminders")
-        .select("id", { count: "exact", head: true })
-        .eq("company_id", companyId)
-        .eq("is_sent", false),
       supabase
         .from("agent_activity_logs")
         .select("action_type, agent_name, created_at")
@@ -106,9 +104,11 @@ export default async function AutomatisatiesPage() {
         .limit(1000),
     ]);
 
+    loadFailed = [approvalsRes, activityRes, skillRes, hourRes].some(
+      (result) => Boolean(result.error),
+    );
     pendingApprovals = approvalsRes.data ?? [];
-    executions30d = execRes.count ?? 0;
-    scheduledJobs = scheduledRes.count ?? 0;
+    activity30d = activityRes.count ?? 0;
 
     const counter = new Map<string, { count: number; last: string }>();
     for (const r of skillRes.data ?? []) {
@@ -140,30 +140,55 @@ export default async function AutomatisatiesPage() {
 
   const isDemo = showDemoData(
     preview,
+    !loadFailed &&
     pendingApprovals.length === 0 &&
-      executions30d === 0 &&
-      scheduledJobs === 0 &&
+      activity30d === 0 &&
       skillCounts.length === 0,
   );
 
   if (isDemo) {
-    pendingApprovals = demoApprovals;
-    executions30d = demoAutomationSummary.executions30d;
-    scheduledJobs = demoAutomationSummary.scheduledJobs;
+    pendingApprovals = demoApprovals.map((approval) => ({
+      ...approval,
+      target_route: null,
+    }));
+    activity30d = demoAutomationSummary.executions30d;
     skillCounts = demoSkillCounts;
     hourly = demoHourly();
   }
+
+  const activityToday = hourly.reduce((total, item) => total + item.count, 0);
 
   return (
     <div className="space-y-6">
       <PageHeader
         icon={<Zap size={20} />}
-        title="Automatisaties"
-        description="Goedkeuringen, uitvoeringen en geplande taken van je AI-agents."
+        title="AI-goedkeuringen"
+        description="Controleer voorstellen voordat een AI-agent actie onderneemt."
         actions={isDemo ? <DemoBadge /> : undefined}
       />
 
       {!companyId && <NoCompanyNotice />}
+
+      <div className="flex items-start gap-3 rounded-xl border border-sky-500/20 bg-sky-500/[0.07] px-4 py-3 text-sm text-sky-100">
+        <ShieldCheck size={18} className="mt-0.5 shrink-0 text-sky-400" />
+        <div>
+          <p className="font-medium">Menselijke controle staat centraal</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-sky-200/70">
+            Hier beoordeel je voorstellen met impact. Uitgebreide automatisaties en
+            dagschema&apos;s maken geen deel uit van de huidige MVP.
+          </p>
+        </div>
+      </div>
+
+      {loadFailed && (
+        <div
+          role="alert"
+          className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
+        >
+          Niet alle goedkeuringsgegevens konden worden geladen. Vernieuw de pagina
+          of probeer het later opnieuw.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatTile
@@ -173,83 +198,98 @@ export default async function AutomatisatiesPage() {
           tone="amber"
         />
         <StatTile
-          label="Uitvoeringen (30d)"
-          value={executions30d}
+          label="Agentactiviteiten (30d)"
+          value={activity30d}
           icon={<Activity size={18} />}
           tone="sky"
         />
         <StatTile
-          label="Geplande taken"
-          value={scheduledJobs}
-          icon={<Timer size={18} />}
+          label="Agentactiviteiten vandaag"
+          value={activityToday}
+          icon={<Clock size={18} />}
           tone="emerald"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Panel
-          title="Goedkeuringen"
-          action={
-            pendingApprovals.length > 0 ? (
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
-                {pendingApprovals.length}
-              </span>
-            ) : undefined
-          }
-        >
-          {pendingApprovals.length === 0 ? (
-            <EmptyState
-              icon={<CheckCircle2 size={18} className="text-emerald-400" />}
-              title="Alles is bij"
-              description="Er zijn geen voorstellen die op goedkeuring wachten."
-            />
-          ) : (
-            <div className="max-h-96 space-y-2 overflow-y-auto">
-              {pendingApprovals.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-start gap-3 rounded-lg bg-white/[0.03] p-3"
+      <Panel
+        title="Te beoordelen voorstellen"
+        action={
+          pendingApprovals.length > 0 ? (
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+              {pendingApprovals.length}
+            </span>
+          ) : undefined
+        }
+      >
+        {pendingApprovals.length === 0 ? (
+          <EmptyState
+            icon={<CheckCircle2 size={18} className="text-emerald-400" />}
+            title="Alles is bij"
+            description="Er zijn geen voorstellen die op goedkeuring wachten."
+          />
+        ) : (
+          <div className="space-y-3">
+            {pendingApprovals.map((approval) => {
+              const contextRoute = approval.target_route?.startsWith("/dashboard/")
+                ? approval.target_route
+                : null;
+              return (
+                <article
+                  key={approval.id}
+                  className="rounded-xl border border-white/10 bg-white/[0.025] p-4"
                 >
-                  <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
-                    <Mail size={14} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium text-zinc-200">
-                      {a.title}
-                    </p>
-                    {a.reason && (
-                      <p className="truncate text-[11px] text-zinc-500">{a.reason}</p>
-                    )}
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <p className="flex-1 text-[10px] text-zinc-500">
-                        {a.agent_name} · {relTime(a.created_at)}
-                      </p>
-                      <ApprovalActions id={a.id} />
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
+                      <Zap size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-zinc-500">
+                        <span className="rounded-full bg-white/5 px-2 py-0.5 font-medium text-zinc-400">
+                          {labelForAction(approval.action_type)}
+                        </span>
+                        <span>{approval.agent_name}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{relTime(approval.created_at)}</span>
+                      </div>
+                      <h3 className="mt-2 text-sm font-medium leading-6 text-zinc-100">
+                        {approval.title}
+                      </h3>
+                      {approval.reason && (
+                        <p className="mt-1 text-xs leading-5 text-zinc-400">
+                          {approval.reason}
+                        </p>
+                      )}
+                      {contextRoute && (
+                        <Link
+                          href={contextRoute}
+                          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-sky-400 hover:text-sky-300"
+                        >
+                          Context bekijken <ExternalLink size={12} />
+                        </Link>
+                      )}
                     </div>
+                    {isDemo ? (
+                      <span className="shrink-0 self-start rounded-full bg-white/5 px-2.5 py-1 text-[10px] font-medium text-zinc-400">
+                        Alleen voorbeeld
+                      </span>
+                    ) : (
+                      <ApprovalActions id={approval.id} />
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Panel>
-
-        <Panel title="Dagschema">
-          <div className="space-y-2.5 text-sm">
-            <ScheduleRow tijd="08:30" taak="Openstaande offertes opvolgen" agent="Daan" />
-            <ScheduleRow tijd="09:00" taak="Nieuwe leads verwerken" agent="Lara" />
-            <ScheduleRow tijd="12:00" taak="Betalingsherinneringen controleren" agent="Nina" />
-            <ScheduleRow tijd="16:00" taak="Dagrapport samenstellen" agent="Lara" />
+                </article>
+              );
+            })}
           </div>
-          <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3 text-[10px] text-zinc-500">
-            <Calendar size={12} /> Alleen op weekdagen (ma–vr)
-          </div>
-        </Panel>
-      </div>
+        )}
+      </Panel>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Panel title="Skill-uitvoeringen (30 dagen)">
+        <Panel title="Activiteit per type (30 dagen)">
           {skillCounts.length === 0 ? (
-            <EmptyState title="Nog geen uitvoeringen" />
+            <EmptyState
+              title="Nog geen activiteit"
+              description="Uitgevoerde agentacties verschijnen hier zodra ze gelogd zijn."
+            />
           ) : (
             <BarList items={skillCounts} />
           )}
@@ -259,27 +299,16 @@ export default async function AutomatisatiesPage() {
           title="Activiteit per uur — vandaag"
           action={<Clock size={13} className="text-zinc-500" />}
         >
-          <HourBars data={hourly} nowHour={now.getHours()} />
+          {hourly.length === 0 ? (
+            <EmptyState
+              title="Vandaag nog geen activiteit"
+              description="Er zijn vandaag nog geen agentacties gelogd."
+            />
+          ) : (
+            <HourBars data={hourly} nowHour={now.getHours()} />
+          )}
         </Panel>
       </div>
-    </div>
-  );
-}
-
-function ScheduleRow({
-  tijd,
-  taak,
-  agent,
-}: {
-  tijd: string;
-  taak: string;
-  agent: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 border-l-2 border-sky-500/50 py-1.5 pl-3">
-      <span className="w-12 shrink-0 font-mono text-xs text-zinc-500">{tijd}</span>
-      <span className="flex-1 text-sm text-zinc-200">{taak}</span>
-      <span className="shrink-0 text-[10px] text-zinc-500">{agent}</span>
     </div>
   );
 }

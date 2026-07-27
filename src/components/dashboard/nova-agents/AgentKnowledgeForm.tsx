@@ -119,11 +119,10 @@ export default function AgentKnowledgeForm({
 
   const selected = agents.find((a) => a.id === agentId);
 
-  const [prevDefaultAgentId, setPrevDefaultAgentId] = useState(defaultAgentId);
-  if (prevDefaultAgentId !== defaultAgentId) {
-    setPrevDefaultAgentId(defaultAgentId);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (defaultAgentId) setAgentId(defaultAgentId);
-  }
+  }, [defaultAgentId]);
 
   const loadDocuments = useCallback(async (id: string) => {
     if (!id) {
@@ -139,9 +138,8 @@ export default function AgentKnowledgeForm({
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      void loadDocuments(agentId);
-    });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadDocuments(agentId);
   }, [agentId, loadDocuments]);
 
   function updateMandate<K extends keyof AgentMandateSections>(

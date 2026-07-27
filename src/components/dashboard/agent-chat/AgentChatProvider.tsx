@@ -24,7 +24,7 @@ import {
   chatAgentFromId,
 } from "@/components/dashboard/agent-chat/agents";
 import { DEFAULT_BUILTIN_AVATARS, defaultAvatarUrl } from "@/lib/agents/avatar-options";
-import { DEFAULT_AGENT_NAME, normalizeAgentName } from "@/lib/agents/userAi";
+import { DEFAULT_AGENT_NAME } from "@/lib/agents/userAi";
 import { sendAgentChatMessage } from "@/app/dashboard/agent-chat/actions";
 import { rememberChatInsight } from "@/app/dashboard/geheugen/actions";
 import {
@@ -292,41 +292,37 @@ export function AgentChatProvider({
   const messages = historyByAgent[activeAgent.id] ?? starterFor(activeAgent);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      setActiveAgent((prev) => {
-        if (prev.id === "nova") return primaryAgent;
-        const refreshed = chatAgentFromId(companyAgents, prev.id, userAgentName);
-        return refreshed ?? prev;
-      });
-      setHistoryByAgent((prev) => {
-        const welcome = prev.nova?.[0];
-        if (!welcome || welcome.id !== "welcome-nova") return prev;
-        return { ...prev, nova: starterFor(primaryAgent) };
-      });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveAgent((prev) => {
+      if (prev.id === "nova") return primaryAgent;
+      const refreshed = chatAgentFromId(companyAgents, prev.id, userAgentName);
+      return refreshed ?? prev;
+    });
+    setHistoryByAgent((prev) => {
+      const welcome = prev.nova?.[0];
+      if (!welcome || welcome.id !== "welcome-nova") return prev;
+      return { ...prev, nova: starterFor(primaryAgent) };
     });
   }, [primaryAgent, companyAgents, userAgentName]);
 
-  const [prevInitialAgents, setPrevInitialAgents] = useState(initialCompanyAgents);
-  if (prevInitialAgents !== initialCompanyAgents) {
-    setPrevInitialAgents(initialCompanyAgents);
-    if (initialCompanyAgents?.length) {
-      setCompanyAgents(initialCompanyAgents);
-    }
-  }
+  useEffect(() => {
+    if (!initialCompanyAgents?.length) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCompanyAgents(initialCompanyAgents);
+  }, [initialCompanyAgents]);
 
   const syncCompanyAgents = useCallback((agents: CustomAgent[]) => {
     setCompanyAgents(agents);
   }, []);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      setView(readStoredView());
-      const storedPosition = readStoredPosition();
-      setPositionState(
-        storedPosition ? clampChatPosition(storedPosition) : defaultChatPosition(),
-      );
-      setPositionReady(true);
-    });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setView(readStoredView());
+    const storedPosition = readStoredPosition();
+    setPositionState(
+      storedPosition ? clampChatPosition(storedPosition) : defaultChatPosition(),
+    );
+    setPositionReady(true);
   }, []);
 
   useEffect(() => {
@@ -708,6 +704,10 @@ export function AgentChatProvider({
                   }, 1500);
                 } catch (err) {
                   console.error(err);
+                  replyText = `❌ **Aanmaken mislukt.** ${
+                    err instanceof Error ? err.message : "Onbekende fout"
+                  }. Probeer het later opnieuw of maak de agent aan via Command Center → Crew.`;
+                  replyOptions = ["Probeer opnieuw", "Toon Automatisaties"];
                 }
               } else {
                 // Mock success for preview mode
@@ -748,34 +748,100 @@ export function AgentChatProvider({
               const email = trimmed;
               const { target } = chatState.data;
 
-              replyText = `Begrepen! Ik heb een actie om de offerte voor **${target}** te verzenden naar **${email}** klaargezet in je Automatisaties. Je kunt deze direct goedkeuren en verzenden met één klik!`;
-              replyOptions = ["Toon Automatisaties", "Dank je"];
-
               if (companyId) {
-                await supabase.from("agent_actions").insert({
-                  company_id: companyId,
-                  agent_name: "Viktor",
-                  action_type: "send_offerte",
-                  title: `Offerte verzenden naar ${email}`,
-                  reason: `Gevraagd via ${DEFAULT_AGENT_NAME} AI-metgezel voor ${target}`,
-                  payload_json: { email, target },
-                  target_entity_type: "offerte",
-                  status: "pending",
-                  requires_approval: true,
-                  confidence: 0.95,
-                });
+                const targetNorm = String(target ?? "")
+                  .trim()
+                  .replace(/[%(),]/g, " ");
+                let offerteQuery = supabase
+                  .from("offertes")
+                  .select("id, nummer, klant")
+                  .eq("bedrijf_id", companyId)
+                  .order("updated_at", { ascending: false })
+                  .limit(5);
 
-                // Add log entry
-                await supabase.from("agent_activity_logs").insert({
-                  company_id: companyId,
-                  agent_name: DEFAULT_AGENT_NAME,
-                  action_type: "opvolging",
-                  message: `${DEFAULT_AGENT_NAME} heeft een voorstel klaargezet om offerte te verzenden naar ${email}`,
-                });
+                if (/^off[-_]?\d/i.test(targetNorm) || /^\d+$/.test(targetNorm)) {
+                  offerteQuery = offerteQuery.or(
+                    `nummer.ilike.%${targetNorm}%,id.eq.${Number(targetNorm) || 0}`,
+                  );
+                } else {
+                  offerteQuery = offerteQuery.or(
+                    `klant.ilike.%${targetNorm}%,nummer.ilike.%${targetNorm}%`,
+                  );
+                }
 
-                router.refresh();
+                const { data: matches, error: lookupError } = await offerteQuery;
+
+                if (lookupError) {
+                  replyText = `❌ Offerte zoeken mislukt: ${lookupError.message}`;
+                  replyOptions = ["Probeer opnieuw", "Naar Offertes"];
+                  setChatState(null);
+                } else if (!matches?.length) {
+                  replyText = `Ik vind geen offerte die overeenkomt met **${targetNorm}**. Open de offertepagina en verstuur daar, of geef het exacte offertenummer (bv. OFF-2024-0005).`;
+                  replyOptions = ["Naar Offertes", "Opnieuw proberen"];
+                  setChatState(null);
+                } else if (matches.length > 1) {
+                  const list = matches
+                    .map(
+                      (m) =>
+                        `• ${m.nummer ?? `#${m.id}`} — ${m.klant ?? "zonder klant"}`,
+                    )
+                    .join("\n");
+                  replyText = `Ik vond **${matches.length}** offertes voor **${targetNorm}**. Geef het exacte nummer:\n\n${list}`;
+                  replyOptions = matches
+                    .slice(0, 3)
+                    .map((m) => m.nummer ?? String(m.id));
+                  setChatState({
+                    flow: "send_quote",
+                    step: "await_target",
+                    data: {},
+                  });
+                } else {
+                  const offerte = matches[0]!;
+                  const recipient = email.includes("@") ? email : email;
+
+                  const { error: insertError } = await supabase
+                    .from("agent_actions")
+                    .insert({
+                      company_id: companyId,
+                      agent_name: "Viktor",
+                      action_type: "send_offerte",
+                      title: `Offerte ${offerte.nummer ?? offerte.id} verzenden naar ${recipient}`,
+                      reason: `Gevraagd via ${DEFAULT_AGENT_NAME} AI-metgezel voor ${targetNorm}`,
+                      payload_json: {
+                        offerteId: offerte.id,
+                        recipientEmail: recipient,
+                      },
+                      target_entity_type: "offerte",
+                      target_entity_id: offerte.id,
+                      target_route: `/dashboard/offertes/${offerte.id}`,
+                      status: "pending",
+                      requires_approval: true,
+                      confidence: 0.95,
+                    });
+
+                  if (insertError) {
+                    replyText = `❌ Voorstel aanmaken mislukt: ${insertError.message}`;
+                    replyOptions = ["Probeer opnieuw", "Toon Automatisaties"];
+                  } else {
+                    await supabase.from("agent_activity_logs").insert({
+                      company_id: companyId,
+                      agent_name: DEFAULT_AGENT_NAME,
+                      action_type: "opvolging",
+                      message: `${DEFAULT_AGENT_NAME} heeft een voorstel klaargezet om offerte ${offerte.nummer ?? offerte.id} te verzenden naar ${recipient}`,
+                    });
+
+                    replyText = `Begrepen! Ik heb een actie klaargezet om **${offerte.nummer ?? `#${offerte.id}`}** (${offerte.klant ?? "klant"}) te verzenden naar **${recipient}**. Keur dit goed in Automatisaties.`;
+                    replyOptions = ["Toon Automatisaties", "Dank je"];
+                    router.refresh();
+                  }
+                  setChatState(null);
+                }
+              } else {
+                replyText =
+                  "In voorbeeldmodus maak ik geen echte verstuur-actie. Open een echte sessie om offertes te versturen.";
+                replyOptions = ["Begrepen"];
+                setChatState(null);
               }
-              setChatState(null);
             }
           }
         } else {

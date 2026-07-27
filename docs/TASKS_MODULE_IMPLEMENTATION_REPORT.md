@@ -1,64 +1,63 @@
-# Tasks Module — Implementation Report
+# Taken-module — Implementation Report
 
-Branch: `feature/tasks-module`  
-Datum: 2026-07-20
+Datum: 2026-07-20  
+Branch: `feature/tasks-module`
 
 ## Architectuur
 
-- Tenant-scoped CRM tasks via uitgebreide `public.tasks` + satellites.
-- Server actions in `src/app/dashboard/taken/actions.ts`.
-- UI: `/dashboard/taken` (lijst/kanban) + `/dashboard/taken/[taskId]`.
-- Command Center laadt echte CRM-taken in `mission-data.ts`.
-- Reminders via `/api/cron/task-reminders` + `authorizeCronRequest`.
-- AI: `Nova:propose_create_task` / `Lima:propose_create_task` policies (approval vereist).
+- Server actions in `src/app/dashboard/taken/actions.ts`
+- Pure helpers: `src/lib/tasks/{types,validation,relations,query}.ts`
+- UI: `TakenBoard`, `TaskDetailActions`, `RelatedTasksPanel`
+- Routes: `/dashboard/taken`, `/dashboard/taken/[taskId]`
+- Cron: `/api/cron/task-reminders` (Bearer `CRON_SECRET`)
+- Legacy `public.tasks` uitgebreid (geen tweede tabel)
 
 ## Database
 
-Migratie: `supabase/migrations/20260720201000_tasks_module.sql`
+Migratie: `supabase/migrations/20260720181000_tasks_module.sql`
 
-Tabellen: `tasks` (ALTER), `task_comments`, `task_attachments`, `task_labels`, `task_label_assignments`, `task_reminders`, `task_recurrence_rules`, `task_recurrence_occurrences`, `task_activity_logs`.
+Tabellen:
+- `tasks` (ALTER + soft delete)
+- `task_comments`, `task_attachments`, `task_labels`, `task_label_assignments`
+- `task_reminders`, `task_recurrence_rules`, `task_recurrence_occurrences`
+- `task_activity_logs`
 
-## Routes
-
-- `/dashboard/taken`
-- `/dashboard/taken/[taskId]`
-- `/api/cron/task-reminders`
+RLS: member read; write via `app_private.can_write_company_tasks` (viewer/readonly denied).
 
 ## Server actions
 
-create/update/delete/restore/complete/reopen/assign/move, comments, attachments, labels, reminders, recurrence, list/get/activity.
+create/update/delete/restore, complete/reopen/setStatus, assign, move, comments, attachments, labels, reminders, recurrence, list/get/activity.
 
-## Componenten
+## Integraties
 
-- `TakenManager`, `TaskDetailClient`, `RelatedTasksPanel`
-
-## RLS
-
-- Read: `is_member_of_company`
-- Write: `can_write_company_tasks` (viewer/readonly/guest denied)
-- Server guards: `requireWriteAccess` + role check; reads via `getDashboardContext`
-
-## Notificaties / recurring / AI
-
-- Reminders: pending→sent claim (idempotent)
-- Recurrence: occurrence_key uniek per regel/dag
-- AI: deterministic policy + human approval
+- Nav: sidebar Operatie + mobile Meer
+- Command Center: echte CRM-taken in mission-data + quick links
+- RelatedTasksPanel op factuurdetail + leads
+- AI policies: `Nova:propose_create_task`, `Lima:propose_invoice_followup_task` (approval verplicht)
 
 ## Migratie-instructies
 
-1. Review migraties lokaal.
-2. Op staging: `supabase db push` (expliciete toestemming).
-3. Zet bootstrap admin uit in productie.
-4. Nav/feature beschikbaar na deploy.
+1. Review SQL lokaal.
+2. Op staging: `supabase db push` of SQL editor (expliciete toestemming).
+3. Regenereren types indien linked: `pnpm types:generate`.
+4. Bootstrap admin blijft uit in productie.
 
 ## Rollback
 
-- Reverse-migratie toevoegen (drop satellites / restore columns) — nooit history herschrijven.
-- Feature tijdelijk uit nav halen.
+- Feature flag: nav-item verwijderen / route achter feature flag.
+- Geen destructive drop in productie; eventueel soft-disable cron in `vercel.json`.
 
 ## Bekende beperkingen
 
 - Live migratie nog niet toegepast.
-- Attachment upload UI beperkt (metadata path + storage_path guard).
-- Types in `database.types.ts` deels via `untyped()` tot `types:generate` op linked schema.
-- Mentions in comments niet geïmplementeerd.
+- Attachment upload UI gebruikt metadata-API (storage path validatie); volledige drag-drop uploader beperkt.
+- Deal-FK validatie lichtgewicht (geen aparte deals-company check in alle flows).
+- Contact-/project-/afspraak-detailpagina’s hebben niet overal RelatedTasksPanel (lijstpagina’s).
+
+## Handmatige teststappen
+
+1. Open `/dashboard/taken`, maak taak, verplaats in kanban.
+2. Open taakdetail, commentaar, voltooien.
+3. Factuurdetail → gekoppelde taak aanmaken.
+4. Command Center → Mijn Taken toont CRM-taken.
+5. Cron dry-run met Bearer secret (staging).

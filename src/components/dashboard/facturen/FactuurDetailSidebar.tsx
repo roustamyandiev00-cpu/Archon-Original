@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Download,
-  Eye,
   Loader2,
   Send,
+  Sparkles,
 } from "lucide-react";
 import { markFactuurAsVerzonden } from "@/app/dashboard/facturen/actions";
+import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 import DocumentDownload from "@/components/dashboard/documenten/DocumentDownload";
 import PeppolActions from "@/components/dashboard/documenten/PeppolActions";
 import MarkFactuurPaidButton from "@/components/dashboard/facturen/MarkFactuurPaidButton";
@@ -20,6 +21,7 @@ import type { DocumentRow } from "@/components/dashboard/documenten/documentTemp
 export type FactuurActivityItem = {
   label: string;
   at: string;
+  detail?: string;
 };
 
 export type FactuurPaymentRow = {
@@ -39,12 +41,16 @@ const PAYABLE_STATUSES = new Set([
 function SidebarCard({
   title,
   children,
+  className = "",
 }: {
   title: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="rounded-xl border border-white/[0.08] bg-zinc-900/40 p-4">
+    <section
+      className={`rounded-2xl border border-white/[0.08] bg-zinc-900/55 p-4 shadow-sm ${className}`}
+    >
       <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
         {title}
       </h2>
@@ -69,7 +75,7 @@ export default function FactuurDetailSidebar({
   paidAmount,
   openAmount,
   payments,
-  activity,
+  aiContext,
   peppolConnected,
   peppolCanSend,
   buyerReference,
@@ -96,7 +102,17 @@ export default function FactuurDetailSidebar({
   paidAmount: number;
   openAmount: number;
   payments: FactuurPaymentRow[];
-  activity: FactuurActivityItem[];
+  aiContext: {
+    customerLabel: string;
+    statusLabel: string;
+    invoiceDate: string | null;
+    dueDate: string | null;
+    totalAmount: number;
+    openAmount: number;
+    lineCount: number;
+    missingFields: string[];
+    isProforma: boolean;
+  };
   peppolConnected: boolean;
   peppolCanSend: boolean;
   buyerReference?: string | null;
@@ -109,6 +125,12 @@ export default function FactuurDetailSidebar({
   docRows: DocumentRow[];
 }) {
   const router = useRouter();
+  const {
+    activeAgent,
+    isTyping: aiIsTyping,
+    open: openAgentChat,
+    sendMessage,
+  } = useAgentChat();
   const [sendBusy, setSendBusy] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
@@ -148,19 +170,45 @@ export default function FactuurDetailSidebar({
     window.location.href = `/dashboard/facturen/${factuurId}/pdf`;
   }
 
+  function handleAiCheck() {
+    openAgentChat();
+    sendMessage(
+      [
+        `Controleer factuur ${nummer} voor ${aiContext.customerLabel}.`,
+        "Geef maximaal vijf concrete, zakelijke aandachtspunten. Controleer volledigheid, betaaltermijn, BTW-signalen, openstaand bedrag en een veilige vervolgstap.",
+        "Wijzig, verstuur of boek niets. Geef alleen advies dat de gebruiker zelf kan beoordelen.",
+        `Documenttype: ${aiContext.isProforma ? "proforma" : "factuur"}`,
+        `Status: ${aiContext.statusLabel}`,
+        `Factuurdatum: ${aiContext.invoiceDate ?? "ontbreekt"}`,
+        `Vervaldatum: ${aiContext.dueDate ?? "ontbreekt"}`,
+        `Totaalbedrag: ${formatEuro(aiContext.totalAmount)}`,
+        `Openstaand: ${formatEuro(aiContext.openAmount)}`,
+        `Aantal regels: ${aiContext.lineCount}`,
+        `Ontbrekende gegevens: ${
+          aiContext.missingFields.length > 0
+            ? aiContext.missingFields.join(", ")
+            : "geen gedetecteerd"
+        }`,
+      ].join("\n"),
+    );
+  }
+
   return (
-    <aside className="flex min-w-0 flex-col gap-3">
-      <SidebarCard title="Status">
+    <aside
+      className="flex min-w-0 flex-col gap-3 xl:sticky xl:top-4"
+      aria-label="Factuuracties en status"
+    >
+      <SidebarCard title="Status" className="order-1">
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${typeTone}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${typeTone}`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${typeDot}`} />
               Type: {typeLabel}
             </span>
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${statusTone}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${statusTone}`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
               Status: {statusLabel}
@@ -174,7 +222,7 @@ export default function FactuurDetailSidebar({
         </div>
       </SidebarCard>
 
-      <SidebarCard title="Acties">
+      <SidebarCard title="Acties" className="order-3">
         <div className="space-y-2">
           {canMarkSent ? (
             <Button
@@ -240,7 +288,7 @@ export default function FactuurDetailSidebar({
         </div>
       </SidebarCard>
 
-      <SidebarCard title="Betaling">
+      <SidebarCard title="Betaling" className="order-2">
         {isProforma ? (
           <p className="text-xs text-zinc-500">Niet van toepassing op proforma.</p>
         ) : isPaid ? (
@@ -254,9 +302,13 @@ export default function FactuurDetailSidebar({
                 Betaald op {formatDate(paidAt)}
               </p>
             ) : null}
-            <div className="flex justify-between text-zinc-300">
-              <span>Ontvangen</span>
-              <span className="font-mono">{formatEuro(paidAmount)}</span>
+            <div>
+              <p className="text-xs uppercase tracking-[0.1em] text-zinc-500">
+                Ontvangen
+              </p>
+              <p className="mt-1 font-mono text-2xl font-semibold text-zinc-50">
+                {formatEuro(paidAmount)}
+              </p>
             </div>
             {payments.length > 0 ? (
               <ul className="space-y-1.5 border-t border-white/[0.08] pt-2">
@@ -274,11 +326,13 @@ export default function FactuurDetailSidebar({
           </div>
         ) : canMarkPaid ? (
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between text-zinc-400">
-              <span>Openstaand</span>
-              <span className="font-mono text-zinc-100">
+            <div>
+              <p className="text-xs uppercase tracking-[0.1em] text-zinc-500">
+                Nog te betalen
+              </p>
+              <p className="mt-1 font-mono text-2xl font-semibold text-zinc-50">
                 {formatEuro(openAmount)}
-              </span>
+              </p>
             </div>
             <p className="text-xs text-zinc-500">
               Registreer de betaling via de actie hierboven.
@@ -291,7 +345,35 @@ export default function FactuurDetailSidebar({
         )}
       </SidebarCard>
 
-      <SidebarCard title="PDF en sjabloon">
+      <SidebarCard title="Nova AI" className="order-4">
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-500/15 text-violet-300">
+              <Sparkles size={17} aria-hidden="true" />
+            </span>
+            <p className="text-xs leading-relaxed text-zinc-400">
+              Laat {activeAgent.name} deze factuur controleren. De AI geeft alleen
+              advies en voert geen acties uit.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={aiIsTyping}
+            onClick={handleAiCheck}
+            className="h-10 w-full justify-center gap-2 border border-violet-500/20 bg-violet-500/10 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100"
+          >
+            {aiIsTyping ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Sparkles size={16} />
+            )}
+            {aiIsTyping ? "Controle loopt…" : "Controleer met AI"}
+          </Button>
+        </div>
+      </SidebarCard>
+
+      <SidebarCard title="PDF en sjabloon" className="order-5">
         <DocumentDownload
           kind="invoice"
           documentId={factuurId}
@@ -304,136 +386,18 @@ export default function FactuurDetailSidebar({
       </SidebarCard>
 
       {(peppolConnected || peppolStatus) && !isProforma ? (
-        <PeppolActions
-          factuurId={factuurId}
-          peppolConnected={peppolConnected}
-          peppolCanSend={peppolCanSend}
-          buyerReference={buyerReference}
-          structuredCommunication={structuredCommunication}
-          peppolStatus={peppolStatus}
-          peppolLastError={peppolLastError}
-        />
-      ) : null}
-
-      {activity.length > 0 ? (
-        <SidebarCard title="Activiteit">
-          <ul className="space-y-2.5">
-            {activity.map((item) => (
-              <li key={`${item.label}-${item.at}`} className="flex gap-2.5">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
-                <div className="min-w-0">
-                  <p className="text-sm text-zinc-200">{item.label}</p>
-                  <p className="font-mono text-[11px] text-zinc-500">
-                    {formatDate(item.at)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </SidebarCard>
+        <div className="order-6">
+          <PeppolActions
+            factuurId={factuurId}
+            peppolConnected={peppolConnected}
+            peppolCanSend={peppolCanSend}
+            buyerReference={buyerReference}
+            structuredCommunication={structuredCommunication}
+            peppolStatus={peppolStatus}
+            peppolLastError={peppolLastError}
+          />
+        </div>
       ) : null}
     </aside>
-  );
-}
-
-/** Header primary actions for desktop/mobile page chrome */
-export function FactuurDetailHeaderActions({
-  factuurId,
-  nummer,
-  status,
-  isProforma,
-  isPaid,
-}: {
-  factuurId: number;
-  nummer: string;
-  status: string | null;
-  isProforma: boolean;
-  isPaid: boolean;
-}) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const canMarkSent = !isProforma && status === "concept";
-  const canMarkPaid =
-    !isProforma && !isPaid && PAYABLE_STATUSES.has(status ?? "");
-
-  async function handleMarkSent() {
-    if (busy) return;
-    const confirmed = window.confirm(
-      `${nummer} markeren als verzonden?\n\nDe status wijzigt van Concept naar Verzonden.`,
-    );
-    if (!confirmed) return;
-    setBusy(true);
-    setError(null);
-    const result = await markFactuurAsVerzonden(factuurId);
-    if ("error" in result && result.error) {
-      setError(result.error);
-      setBusy(false);
-      return;
-    }
-    router.refresh();
-    setBusy(false);
-  }
-
-  return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      {canMarkSent ? (
-        <Button
-          type="button"
-          disabled={busy}
-          onClick={() => void handleMarkSent()}
-          className="h-10 gap-2 bg-sky-500 text-zinc-950 hover:bg-sky-400"
-        >
-          {busy ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Send size={16} />
-          )}
-          Markeer als verzonden
-        </Button>
-      ) : null}
-
-      {canMarkPaid ? (
-        <MarkFactuurPaidButton
-          factuurId={factuurId}
-          nummer={nummer}
-          variant="compact"
-          className="min-w-[11rem]"
-        />
-      ) : null}
-
-      {!canMarkSent && !canMarkPaid ? (
-        <Button
-          type="button"
-          onClick={() => {
-            window.location.href = `/dashboard/facturen/${factuurId}/pdf`;
-          }}
-          className="h-10 gap-2 bg-sky-500 text-zinc-950 hover:bg-sky-400"
-        >
-          <Download size={16} />
-          PDF downloaden
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            window.location.href = `/dashboard/facturen/${factuurId}/pdf`;
-          }}
-          className="h-10 gap-2 border border-white/[0.08]"
-          aria-label="PDF downloaden"
-        >
-          <Eye size={16} />
-          <span className="hidden sm:inline">Voorbeeld PDF</span>
-        </Button>
-      )}
-
-      {error ? (
-        <p className="w-full text-right text-xs text-rose-400" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
   );
 }

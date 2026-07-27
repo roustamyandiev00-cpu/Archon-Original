@@ -1,30 +1,35 @@
-# Tasks Module — Test Report
+# Taken-module — Test Report
+
+Datum: 2026-07-20
 
 ## Automated
 
 | Suite | Scope | Result |
 |-------|-------|--------|
-| `src/lib/stripe/__tests__/webhook-events.test.ts` | claim/duplicate/retry/hash/livemode | 7/7 passed |
-| `src/lib/cron/__tests__/auth.test.ts` | cron secret | 3/3 passed |
-| `src/lib/tasks/__tests__/tasks-core.test.ts` | validation/recurrence/security helpers | 7/7 passed |
-| `src/lib/agents/__tests__/can-approve-action.test.ts` | allowlist + task policy | 3/3 passed |
-| `pnpm typecheck` | | passed |
-| targeted eslint | taken/stripe/cron | passed |
-| `pnpm build` | | passed |
+| `src/lib/tasks/__tests__/validation.test.ts` | parse/roles/recurrence keys | run in CI step |
+| `src/lib/tasks/__tests__/policy.test.ts` | AI approval policies | run in CI step |
+| `src/lib/stripe/__tests__/webhook-events.test.ts` | event ledger idempotency | run in CI step |
+| Existing security tests | canApprove/cron/platform-admin | regressie |
 
-## Not covered in CI (manual / blocked)
+## Covered behaviours
 
-- Cross-tenant DB RLS against live Postgres
+- create input validation
+- viewer cannot write (unit)
+- recurrence occurrence key stability
+- Stripe first/duplicate/retry/livemode
+- AI propose task requires approval
+
+## Not fully automated (manual / blocked)
+
+- Cross-tenant DB RLS live
+- Concurrent reminder cron double-run on live DB
+- Full UI kanban drag
 - Attachment binary upload E2E
-- Concurrent cron reminder runs against live DB
-- Full UI kanban drag (status select covered)
 
-## Manual checklist
+## Commands
 
-1. Create task on `/dashboard/taken`
-2. Complete / reopen / assign
-3. Kanban status move
-4. Comment add
-5. Reminder create + cron with secret
-6. Related panel on factuur detail
-7. Command Center shows CRM tasks
+```bash
+pnpm exec vitest run src/lib/tasks src/lib/stripe/__tests__/webhook-events.test.ts
+pnpm typecheck
+pnpm build
+```

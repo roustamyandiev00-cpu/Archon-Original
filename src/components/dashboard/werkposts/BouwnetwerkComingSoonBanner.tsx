@@ -3,32 +3,40 @@
 import { useEffect, useState } from "react";
 import { Rocket, Users, X } from "lucide-react";
 
-export const BOUWNETWERK_REQUIRED_USERS = 100;
-const REQUIRED_USERS = BOUWNETWERK_REQUIRED_USERS;
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  bouwnetwerkProgressPercent,
+  isBouwnetwerkUnlocked,
+} from "@/lib/bouwnetwerk-gate";
+
 const STORAGE_KEY = "archonpro:wip-dismissed:bouwnetwerk";
 
 export function BouwnetwerkComingSoonBanner({
-  currentUsers,
+  registeredUsers = 0,
+  requiredUsers = BOUWNETWERK_REQUIRED_USERS,
 }: {
-  /** Echt aantal geregistreerde gebruikers (get_platform_registration_count). */
-  currentUsers: number;
+  registeredUsers?: number;
+  requiredUsers?: number;
 }) {
   const [visible, setVisible] = useState(false);
-  const remaining = Math.max(REQUIRED_USERS - currentUsers, 0);
-  const progressPercent = Math.min(
-    Math.round((currentUsers / REQUIRED_USERS) * 100),
-    100,
+  const progressPercent = bouwnetwerkProgressPercent(
+    registeredUsers,
+    requiredUsers,
   );
+  const unlocked = isBouwnetwerkUnlocked(registeredUsers, requiredUsers);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        setVisible(window.localStorage.getItem(STORAGE_KEY) !== "1");
-      } catch {
-        setVisible(true);
-      }
-    });
-  }, []);
+    if (unlocked) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVisible(false);
+      return;
+    }
+    try {
+      setVisible(window.localStorage.getItem(STORAGE_KEY) !== "1");
+    } catch {
+      setVisible(true);
+    }
+  }, [unlocked]);
 
   function dismiss() {
     try {
@@ -39,26 +47,26 @@ export function BouwnetwerkComingSoonBanner({
     setVisible(false);
   }
 
-  if (!visible) return null;
+  if (!visible || unlocked) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-amber-500/5 px-5 py-5">
+    <div className="relative overflow-hidden rounded-2xl border border-orange-500/25 bg-orange-500/5 px-5 py-5">
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-amber-500/10 blur-3xl"
+        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-orange-500/10 blur-3xl"
       />
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-400">
+          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-orange-500/25 bg-orange-500/10 text-orange-400">
             <Rocket size={17} />
           </span>
           <div>
             <div className="flex items-start justify-between gap-3">
               <p className="font-semibold text-zinc-100">
-                Bouwnetwerk wordt actief bij{" "}
-                <span className="text-amber-400">
-                  {REQUIRED_USERS} gebruikers
+                Bouwnetwerk &amp; Samenwerkingen worden actief bij{" "}
+                <span className="text-orange-400">
+                  {requiredUsers} geregistreerde gebruikers
                 </span>
               </p>
               <button
@@ -71,21 +79,14 @@ export function BouwnetwerkComingSoonBanner({
               </button>
             </div>
             <p className="mt-0.5 max-w-xl text-sm text-zinc-400">
-              Er zijn nu{" "}
-              <span className="font-semibold text-zinc-200">
-                {currentUsers} geregistreerde gebruikers
-              </span>
-              {" — "}nog{" "}
-              <span className="font-semibold text-amber-300">
-                {remaining}
-              </span>{" "}
-              te gaan, dan kan je deze optie gebruiken. Je kan intussen alles
-              al bekijken en instellen.
+              Deze modules zijn nog in ontwikkeling en nog niet beschikbaar
+              voor gebruik. De teller in de topbar toont het echte aantal
+              registraties op ArchonPro.
             </p>
             <button
               type="button"
               onClick={dismiss}
-              className="mt-3 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition-colors hover:bg-amber-500/15"
+              className="mt-3 inline-flex rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-200 transition-colors hover:bg-orange-500/15"
             >
               Begrepen, verberg dit
             </button>
@@ -100,15 +101,15 @@ export function BouwnetwerkComingSoonBanner({
                 Voortgang
               </span>
             </div>
-            <p className="text-2xl font-bold text-zinc-50">
-              {currentUsers}
-              <span className="text-sm font-normal text-zinc-500">
-                /{REQUIRED_USERS}
+            <p className="text-2xl font-bold text-orange-400 tabular-nums">
+              {registeredUsers}
+              <span className="text-sm font-normal text-orange-500/70">
+                /{requiredUsers}
               </span>
             </p>
             <div className="h-1.5 w-28 overflow-hidden rounded-full bg-zinc-800">
               <div
-                className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                className="h-full rounded-full bg-orange-500 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>

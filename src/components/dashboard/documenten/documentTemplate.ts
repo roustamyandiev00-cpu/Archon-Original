@@ -21,6 +21,10 @@ const FALLBACK_TEMPLATE_ID = "archon-02";
 /** Bepaalt welk sjabloon-id we renderen (met terugval op een standaard). */
 export function resolveTemplateId(value: string | null | undefined): string {
   if (value && value in ARCHON_TEMPLATE_SOURCES) return value;
+  if (value === "klassiek") return "archon-01";
+  if (value === "minimaal") return "archon-02";
+  if (value === "modern") return "archon-02";
+  if (value === "compact") return "archon-02";
   return FALLBACK_TEMPLATE_ID;
 }
 

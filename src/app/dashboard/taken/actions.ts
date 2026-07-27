@@ -2,30 +2,29 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  getDashboardContext,
   requireAdminAccess,
   requireWriteAccess,
 } from "@/components/dashboard/context";
-import { untyped } from "@/lib/integraties";
+import { writeAuditEntry } from "@/lib/agents/audit";
 import {
-  assertSameCompanyLinks,
-  logTaskActivity,
-  taskRowFromInput,
-} from "@/lib/tasks/service";
-import { parseTaskInput, type TaskInput } from "@/lib/tasks/validation";
+  assertTaskRelations,
+  writeTaskActivity,
+} from "@/lib/tasks/relations";
 import {
-  advanceRecurrenceDate,
-  buildOccurrenceKey,
-  type RecurrenceFrequency,
-} from "@/lib/tasks/recurrence";
-import {
+  canWriteTasks,
   isTaskPriority,
   isTaskStatus,
   type TaskListFilters,
   type TaskPriority,
-  type TaskRow,
   type TaskStatus,
 } from "@/lib/tasks/types";
+import {
+  addRecurrenceInterval,
+  nextOccurrenceKey,
+  parseCreateTaskInput,
+  type CreateTaskInput,
+} from "@/lib/tasks/validation";
+import type { Json } from "@/types/database.types";
 
 function revalidateTasks(taskId?: number) {
   revalidatePath("/dashboard/taken");
@@ -33,40 +32,756 @@ function revalidateTasks(taskId?: number) {
   if (taskId) revalidatePath(`/dashboard/taken/${taskId}`);
 }
 
-function canWriteRole(role: string | null, isAdmin: boolean): boolean {
-  if (isAdmin) return true;
-  const normalized = role?.trim().toLowerCase() ?? "";
-  if (!normalized) return false;
-  if (["viewer", "readonly", "read_only", "guest"].includes(normalized)) {
-    return false;
-  }
-  return true;
-}
-
 async function requireTaskWrite() {
   const access = await requireWriteAccess();
   if ("error" in access) return access;
-  if (!canWriteRole(access.role, access.isAdmin)) {
+  if (!canWriteTasks(access.role, access.isAdmin)) {
     return { error: "Je hebt geen rechten om taken te wijzigen." };
   }
   return access;
 }
 
-async function requireTaskRead() {
-  const ctx = await getDashboardContext();
-  if (!ctx.user || !ctx.companyId) {
-    return { error: "Geen actief bedrijf gevonden." };
+export async function createTask(input: CreateTaskInput) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  const parsed = parseCreateTaskInput(input);
+  if (!parsed.ok) return { error: parsed.error };
+
+  const relations = await assertTaskRelations(supabase, companyId, parsed.data);
+  if (!relations.ok) return { error: relations.error };
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert({
+      company_id: companyId,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      status: parsed.data.status,
+      priority: parsed.data.priority,
+      start_at: parsed.data.startAt,
+      due_at: parsed.data.dueAt,
+      assigned_to_user_id: parsed.data.assignedToUserId,
+      created_by_user_id: user.id,
+      created_by: user.id,
+      contact_id: parsed.data.contactId,
+      deal_id: parsed.data.dealId,
+      offerte_id: parsed.data.offerteId,
+      factuur_id: parsed.data.factuurId,
+      project_id: parsed.data.projectId,
+      afspraak_id: parsed.data.afspraakId,
+      parent_task_id: parsed.data.parentTaskId,
+      source: parsed.data.source,
+      ai_generated: parsed.data.aiGenerated,
+      requires_approval: parsed.data.requiresApproval,
+      position: parsed.data.position,
+      metadata: {} as Json,
+      completed_at:
+        parsed.data.status === "completed" ? now : null,
+      updated_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  await writeTaskActivity(supabase, {
+    companyId,
+    taskId: data.id,
+    actorId: user.id,
+    eventType: "task.created",
+  });
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${data.id}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.created",
+    entityType: "task",
+    entityId: data.id,
+  });
+
+  revalidateTasks(data.id);
+  return { ok: true as const, id: data.id };
+}
+
+export async function updateTask(id: number, input: CreateTaskInput) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Ongeldige taak." };
+
+  const parsed = parseCreateTaskInput(input);
+  if (!parsed.ok) return { error: parsed.error };
+
+  const relations = await assertTaskRelations(supabase, companyId, parsed.data);
+  if (!relations.ok) return { error: relations.error };
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({
+      title: parsed.data.title,
+      description: parsed.data.description,
+      status: parsed.data.status,
+      priority: parsed.data.priority,
+      start_at: parsed.data.startAt,
+      due_at: parsed.data.dueAt,
+      assigned_to_user_id: parsed.data.assignedToUserId,
+      contact_id: parsed.data.contactId,
+      deal_id: parsed.data.dealId,
+      offerte_id: parsed.data.offerteId,
+      factuur_id: parsed.data.factuurId,
+      project_id: parsed.data.projectId,
+      afspraak_id: parsed.data.afspraakId,
+      parent_task_id: parsed.data.parentTaskId,
+      position: parsed.data.position,
+      completed_at:
+        parsed.data.status === "completed" ? now : null,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "Taak niet gevonden." };
+
+  await writeTaskActivity(supabase, {
+    companyId,
+    taskId: id,
+    actorId: user.id,
+    eventType: "task.updated",
+  });
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${id}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.updated",
+    entityType: "task",
+    entityId: id,
+  });
+
+  revalidateTasks(id);
+  return { ok: true as const };
+}
+
+export async function deleteTask(id: number) {
+  const access = await requireAdminAccess();
+  if ("error" in access) return { error: access.error };
+  if (!canWriteTasks(access.role, access.isAdmin)) {
+    return { error: "Alleen beheerders kunnen taken verwijderen." };
   }
-  return {
-    supabase: ctx.supabase,
-    user: ctx.user,
-    companyId: ctx.companyId,
-  };
+  const { supabase, companyId, user } = access;
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "Taak niet gevonden." };
+
+  await writeTaskActivity(supabase, {
+    companyId,
+    taskId: id,
+    actorId: user.id,
+    eventType: "task.deleted",
+  });
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${id}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.deleted",
+    entityType: "task",
+    entityId: id,
+  });
+
+  revalidateTasks();
+  return { ok: true as const };
+}
+
+export async function restoreTask(id: number) {
+  const access = await requireAdminAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({ deleted_at: null, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("company_id", companyId)
+    .not("deleted_at", "is", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "Taak niet gevonden." };
+
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${id}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.restored",
+    entityType: "task",
+    entityId: id,
+  });
+
+  revalidateTasks(id);
+  return { ok: true as const };
+}
+
+export async function completeTask(id: number) {
+  return setTaskStatus(id, "completed");
+}
+
+export async function reopenTask(id: number) {
+  return setTaskStatus(id, "todo");
+}
+
+export async function setTaskStatus(id: number, status: string) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  if (!isTaskStatus(status)) return { error: "Ongeldige status." };
+  const { supabase, companyId, user } = access;
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({
+      status,
+      completed_at: status === "completed" ? now : null,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "Taak niet gevonden." };
+
+  const action =
+    status === "completed"
+      ? "task.completed"
+      : status === "todo"
+        ? "task.reopened"
+        : "task.status_changed";
+
+  await writeTaskActivity(supabase, {
+    companyId,
+    taskId: id,
+    actorId: user.id,
+    eventType: action,
+    metadata: { status },
+  });
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${id}`,
+    actorType: "user",
+    actorId: user.id,
+    action,
+    entityType: "task",
+    entityId: id,
+    metadata: { status },
+  });
+
+  revalidateTasks(id);
+  return { ok: true as const };
+}
+
+export async function assignTask(id: number, userId: string | null) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({
+      assigned_to_user_id: userId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "Taak niet gevonden." };
+
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${id}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.assigned",
+    entityType: "task",
+    entityId: id,
+    metadata: { assignedTo: userId },
+  });
+
+  revalidateTasks(id);
+  return { ok: true as const };
+}
+
+export async function moveTask(
+  id: number,
+  status: string,
+  position: number,
+) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  if (!isTaskStatus(status)) return { error: "Ongeldige status." };
+  const { supabase, companyId, user } = access;
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({
+      status,
+      position,
+      completed_at: status === "completed" ? now : null,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "Taak niet gevonden." };
+
+  await writeTaskActivity(supabase, {
+    companyId,
+    taskId: id,
+    actorId: user.id,
+    eventType: "task.status_changed",
+    metadata: { status, position },
+  });
+
+  revalidateTasks(id);
+  return { ok: true as const };
+}
+
+export async function addTaskComment(taskId: number, body: string) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const text = body.trim();
+  if (!text) return { error: "Reactie mag niet leeg zijn." };
+  const { supabase, companyId, user } = access;
+
+  const { data: task } = await supabase
+    .from("tasks")
+    .select("id")
+    .eq("id", taskId)
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!task) return { error: "Taak niet gevonden." };
+
+  const { data, error } = await supabase
+    .from("task_comments")
+    .insert({
+      company_id: companyId,
+      task_id: taskId,
+      body: text,
+      created_by_user_id: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${taskId}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.comment_added",
+    entityType: "task",
+    entityId: taskId,
+  });
+
+  revalidateTasks(taskId);
+  return { ok: true as const, id: data.id };
+}
+
+export async function deleteTaskComment(commentId: number) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const { error } = await supabase
+    .from("task_comments")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", commentId)
+    .eq("company_id", companyId)
+    .is("deleted_at", null);
+
+  if (error) return { error: error.message };
+  revalidateTasks();
+  return { ok: true as const };
+}
+
+export async function addTaskAttachment(input: {
+  taskId: number;
+  fileName: string;
+  originalName: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  storagePath: string;
+  storageBucket?: string;
+}) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  const { data: task } = await supabase
+    .from("tasks")
+    .select("id")
+    .eq("id", input.taskId)
+    .eq("company_id", companyId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!task) return { error: "Taak niet gevonden." };
+
+  if (!input.storagePath.startsWith(`${companyId}/`)) {
+    return { error: "Ongeldig opslagpad voor dit bedrijf." };
+  }
+
+  const { data, error } = await supabase
+    .from("task_attachments")
+    .insert({
+      company_id: companyId,
+      task_id: input.taskId,
+      file_name: input.fileName,
+      original_name: input.originalName,
+      mime_type: input.mimeType ?? null,
+      size_bytes: input.sizeBytes ?? null,
+      storage_path: input.storagePath,
+      storage_bucket: input.storageBucket ?? "project-files",
+      uploaded_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${input.taskId}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.attachment_added",
+    entityType: "task",
+    entityId: input.taskId,
+  });
+
+  revalidateTasks(input.taskId);
+  return { ok: true as const, id: data.id };
+}
+
+export async function removeTaskAttachment(attachmentId: string) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const { error } = await supabase
+    .from("task_attachments")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", attachmentId)
+    .eq("company_id", companyId)
+    .is("deleted_at", null);
+
+  if (error) return { error: error.message };
+  revalidateTasks();
+  return { ok: true as const };
+}
+
+export async function addTaskLabel(taskId: number, labelName: string, color?: string) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const name = labelName.trim();
+  if (!name) return { error: "Labelnaam is verplicht." };
+  const { supabase, companyId } = access;
+
+  const { data: label, error: labelError } = await supabase
+    .from("task_labels")
+    .upsert(
+      {
+        company_id: companyId,
+        name,
+        color: color?.trim() || "#64748b",
+      },
+      { onConflict: "company_id,name" },
+    )
+    .select("id")
+    .single();
+
+  if (labelError) return { error: labelError.message };
+
+  const { error } = await supabase.from("task_label_assignments").upsert({
+    company_id: companyId,
+    task_id: taskId,
+    label_id: label.id,
+  });
+
+  if (error) return { error: error.message };
+  revalidateTasks(taskId);
+  return { ok: true as const, labelId: label.id };
+}
+
+export async function removeTaskLabel(taskId: number, labelId: number) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const { error } = await supabase
+    .from("task_label_assignments")
+    .delete()
+    .eq("company_id", companyId)
+    .eq("task_id", taskId)
+    .eq("label_id", labelId);
+
+  if (error) return { error: error.message };
+  revalidateTasks(taskId);
+  return { ok: true as const };
+}
+
+export async function createTaskReminder(input: {
+  taskId: number;
+  remindAt: string;
+  channel?: "in_app" | "email";
+}) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const remindAt = Date.parse(input.remindAt);
+  if (Number.isNaN(remindAt)) return { error: "Ongeldige reminderdatum." };
+  const { supabase, companyId, user } = access;
+
+  const iso = new Date(remindAt).toISOString();
+  const idempotencyKey = `task:${input.taskId}:remind:${iso}:${input.channel ?? "in_app"}`;
+
+  const { data, error } = await supabase
+    .from("task_reminders")
+    .upsert(
+      {
+        company_id: companyId,
+        task_id: input.taskId,
+        remind_at: iso,
+        channel: input.channel ?? "in_app",
+        status: "pending",
+        idempotency_key: idempotencyKey,
+        created_by_user_id: user.id,
+      },
+      { onConflict: "company_id,idempotency_key", ignoreDuplicates: true },
+    )
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${input.taskId}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.reminder_created",
+    entityType: "task",
+    entityId: input.taskId,
+  });
+
+  revalidateTasks(input.taskId);
+  return { ok: true as const, id: data?.id ?? null, idempotencyKey };
+}
+
+export async function deleteTaskReminder(reminderId: number) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId } = access;
+
+  const { error } = await supabase
+    .from("task_reminders")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", reminderId)
+    .eq("company_id", companyId);
+
+  if (error) return { error: error.message };
+  revalidateTasks();
+  return { ok: true as const };
+}
+
+export async function createRecurringTask(input: {
+  task: CreateTaskInput;
+  frequency: "daily" | "weekly" | "monthly";
+  intervalCount?: number;
+  timezone?: string;
+  endsAt?: string | null;
+}) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  const intervalCount = Math.max(1, input.intervalCount ?? 1);
+  const { data: rule, error: ruleError } = await supabase
+    .from("task_recurrence_rules")
+    .insert({
+      company_id: companyId,
+      frequency: input.frequency,
+      interval_count: intervalCount,
+      timezone: input.timezone ?? "Europe/Brussels",
+      next_run_at: new Date().toISOString(),
+      ends_at: input.endsAt ?? null,
+      is_active: true,
+      created_by_user_id: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (ruleError) return { error: ruleError.message };
+
+  const created = await createTask({
+    ...input.task,
+    source: "recurrence",
+  });
+  if ("error" in created && created.error) return created;
+
+  if (created.ok && created.id) {
+    await supabase
+      .from("tasks")
+      .update({ recurrence_rule_id: rule.id })
+      .eq("id", created.id)
+      .eq("company_id", companyId);
+
+    await writeAuditEntry(supabase, {
+      tenantId: companyId,
+      correlationId: `task-${created.id}`,
+      actorType: "user",
+      actorId: user.id,
+      action: "task.recurrence_created",
+      entityType: "task",
+      entityId: created.id,
+      metadata: { frequency: input.frequency, intervalCount },
+    });
+  }
+
+  return { ok: true as const, ruleId: rule.id, taskId: created.ok ? created.id : null };
+}
+
+export async function generateNextRecurringTask(ruleId: number) {
+  const access = await requireTaskWrite();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  const { data: rule } = await supabase
+    .from("task_recurrence_rules")
+    .select("*")
+    .eq("id", ruleId)
+    .eq("company_id", companyId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!rule) return { error: "Recurrenceregel niet gevonden." };
+
+  const frequency = rule.frequency as "daily" | "weekly" | "monthly";
+  const base = rule.next_run_at ? new Date(rule.next_run_at) : new Date();
+  const occurrenceKey = nextOccurrenceKey(frequency, base);
+
+  const { data: existing } = await supabase
+    .from("task_recurrence_occurrences")
+    .select("id, task_id")
+    .eq("recurrence_rule_id", ruleId)
+    .eq("occurrence_key", occurrenceKey)
+    .maybeSingle();
+
+  if (existing) {
+    return { ok: true as const, duplicate: true, taskId: existing.task_id };
+  }
+
+  const { data: template } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("recurrence_rule_id", ruleId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!template) return { error: "Geen sjabloontaak voor deze recurrence." };
+
+  const created = await createTask({
+    title: template.title,
+    description: template.description ?? undefined,
+    status: "todo",
+    priority: isTaskPriority(template.priority) ? template.priority : "normal",
+    assignedToUserId: template.assigned_to_user_id,
+    contactId: template.contact_id,
+    dealId: template.deal_id,
+    offerteId: template.offerte_id,
+    factuurId: template.factuur_id,
+    projectId: template.project_id,
+    afspraakId: template.afspraak_id,
+    source: "recurrence",
+  });
+
+  if (!created.ok || !created.id) return created;
+
+  await supabase.from("task_recurrence_occurrences").insert({
+    company_id: companyId,
+    recurrence_rule_id: ruleId,
+    occurrence_key: occurrenceKey,
+    task_id: created.id,
+  });
+
+  const next = addRecurrenceInterval(base, frequency, rule.interval_count);
+  await supabase
+    .from("task_recurrence_rules")
+    .update({
+      next_run_at: next.toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", ruleId)
+    .eq("company_id", companyId);
+
+  await writeAuditEntry(supabase, {
+    tenantId: companyId,
+    correlationId: `task-${created.id}`,
+    actorType: "user",
+    actorId: user.id,
+    action: "task.created",
+    entityType: "task",
+    entityId: created.id,
+    metadata: { recurrence: true, occurrenceKey },
+  });
+
+  return { ok: true as const, taskId: created.id, occurrenceKey };
 }
 
 export async function listTasks(filters: TaskListFilters = {}) {
-  const access = await requireTaskRead();
-  if ("error" in access) return { error: access.error };
+  const access = await requireWriteAccess();
+  if ("error" in access) {
+    // read-only members may still list via getDashboardContext path — use soft deny
+    return { error: access.error };
+  }
   const { supabase, companyId, user } = access;
 
   const page = Math.max(1, filters.page ?? 1);
@@ -74,7 +789,7 @@ export async function listTasks(filters: TaskListFilters = {}) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  let query = untyped(supabase)
+  let query = supabase
     .from("tasks")
     .select("*", { count: "exact" })
     .eq("company_id", companyId)
@@ -103,631 +818,69 @@ export async function listTasks(filters: TaskListFilters = {}) {
     query = query.eq("assigned_to_user_id", filters.assignee);
   }
   if (filters.q?.trim()) {
-    const q = `%${filters.q.trim()}%`;
-    query = query.or(`title.ilike.${q},description.ilike.${q}`);
+    query = query.or(
+      `title.ilike.%${filters.q.trim()}%,description.ilike.%${filters.q.trim()}%`,
+    );
   }
   if (filters.overdue) {
     query = query
       .lt("due_at", new Date().toISOString())
-      .not("status", "in", '("completed","cancelled")');
+      .neq("status", "completed")
+      .neq("status", "cancelled");
   }
   if (filters.aiGenerated) query = query.eq("ai_generated", true);
   if (filters.contactId) query = query.eq("contact_id", filters.contactId);
+  if (filters.dealId) query = query.eq("deal_id", filters.dealId);
   if (filters.offerteId) query = query.eq("offerte_id", filters.offerteId);
   if (filters.factuurId) query = query.eq("factuur_id", filters.factuurId);
   if (filters.projectId) query = query.eq("project_id", filters.projectId);
-  if (filters.dealId) query = query.eq("deal_id", filters.dealId);
   if (filters.afspraakId) query = query.eq("afspraak_id", filters.afspraakId);
 
   const { data, error, count } = await query;
   if (error) return { error: error.message };
+
   return {
-    tasks: (data ?? []) as TaskRow[],
+    ok: true as const,
+    tasks: data ?? [],
     total: count ?? 0,
     page,
     pageSize,
   };
 }
 
-export async function getTask(taskId: number) {
-  const access = await requireTaskRead();
+export async function getTask(id: number) {
+  const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 
-  const { data, error } = await untyped(supabase)
+  const { data, error } = await supabase
     .from("tasks")
     .select("*")
-    .eq("id", taskId)
+    .eq("id", id)
     .eq("company_id", companyId)
     .is("deleted_at", null)
     .maybeSingle();
+
   if (error) return { error: error.message };
   if (!data) return { error: "Taak niet gevonden." };
-  return { task: data as TaskRow };
+  return { ok: true as const, task: data };
 }
 
 export async function getTaskActivity(taskId: number) {
-  const access = await requireTaskRead();
+  const access = await requireWriteAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 
-  const { data: task } = await untyped(supabase)
-    .from("tasks")
-    .select("id")
-    .eq("id", taskId)
-    .eq("company_id", companyId)
-    .maybeSingle();
-  if (!task) return { error: "Taak niet gevonden." };
-
-  const { data, error } = await untyped(supabase)
+  const { data, error } = await supabase
     .from("task_activity_logs")
-    .select("id, event_type, actor_id, metadata, created_at")
-    .eq("task_id", taskId)
+    .select("*")
     .eq("company_id", companyId)
+    .eq("task_id", taskId)
     .order("created_at", { ascending: false })
     .limit(100);
+
   if (error) return { error: error.message };
-  return { activity: data ?? [] };
+  return { ok: true as const, activity: data ?? [] };
 }
 
-export async function createTask(raw: Partial<TaskInput> & { title?: string }) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-  const parsed = parseTaskInput(raw);
-  if (!parsed.ok) return { error: parsed.error };
-
-  const linkCheck = await assertSameCompanyLinks(access.supabase, access.companyId, {
-    contactId: parsed.data.contactId,
-    offerteId: parsed.data.offerteId,
-    factuurId: parsed.data.factuurId,
-    parentTaskId: parsed.data.parentTaskId,
-  });
-  if (linkCheck.error) return { error: linkCheck.error };
-
-  const row = taskRowFromInput(access.companyId, access.user.id, parsed.data);
-  const { data, error } = await untyped(access.supabase)
-    .from("tasks")
-    .insert(row)
-    .select("*")
-    .maybeSingle();
-  if (error) return { error: error.message };
-  if (!data) return { error: "Taak kon niet worden aangemaakt." };
-
-  await logTaskActivity(access.supabase, {
-    companyId: access.companyId,
-    taskId: data.id,
-    actorId: access.user.id,
-    eventType: "task.created",
-    metadata: { title: data.title, source: data.source },
-  });
-
-  revalidateTasks(data.id);
-  return { task: data as TaskRow };
-}
-
-export async function updateTask(
-  taskId: number,
-  raw: Partial<TaskInput> & { title?: string },
-) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-
-  const { data: existing } = await untyped(access.supabase)
-    .from("tasks")
-    .select("*")
-    .eq("id", taskId)
-    .eq("company_id", access.companyId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (!existing) return { error: "Taak niet gevonden." };
-
-  const merged = parseTaskInput({
-    title: raw.title ?? existing.title,
-    description:
-      raw.description !== undefined ? raw.description : existing.description,
-    status: (raw.status as TaskStatus | undefined) ?? existing.status,
-    priority: (raw.priority as TaskPriority | undefined) ?? existing.priority,
-    startAt: raw.startAt !== undefined ? raw.startAt : existing.start_at,
-    dueAt: raw.dueAt !== undefined ? raw.dueAt : existing.due_at,
-    assignedToUserId:
-      raw.assignedToUserId !== undefined
-        ? raw.assignedToUserId
-        : existing.assigned_to_user_id,
-    contactId: raw.contactId !== undefined ? raw.contactId : existing.contact_id,
-    dealId: raw.dealId !== undefined ? raw.dealId : existing.deal_id,
-    offerteId: raw.offerteId !== undefined ? raw.offerteId : existing.offerte_id,
-    factuurId: raw.factuurId !== undefined ? raw.factuurId : existing.factuur_id,
-    projectId: raw.projectId !== undefined ? raw.projectId : existing.project_id,
-    afspraakId:
-      raw.afspraakId !== undefined ? raw.afspraakId : existing.afspraak_id,
-    parentTaskId:
-      raw.parentTaskId !== undefined ? raw.parentTaskId : existing.parent_task_id,
-    position: raw.position !== undefined ? raw.position : existing.position,
-  });
-  if (!merged.ok) return { error: merged.error };
-
-  const linkCheck = await assertSameCompanyLinks(access.supabase, access.companyId, {
-    contactId: merged.data.contactId,
-    offerteId: merged.data.offerteId,
-    factuurId: merged.data.factuurId,
-    parentTaskId: merged.data.parentTaskId,
-  });
-  if (linkCheck.error) return { error: linkCheck.error };
-
-  const patch = taskRowFromInput(access.companyId, access.user.id, merged.data);
-  delete (patch as { created_by_user_id?: string }).created_by_user_id;
-
-  if (merged.data.status === "completed" && existing.status !== "completed") {
-    patch.completed_at = new Date().toISOString();
-  }
-  if (merged.data.status !== "completed") {
-    patch.completed_at = null;
-  }
-
-  const { data, error } = await untyped(access.supabase)
-    .from("tasks")
-    .update(patch)
-    .eq("id", taskId)
-    .eq("company_id", access.companyId)
-    .select("*")
-    .maybeSingle();
-  if (error) return { error: error.message };
-
-  const eventType =
-    existing.status !== merged.data.status
-      ? "task.status_changed"
-      : existing.assigned_to_user_id !== merged.data.assignedToUserId
-        ? "task.assigned"
-        : "task.updated";
-
-  await logTaskActivity(access.supabase, {
-    companyId: access.companyId,
-    taskId,
-    actorId: access.user.id,
-    eventType,
-    metadata: {
-      beforeStatus: existing.status,
-      afterStatus: merged.data.status,
-    },
-  });
-
-  revalidateTasks(taskId);
-  return { task: data as TaskRow };
-}
-
-export async function deleteTask(taskId: number) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-
-  const { data, error } = await untyped(access.supabase)
-    .from("tasks")
-    .update({
-      deleted_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", taskId)
-    .eq("company_id", access.companyId)
-    .is("deleted_at", null)
-    .select("id")
-    .maybeSingle();
-  if (error) return { error: error.message };
-  if (!data) return { error: "Taak niet gevonden." };
-
-  await logTaskActivity(access.supabase, {
-    companyId: access.companyId,
-    taskId,
-    actorId: access.user.id,
-    eventType: "task.deleted",
-  });
-  revalidateTasks();
-  return { ok: true };
-}
-
-export async function restoreTask(taskId: number) {
-  const access = await requireAdminAccess();
-  if ("error" in access) return { error: access.error };
-
-  const { data, error } = await untyped(access.supabase)
-    .from("tasks")
-    .update({ deleted_at: null, updated_at: new Date().toISOString() })
-    .eq("id", taskId)
-    .eq("company_id", access.companyId)
-    .select("*")
-    .maybeSingle();
-  if (error) return { error: error.message };
-  if (!data) return { error: "Taak niet gevonden." };
-
-  await logTaskActivity(access.supabase, {
-    companyId: access.companyId,
-    taskId,
-    actorId: access.user.id,
-    eventType: "task.restored",
-  });
-  revalidateTasks(taskId);
-  return { task: data as TaskRow };
-}
-
-export async function completeTask(taskId: number) {
-  return updateTask(taskId, { status: "completed", title: undefined });
-}
-
-export async function reopenTask(taskId: number) {
-  const result = await updateTask(taskId, { status: "todo", title: undefined });
-  if ("task" in result && result.task) {
-    const access = await requireTaskWrite();
-    if (!("error" in access)) {
-      await logTaskActivity(access.supabase, {
-        companyId: access.companyId,
-        taskId,
-        actorId: access.user.id,
-        eventType: "task.reopened",
-      });
-    }
-  }
-  return result;
-}
-
-export async function assignTask(taskId: number, userId: string | null) {
-  return updateTask(taskId, {
-    assignedToUserId: userId,
-    title: undefined,
-  });
-}
-
-export async function moveTask(
-  taskId: number,
-  status: TaskStatus,
-  position: number,
-) {
-  if (!isTaskStatus(status)) return { error: "Ongeldige status." };
-  return updateTask(taskId, { status, position, title: undefined });
-}
-
-export async function addTaskComment(taskId: number, body: string) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-  const text = body.trim();
-  if (!text) return { error: "Opmerking is leeg." };
-
-  const { data: task } = await untyped(access.supabase)
-    .from("tasks")
-    .select("id")
-    .eq("id", taskId)
-    .eq("company_id", access.companyId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (!task) return { error: "Taak niet gevonden." };
-
-  const { data, error } = await untyped(access.supabase)
-    .from("task_comments")
-    .insert({
-      company_id: access.companyId,
-      task_id: taskId,
-      body: text,
-      created_by_user_id: access.user.id,
-    })
-    .select("id, body, created_at, created_by_user_id")
-    .maybeSingle();
-  if (error) return { error: error.message };
-
-  await logTaskActivity(access.supabase, {
-    companyId: access.companyId,
-    taskId,
-    actorId: access.user.id,
-    eventType: "task.comment_added",
-  });
-  revalidateTasks(taskId);
-  return { comment: data };
-}
-
-export async function deleteTaskComment(commentId: number) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-
-  const { data, error } = await untyped(access.supabase)
-    .from("task_comments")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", commentId)
-    .eq("company_id", access.companyId)
-    .select("task_id")
-    .maybeSingle();
-  if (error) return { error: error.message };
-  if (!data) return { error: "Opmerking niet gevonden." };
-  revalidateTasks(data.task_id);
-  return { ok: true };
-}
-
-export async function addTaskAttachment(input: {
-  taskId: number;
-  fileName: string;
-  originalName: string;
-  mimeType?: string;
-  sizeBytes?: number;
-  storagePath: string;
-  storageBucket?: string;
-}) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-
-  const { data: task } = await untyped(access.supabase)
-    .from("tasks")
-    .select("id")
-    .eq("id", input.taskId)
-    .eq("company_id", access.companyId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (!task) return { error: "Taak niet gevonden." };
-
-  if (!input.storagePath.startsWith(`${access.companyId}/`)) {
-    return { error: "Ongeldig opslagpad voor dit bedrijf." };
-  }
-
-  const { data, error } = await untyped(access.supabase)
-    .from("task_attachments")
-    .insert({
-      company_id: access.companyId,
-      task_id: input.taskId,
-      file_name: input.fileName,
-      original_name: input.originalName,
-      mime_type: input.mimeType ?? null,
-      size_bytes: input.sizeBytes ?? null,
-      storage_path: input.storagePath,
-      storage_bucket: input.storageBucket ?? "project-files",
-      uploaded_by: access.user.id,
-    })
-    .select("*")
-    .maybeSingle();
-  if (error) return { error: error.message };
-
-  await logTaskActivity(access.supabase, {
-    companyId: access.companyId,
-    taskId: input.taskId,
-    actorId: access.user.id,
-    eventType: "task.attachment_added",
-    metadata: { fileName: input.originalName },
-  });
-  revalidateTasks(input.taskId);
-  return { attachment: data };
-}
-
-export async function removeTaskAttachment(attachmentId: string) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-
-  const { data, error } = await untyped(access.supabase)
-    .from("task_attachments")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", attachmentId)
-    .eq("company_id", access.companyId)
-    .select("task_id")
-    .maybeSingle();
-  if (error) return { error: error.message };
-  if (!data) return { error: "Bijlage niet gevonden." };
-  revalidateTasks(data.task_id);
-  return { ok: true };
-}
-
-export async function addTaskLabel(taskId: number, labelName: string) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-  const name = labelName.trim();
-  if (!name) return { error: "Labelnaam is verplicht." };
-
-  const { data: label, error: labelError } = await untyped(access.supabase)
-    .from("task_labels")
-    .upsert(
-      { company_id: access.companyId, name },
-      { onConflict: "company_id,name" },
-    )
-    .select("id")
-    .maybeSingle();
-  if (labelError) return { error: labelError.message };
-  if (!label) return { error: "Label kon niet worden aangemaakt." };
-
-  const { error } = await untyped(access.supabase)
-    .from("task_label_assignments")
-    .upsert({
-      task_id: taskId,
-      label_id: label.id,
-      company_id: access.companyId,
-    });
-  if (error) return { error: error.message };
-  revalidateTasks(taskId);
-  return { ok: true, labelId: label.id };
-}
-
-export async function removeTaskLabel(taskId: number, labelId: number) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-  const { error } = await untyped(access.supabase)
-    .from("task_label_assignments")
-    .delete()
-    .eq("task_id", taskId)
-    .eq("label_id", labelId)
-    .eq("company_id", access.companyId);
-  if (error) return { error: error.message };
-  revalidateTasks(taskId);
-  return { ok: true };
-}
-
-export async function createTaskReminder(input: {
-  taskId: number;
-  remindAt: string;
-  channel?: "in_app" | "email";
-}) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-  const remindAt = new Date(input.remindAt);
-  if (Number.isNaN(remindAt.getTime())) return { error: "Ongeldige reminder-tijd." };
-
-  const idempotencyKey = `task:${input.taskId}:${remindAt.toISOString()}:${input.channel ?? "in_app"}`;
-  const { data, error } = await untyped(access.supabase)
-    .from("task_reminders")
-    .upsert(
-      {
-        company_id: access.companyId,
-        task_id: input.taskId,
-        remind_at: remindAt.toISOString(),
-        channel: input.channel ?? "in_app",
-        status: "pending",
-        idempotency_key: idempotencyKey,
-        created_by_user_id: access.user.id,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "company_id,idempotency_key" },
-    )
-    .select("*")
-    .maybeSingle();
-  if (error) return { error: error.message };
-
-  await logTaskActivity(access.supabase, {
-    companyId: access.companyId,
-    taskId: input.taskId,
-    actorId: access.user.id,
-    eventType: "task.reminder_created",
-    metadata: { remindAt: remindAt.toISOString() },
-  });
-  revalidateTasks(input.taskId);
-  return { reminder: data };
-}
-
-export async function deleteTaskReminder(reminderId: number) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-  const { data, error } = await untyped(access.supabase)
-    .from("task_reminders")
-    .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", reminderId)
-    .eq("company_id", access.companyId)
-    .select("task_id")
-    .maybeSingle();
-  if (error) return { error: error.message };
-  if (!data) return { error: "Reminder niet gevonden." };
-  revalidateTasks(data.task_id);
-  return { ok: true };
-}
-
-export async function createRecurringTask(input: {
-  title: string;
-  frequency: RecurrenceFrequency;
-  intervalCount?: number;
-  dueAt?: string | null;
-  description?: string | null;
-}) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-  if (!["daily", "weekly", "monthly"].includes(input.frequency)) {
-    return { error: "Ongeldige herhaling." };
-  }
-
-  const nextRun = input.dueAt ? new Date(input.dueAt) : new Date();
-  const { data: rule, error: ruleError } = await untyped(access.supabase)
-    .from("task_recurrence_rules")
-    .insert({
-      company_id: access.companyId,
-      frequency: input.frequency,
-      interval_count: Math.max(1, input.intervalCount ?? 1),
-      next_run_at: nextRun.toISOString(),
-      created_by_user_id: access.user.id,
-    })
-    .select("*")
-    .maybeSingle();
-  if (ruleError) return { error: ruleError.message };
-  if (!rule) return { error: "Herhaalregel kon niet worden aangemaakt." };
-
-  const created = await createTask({
-    title: input.title,
-    description: input.description,
-    dueAt: input.dueAt ?? null,
-    source: "recurrence",
-  });
-  if ("error" in created && created.error) return created;
-
-  if (created.task) {
-    await untyped(access.supabase)
-      .from("tasks")
-      .update({ recurrence_rule_id: rule.id })
-      .eq("id", created.task.id)
-      .eq("company_id", access.companyId);
-
-    await logTaskActivity(access.supabase, {
-      companyId: access.companyId,
-      taskId: created.task.id,
-      actorId: access.user.id,
-      eventType: "task.recurrence_created",
-      metadata: { frequency: input.frequency },
-    });
-  }
-
-  return { rule, task: created.task };
-}
-
-export async function generateNextRecurringTask(ruleId: number) {
-  const access = await requireTaskWrite();
-  if ("error" in access) return { error: access.error };
-
-  const { data: rule } = await untyped(access.supabase)
-    .from("task_recurrence_rules")
-    .select("*")
-    .eq("id", ruleId)
-    .eq("company_id", access.companyId)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!rule) return { error: "Actieve herhaalregel niet gevonden." };
-
-  const runAt = rule.next_run_at ? new Date(rule.next_run_at) : new Date();
-  const occurrenceKey = buildOccurrenceKey(rule.id, runAt);
-
-  const { data: existingOcc } = await untyped(access.supabase)
-    .from("task_recurrence_occurrences")
-    .select("id, task_id")
-    .eq("recurrence_rule_id", rule.id)
-    .eq("occurrence_key", occurrenceKey)
-    .maybeSingle();
-  if (existingOcc) {
-    return { ok: true, duplicate: true, taskId: existingOcc.task_id };
-  }
-
-  const { data: template } = await untyped(access.supabase)
-    .from("tasks")
-    .select("title, description, priority, assigned_to_user_id")
-    .eq("company_id", access.companyId)
-    .eq("recurrence_rule_id", rule.id)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  const created = await createTask({
-    title: template?.title ?? "Terugkerende taak",
-    description: template?.description,
-    priority: isTaskPriority(template?.priority) ? template.priority : "normal",
-    assignedToUserId: template?.assigned_to_user_id ?? null,
-    dueAt: runAt.toISOString(),
-    source: "recurrence",
-  });
-  if ("error" in created && created.error) return created;
-
-  await untyped(access.supabase).from("task_recurrence_occurrences").insert({
-    company_id: access.companyId,
-    recurrence_rule_id: rule.id,
-    occurrence_key: occurrenceKey,
-    task_id: created.task?.id ?? null,
-  });
-
-  const next = advanceRecurrenceDate(
-    runAt,
-    rule.frequency as RecurrenceFrequency,
-    Number(rule.interval_count ?? 1),
-  );
-  await untyped(access.supabase)
-    .from("task_recurrence_rules")
-    .update({
-      next_run_at: next.toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", rule.id)
-    .eq("company_id", access.companyId);
-
-  return { ok: true, task: created.task };
-}
+export type { TaskStatus, TaskPriority, TaskListFilters, CreateTaskInput };

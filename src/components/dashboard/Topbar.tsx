@@ -15,7 +15,7 @@ import {
   Zap,
   Users,
 } from "lucide-react";
-import { BOUWNETWERK_REQUIRED_USERS } from "@/components/dashboard/werkposts/BouwnetwerkComingSoonBanner";
+import { BOUWNETWERK_REQUIRED_USERS } from "@/lib/bouwnetwerk-gate";
 import { LogoMark } from "@/components/BrandLogo";
 import {
   Command,
@@ -24,7 +24,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import ThemeToggle from "@/components/dashboard/ThemeToggle";
 import AgentChatTopbarButton from "@/components/dashboard/agent-chat/AgentChatTopbarButton";
 import AgentAvatar from "@/components/dashboard/agents/AgentAvatar";
 import { useAgentCompletions } from "@/components/dashboard/AgentCompletionsProvider";

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Proactief — CEO Dashboard — ArchonPro",
+  title: "Agentacties — AI Control Center — ArchonPro",
 };
 
 const severityVariant = {
@@ -23,7 +23,7 @@ const severityVariant = {
 } as const;
 
 const categoryLabel = {
-  crm: "CRM",
+  crm: "Klantaccount",
   ai: "AI Agent",
   billing: "Billing",
   growth: "Groei",
@@ -41,13 +41,14 @@ export default async function AdminProactivePage() {
     <div className="space-y-6">
       <header>
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-          CEO Dashboard / Proactief
+          AI Control Center / Agentacties
         </p>
         <h1 className="mt-1 text-2xl font-semibold text-zinc-50 sm:text-3xl">
-          Proactieve inzichten
+          Agentacties en signalen
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-          Automatische signalen over CRM, AI-fouten, lage credits, inactieve klanten en groei.
+          Automatische signalen over klantaccounts, AI-fouten, lage credits,
+          inactieve bedrijven en groei.
         </p>
       </header>
 

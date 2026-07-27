@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 
 export const metadata: Metadata = {
-  title: "AI Agents — CEO Dashboard — ArchonPro",
+  title: "AI Control Center — Platformbeheer — ArchonPro",
 };
 
 export default async function AdminAiAgentsPage() {
@@ -36,13 +36,14 @@ export default async function AdminAiAgentsPage() {
     <div className="space-y-6">
       <header>
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-          CEO Dashboard / AI Agents
+          AI / Control Center
         </p>
         <h1 className="mt-1 text-2xl font-semibold text-zinc-50 sm:text-3xl">
-          AI Agent Fleet
+          AI Control Center
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-          Monitor alle AI-agents per klant: goedkeuringen, uitvoeringen, credits en activiteit.
+          Monitor alle AI-agents per bedrijf: goedkeuringen, uitvoeringen,
+          credits en recente activiteit.
         </p>
       </header>
 

@@ -1,6 +1,10 @@
 import { getCompanyContext } from "@/lib/company";
 import { isActivePreviewMode } from "@/components/dashboard/context";
-import { DEMO_FACTUREN } from "@/lib/demo";
+import {
+  DEMO_FACTUUR_CUSTOMERS,
+  DEMO_FACTUREN,
+  DEMO_PRIJSLIJST,
+} from "@/lib/demo";
 import { showDemoData } from "@/lib/demo-mode";
 import type { FactuurListItem } from "@/components/dashboard/facturen/FacturenDataTable";
 import type { FactuurDocumentContext } from "@/components/dashboard/facturen/FactuurForm";
@@ -203,7 +207,20 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
   });
   const isDemo =
     !facturenError && showDemoData(preview, facturen.length === 0);
-  if (isDemo) facturen = DEMO_FACTUREN;
+  if (isDemo) {
+    facturen = DEMO_FACTUREN;
+    if (customers.length === 0) customers = DEMO_FACTUUR_CUSTOMERS;
+    if (prijslijstItems.length === 0) {
+      prijslijstItems = DEMO_PRIJSLIJST.filter((p) => p.isActive).map((p) => ({
+        id: p.id,
+        omschrijving: p.omschrijving,
+        eenheid: p.eenheid,
+        prijs: p.prijs,
+        btwPercentage: p.btwPercentage,
+        categorie: p.categorie,
+      }));
+    }
+  }
 
   const maandOmzet = facturen
     .filter((f) => f.document_type === "factuur" && (f.datum ?? "") >= monthStart)

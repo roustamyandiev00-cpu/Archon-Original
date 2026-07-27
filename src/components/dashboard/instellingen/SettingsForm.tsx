@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
@@ -21,7 +20,6 @@ import {
   ImageIcon,
   Database,
   Plug,
-  Gift,
 } from "lucide-react";
 import GlowCard from "@/components/dashboard/GlowCard";
 import ApiKeysManager from "@/components/dashboard/instellingen/ApiKeysManager";
@@ -48,6 +46,7 @@ import {
   type AiToestemming,
 } from "@/app/dashboard/instellingen/settings";
 import {
+  isArchonTemplate,
   archonTemplateMeta,
   archonTemplatePreviewHtml,
 } from "@/components/dashboard/instellingen/templatePreview";
@@ -67,19 +66,11 @@ import { useDashboardTheme } from "@/components/dashboard/DashboardThemeProvider
 import { Globe, Type, Moon, Sun } from "lucide-react";
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-2.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
-const labelClass = "mb-1.5 block text-sm font-medium text-zinc-200";
-const hintClass = "mt-1 text-xs text-zinc-500";
+  "w-full rounded-xl border border-white/10 bg-zinc-900/70 px-3 py-1.5 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60";
+const labelClass = "mb-1 block text-sm font-medium text-zinc-200";
+const hintClass = "mt-1 text-[11px] text-zinc-500";
 
-type Section =
-  | "bedrijf"
-  | "documenten"
-  | "ai"
-  | "import"
-  | "api"
-  | "integraties"
-  | "weergave"
-  | "uitnodigen";
+type Section = "bedrijf" | "documenten" | "ai" | "import" | "api" | "integraties" | "weergave";
 
 const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "bedrijf", label: "Bedrijfsgegevens", icon: <Building2 size={15} /> },
@@ -93,7 +84,6 @@ const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: "ai", label: "AI-agent", icon: <Bot size={15} /> },
   { id: "api", label: "API", icon: <KeyRound size={15} /> },
   { id: "weergave", label: "Weergave", icon: <Globe size={15} /> },
-  { id: "uitnodigen", label: "Uitnodigen", icon: <Gift size={15} /> },
 ];
 
 function isSection(value: string | null): value is Section {
@@ -128,13 +118,13 @@ function SectionHeader({
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-3 border-b border-white/10 pb-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
+    <div className="flex items-start gap-2 border-b border-white/10 pb-2">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
         {icon}
       </span>
       <div>
-        <h2 className="text-base font-semibold text-zinc-100">{title}</h2>
-        <p className="mt-0.5 text-sm text-zinc-500">{description}</p>
+        <h2 className="text-sm font-semibold text-zinc-100">{title}</h2>
+        <p className="mt-0.5 text-xs text-zinc-500">{description}</p>
       </div>
     </div>
   );
@@ -176,94 +166,6 @@ function ArchonThumb({ html, title }: { html: string; title: string }) {
   );
 }
 
-function TemplateStyleThumbnail({ templateId }: { templateId: string }) {
-  if (templateId === "archon-05") {
-    return (
-      <div className="flex h-full bg-white">
-        <div className="w-[30%] bg-slate-900 p-2">
-          <div className="h-1.5 w-10 rounded-full bg-sky-400" />
-          <div className="mt-4 space-y-1.5">
-            <div className="h-1 rounded-full bg-white/35" />
-            <div className="h-1 w-4/5 rounded-full bg-white/20" />
-            <div className="h-1 w-3/5 rounded-full bg-white/20" />
-          </div>
-        </div>
-        <div className="flex-1 p-2.5">
-          <div className="h-2 w-14 rounded-full bg-slate-800" />
-          <div className="mt-4 h-px bg-slate-200" />
-          <div className="mt-2 space-y-1.5">
-            <div className="h-1 rounded-full bg-slate-200" />
-            <div className="h-1 rounded-full bg-slate-100" />
-            <div className="h-1 w-3/4 rounded-full bg-slate-100" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (templateId === "archon-03") {
-    return (
-      <div className="h-full bg-white p-2.5">
-        <div className="-mx-2.5 -mt-2.5 flex h-9 items-end justify-between bg-slate-950 px-2.5 pb-2">
-          <div className="h-2 w-14 rounded-full bg-white" />
-          <div className="h-1.5 w-8 rounded-full bg-amber-400" />
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
-          <div className="col-span-2 h-1.5 rounded-full bg-slate-800" />
-          <div className="h-1.5 rounded-full bg-amber-400" />
-        </div>
-        <div className="mt-3 space-y-1.5 border-t-2 border-slate-900 pt-2">
-          <div className="h-1 rounded-full bg-slate-200" />
-          <div className="h-1 rounded-full bg-slate-100" />
-          <div className="h-1 w-4/5 rounded-full bg-slate-100" />
-        </div>
-      </div>
-    );
-  }
-
-  if (templateId === "archon-04") {
-    return (
-      <div className="h-full bg-white">
-        <div className="h-[42%] bg-slate-950 p-2.5">
-          <div className="h-1.5 w-12 rounded-full bg-sky-400" />
-          <div className="mt-3 h-2 w-20 rounded-full bg-white" />
-        </div>
-        <div className="p-2.5">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <div className="h-1 rounded-full bg-slate-300" />
-              <div className="h-1 w-4/5 rounded-full bg-slate-100" />
-            </div>
-            <div className="space-y-1 border-l border-slate-200 pl-2">
-              <div className="h-1 rounded-full bg-slate-300" />
-              <div className="h-1 w-3/4 rounded-full bg-slate-100" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full bg-white p-2.5">
-      <div className="flex items-start justify-between">
-        <div className="h-2 w-16 rounded-full bg-slate-900" />
-        <div className="h-1.5 w-10 rounded-full bg-sky-400" />
-      </div>
-      <div className="mt-5 grid grid-cols-3 gap-2 border-y border-slate-200 py-2">
-        <div className="h-5 rounded bg-slate-50" />
-        <div className="h-5 rounded bg-slate-50" />
-        <div className="h-5 rounded bg-slate-50" />
-      </div>
-      <div className="mt-3 space-y-1.5">
-        <div className="h-1 rounded-full bg-slate-200" />
-        <div className="h-1 rounded-full bg-slate-100" />
-        <div className="h-1 w-3/4 rounded-full bg-slate-100" />
-      </div>
-    </div>
-  );
-}
-
 function TemplatePicker({
   label,
   soort,
@@ -284,6 +186,7 @@ function TemplatePicker({
   const renderId = resolveTemplateId(value);
   const renderMeta = archonTemplateMeta(renderId);
   const thumbHtml = uploaded ? null : archonTemplatePreviewHtml(renderId, soort);
+  const mappedFromLegacy = !uploaded && !isArchonTemplate(value);
 
   function openFullPreview() {
     const html = archonTemplatePreviewHtml(renderId, "both");
@@ -314,57 +217,32 @@ function TemplatePicker({
   }
 
   return (
-    <fieldset>
-      <legend className="text-base font-semibold text-zinc-100">{label}</legend>
-      <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-        Kies het ontwerp dat standaard wordt gebruikt voor nieuwe {soort === "quote" ? "offertes" : "facturen"}.
-      </p>
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {TEMPLATE_PRESETS.map((preset) => {
-          const selected = !uploaded && renderId === preset.id;
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onChange(preset.id)}
-              className={`group overflow-hidden rounded-2xl border text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 ${
-                selected
-                  ? "border-sky-400/70 bg-sky-500/10 shadow-[0_0_0_1px_rgba(56,189,248,0.18),0_12px_30px_rgba(14,165,233,0.12)]"
-                  : "border-white/10 bg-zinc-950/50 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.04]"
-              }`}
-            >
-              <span className="relative block h-28 overflow-hidden border-b border-black/10 bg-zinc-200">
-                <TemplateStyleThumbnail templateId={preset.id} />
-                {selected && (
-                  <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-sky-500 px-2 py-1 text-[10px] font-bold text-zinc-950 shadow-lg">
-                    <Check size={11} strokeWidth={3} /> Gekozen
-                  </span>
-                )}
-              </span>
-              <span className="block p-3">
-                <span className="block text-sm font-semibold text-zinc-100">
-                  {preset.label}
-                </span>
-                <span className="mt-1 block text-[11px] leading-relaxed text-zinc-500">
-                  {preset.description}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+    <div>
+      <label className={labelClass}>{label}</label>
+      <select
+        value={uploaded ? "__upload__" : value}
+        onChange={(e) => {
+          if (e.target.value !== "__upload__") onChange(e.target.value);
+        }}
+        className={inputClass}
+      >
+        {TEMPLATE_PRESETS.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.label}
+          </option>
+        ))}
+        {uploaded && <option value="__upload__">Eigen sjabloon</option>}
+      </select>
 
       {uploaded && (
-        <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-sky-500/25 bg-sky-500/[0.06] px-3 py-2.5 text-xs">
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-sky-500/25 bg-sky-500/[0.06] px-3 py-2 text-xs">
           <span className="flex min-w-0 items-center gap-1.5 text-sky-300">
             <FileText size={13} className="shrink-0" />
             <span className="truncate">{templateFileName(value)}</span>
           </span>
           <button
             type="button"
-            onClick={() => onChange("archon-02")}
+            onClick={() => onChange("modern")}
             title="Eigen sjabloon verwijderen"
             className="grid h-6 w-6 shrink-0 place-items-center rounded text-zinc-400 transition-colors hover:bg-white/10 hover:text-rose-400"
           >
@@ -374,28 +252,25 @@ function TemplatePicker({
       )}
 
       {thumbHtml && (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/60">
-          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-zinc-100">
-                Voorbeeld · {renderMeta?.label ?? label}
-              </p>
-              <p className="mt-0.5 text-[11px] text-zinc-500">
-                Voorbeeldgegevens — je eigen logo en bedrijfsgegevens worden automatisch gebruikt.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={openFullPreview}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-medium text-sky-300 transition-colors hover:border-sky-500/40 hover:bg-sky-500/10"
-            >
-              <ExternalLink size={12} /> Volledig voorbeeld
-            </button>
-          </div>
+        <div className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-zinc-900/60">
           <ArchonThumb
             html={thumbHtml}
             title={`Voorbeeld ${renderMeta?.label ?? value}`}
           />
+          <div className="flex items-center justify-between gap-2 border-t border-white/10 px-3 py-2">
+            <span className="min-w-0 truncate text-xs text-zinc-400">
+              {mappedFromLegacy
+                ? `Wordt weergegeven als “${renderMeta?.label}”`
+                : renderMeta?.description}
+            </span>
+            <button
+              type="button"
+              onClick={openFullPreview}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-sky-300 transition-colors hover:border-sky-500/40 hover:bg-sky-500/10"
+            >
+              <ExternalLink size={12} /> Op ware grootte
+            </button>
+          </div>
         </div>
       )}
 
@@ -406,13 +281,12 @@ function TemplatePicker({
         onChange={handleFile}
         className="hidden"
       />
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
-        >
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+      >
         {uploading ? (
           <>
             <Loader2 size={13} className="animate-spin" /> Uploaden…
@@ -422,14 +296,10 @@ function TemplatePicker({
             <Upload size={13} /> Eigen sjabloon uploaden
           </>
         )}
-        </button>
-        <span className="text-[11px] text-zinc-600">
-          PDF, Word of afbeelding · maximaal 10 MB
-        </span>
-      </div>
+      </button>
 
       {error && <p className="mt-1.5 text-xs text-rose-400">{error}</p>}
-    </fieldset>
+    </div>
   );
 }
 
@@ -443,6 +313,15 @@ function LogoField({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+
+  // Afgeleide state: reset de previewfout zodra de waarde wijzigt, tijdens
+  // render in plaats van in een effect (voorkomt cascading renders).
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    setPreviewFailed(false);
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -473,31 +352,27 @@ function LogoField({
     onChange("");
   }
 
-  return (
-    <div className="sm:col-span-2">
-      <label className={labelClass}>Bedrijfslogo</label>
-      <p className={hintClass}>
-        Verschijnt op offertes en facturen. PNG, JPG, WebP, SVG of GIF — max. 2
-        MB.
-      </p>
+  const showPreview = Boolean(value) && !previewFailed;
 
-      <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start">
-        <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/70">
-          {value ? (
-            <Image
+  return (
+    <div className="w-full">
+      <label className={labelClass}>Bedrijfslogo</label>
+      <div className="flex items-start gap-3 mt-1.5">
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-zinc-900/70">
+          {showPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element -- storage/externe URL zonder image-optimizer
+            <img
               src={value}
               alt="Bedrijfslogo"
-              width={112}
-              height={112}
-              unoptimized
-              className="h-full w-full object-contain p-2"
+              className="h-full w-full max-h-full max-w-full object-contain p-1"
+              onError={() => setPreviewFailed(true)}
             />
           ) : (
-            <ImageIcon size={28} className="text-zinc-600" />
+            <ImageIcon size={20} className="text-zinc-600" />
           )}
         </div>
 
-        <div className="min-w-0 flex-1 space-y-3">
+        <div className="min-w-0 flex-1 space-y-2">
           <input
             ref={fileRef}
             type="file"
@@ -510,15 +385,15 @@ function LogoField({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
             >
               {uploading ? (
                 <>
-                  <Loader2 size={13} className="animate-spin" /> Uploaden…
+                  <Loader2 size={11} className="animate-spin" /> Uploaden…
                 </>
               ) : (
                 <>
-                  <Upload size={13} /> Logo uploaden
+                  <Upload size={11} /> Logo uploaden
                 </>
               )}
             </button>
@@ -527,26 +402,26 @@ function LogoField({
                 type="button"
                 onClick={handleRemove}
                 disabled={uploading}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-60"
+                className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-medium text-zinc-400 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-60"
               >
-                <X size={13} /> Verwijderen
+                <X size={11} /> Verwijderen
               </button>
             )}
           </div>
 
-          <Field
-            label="Of plak een logo-URL"
-            hint="Handig als je logo al online staat."
-          >
-            <input
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder="https://..."
-              className={inputClass}
-            />
-          </Field>
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Of plak logo-URL..."
+            className="w-full rounded-lg border border-white/10 bg-zinc-900/70 px-2 py-1 text-xs text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 focus:border-sky-500/60"
+          />
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {previewFailed && value ? (
+            <p className="mt-1 text-[10px] text-amber-300">
+              Logo-URL laadt niet. Controleer de link of upload opnieuw.
+            </p>
+          ) : null}
+          {error && <p className="mt-1 text-[10px] text-rose-400">{error}</p>}
         </div>
       </div>
     </div>
@@ -587,16 +462,8 @@ export default function SettingsForm({
   const { theme, toggleTheme } = useDashboardTheme();
 
   // Weergave (taal + lettertype) — geladen uit localStorage
-  const [selectedLanguage, setSelectedLanguageState] = useState<AppLanguage>("nl");
-  const [selectedFont, setSelectedFontState] = useState<AppFont>("inter");
-
-  // Hydrate from localStorage on mount
-  useEffect(() => {
-    queueMicrotask(() => {
-      setSelectedLanguageState(readLanguage());
-      setSelectedFontState(readFont());
-    });
-  }, []);
+  const [selectedLanguage, setSelectedLanguageState] = useState<AppLanguage>(() => readLanguage());
+  const [selectedFont, setSelectedFontState] = useState<AppFont>(() => readFont());
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -613,14 +480,13 @@ export default function SettingsForm({
   const integrationError = searchParams.get("error");
 
   useEffect(() => {
-    queueMicrotask(() => {
-      const requestedTab = searchParams.get("tab");
-      if (isSection(requestedTab)) {
-        setTab(requestedTab);
-      } else if (connectedParam || integrationError) {
-        setTab(INTEGRATIES_SETTINGS_TAB);
-      }
-    });
+    const requestedTab = searchParams.get("tab");
+    if (isSection(requestedTab)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTab(requestedTab);
+    } else if (connectedParam || integrationError) {
+      setTab(INTEGRATIES_SETTINGS_TAB);
+    }
   }, [searchParams, connectedParam, integrationError]);
 
   function handleLanguageChange(lang: AppLanguage) {
@@ -699,61 +565,40 @@ export default function SettingsForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex min-h-0 flex-1 flex-col gap-3"
-    >
-      <div
-        className="flex shrink-0 snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-label="Instellingencategorieën"
-      >
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {referralCode && <ReferralInvitePanel referralCode={referralCode} />}
+
+      <p className="text-sm text-zinc-500">
+        Kies een categorie — alle instellingen staan in de tabs hieronder.
+      </p>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         {sections.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`inline-flex min-h-10 shrink-0 snap-start items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-sm font-medium leading-tight transition-colors ${
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
               tab === t.id
                 ? "bg-sky-500 text-zinc-950 shadow-sm"
                 : "border border-white/10 text-zinc-300 hover:bg-white/5"
             }`}
           >
             {t.icon}
-            <span>{t.label}</span>
+            <span className="truncate">{t.label}</span>
           </button>
         ))}
       </div>
 
-      <GlowCard
-        subtle
-        className="min-h-0 flex-1 overflow-hidden"
-        innerClassName="h-full overflow-y-auto overscroll-contain p-4 sm:p-6"
-      >
-        {tab === "uitnodigen" && referralCode && (
-          <ReferralInvitePanel referralCode={referralCode} />
-        )}
-
-        {tab === "uitnodigen" && !referralCode && (
-          <div className="grid h-full min-h-64 place-items-center text-center">
-            <div>
-              <Gift size={24} className="mx-auto text-violet-400" />
-              <h2 className="mt-3 text-base font-semibold text-zinc-100">
-                Uitnodigen is niet beschikbaar
-              </h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                Er is nog geen persoonlijke uitnodigingscode gevonden.
-              </p>
-            </div>
-          </div>
-        )}
+      <GlowCard subtle innerClassName="p-3 sm:p-4">
         {tab === "bedrijf" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <SectionHeader
               icon={<Building2 size={18} />}
               title="Bedrijfsgegevens"
               description="De basisgegevens van je bedrijf. Deze worden gebruikt op je documenten en door de AI-agent."
             />
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/40 px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/40 px-3 py-1.5">
               <span className="text-xs font-medium text-zinc-500">
                 Verificatiestatus
               </span>
@@ -781,17 +626,15 @@ export default function SettingsForm({
                 Alleen ter informatie — nog geen actie vereist.
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <Field label="Bedrijfsnaam">
-                  <input
-                    value={form.naam}
-                    onChange={(e) => set("naam", e.target.value)}
-                    placeholder="bijv. Bouwbedrijf Janssen"
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
+            <div className="grid gap-x-4 gap-y-3 grid-cols-1 md:grid-cols-3">
+              <Field label="Bedrijfsnaam">
+                <input
+                  value={form.naam}
+                  onChange={(e) => set("naam", e.target.value)}
+                  placeholder="bijv. Bouwbedrijf Janssen"
+                  className={inputClass}
+                />
+              </Field>
               <Field label="E-mail">
                 <input
                   type="email"
@@ -809,7 +652,7 @@ export default function SettingsForm({
                   className={inputClass}
                 />
               </Field>
-              <div className="sm:col-span-2">
+              <div className="md:col-span-2 sm:col-span-2">
                 <Field label="Adres">
                   <input
                     value={form.adres}
@@ -848,7 +691,7 @@ export default function SettingsForm({
                   className={inputClass}
                 />
               </Field>
-              <Field label="IBAN" hint="Wordt getoond op facturen voor betaling.">
+              <Field label="IBAN" hint="Getoond op facturen voor betaling.">
                 <input
                   value={form.iban}
                   onChange={(e) => set("iban", e.target.value)}
@@ -858,7 +701,7 @@ export default function SettingsForm({
               </Field>
               <Field
                 label="Peppol-identificatie"
-                hint="Verplicht voor e-facturatie. Gebruik 0208:KBO-nummer of 9925:BE0xxx (BTW)."
+                hint="KBO-nummer of BTW (9925:BE0xxx)."
               >
                 <input
                   value={form.peppol_participant_id}
@@ -867,10 +710,12 @@ export default function SettingsForm({
                   className={inputClass}
                 />
               </Field>
-              <LogoField
-                value={form.logo_url}
-                onChange={(v) => set("logo_url", v)}
-              />
+              <div className="md:col-span-1 sm:col-span-2">
+                <LogoField
+                  value={form.logo_url}
+                  onChange={(v) => set("logo_url", v)}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -936,18 +781,17 @@ export default function SettingsForm({
 
             {/* Sjablonen */}
             <div className="space-y-4 border-t border-white/10 pt-6">
-              <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-r from-sky-500/10 via-violet-500/[0.06] to-transparent p-4">
-                <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-100">
+              <div>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
                   <FileUp size={15} className="text-sky-400" />
-                  Documentontwerp
+                  Sjablonen
                 </h3>
-                <p className="mt-1 max-w-3xl text-sm leading-relaxed text-zinc-400">
-                  Geef offertes en facturen een professionele, herkenbare uitstraling.
-                  Kies per documenttype één van vier ontwerpen; de gekozen stijl wordt
-                  automatisch gebruikt voor nieuwe documenten.
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Kies een kant-en-klaar ArchonPro-ontwerp (met voorbeeld) of
+                  upload je eigen sjabloon (PDF, Word of afbeelding, max. 10 MB).
                 </p>
               </div>
-              <div className="space-y-8">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <TemplatePicker
                   label="Offerte-sjabloon"
                   soort="quote"
@@ -1373,11 +1217,7 @@ export default function SettingsForm({
         )}
       </GlowCard>
 
-      {tab !== "api" &&
-        tab !== "import" &&
-        tab !== "integraties" &&
-        tab !== "weergave" &&
-        tab !== "uitnodigen" && (
+      {tab !== "api" && tab !== "import" && tab !== "integraties" && tab !== "weergave" && (
       <div className="flex items-center justify-end gap-3">
         {error && (
           <p className="mr-auto rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">

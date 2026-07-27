@@ -2181,6 +2181,7 @@ function ProfileField({
 // DOCUMENTS PANEL
 // ---------------------------------------------------------
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function DocumentsPanel({
   loading,
   documents,

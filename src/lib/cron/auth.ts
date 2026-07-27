@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-/** Shared cron auth: Bearer CRON_SECRET required; missing secret = deny. */
+/** Shared cron auth: Bearer CRON_SECRET vereist; ontbrekend secret = deny. */
 export function authorizeCronRequest(req: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) return false;

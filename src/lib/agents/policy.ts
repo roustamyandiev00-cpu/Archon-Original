@@ -118,22 +118,6 @@ const POLICIES: Record<
     cooldownHours: 0,
     reversibility: "partial",
   },
-  "Nova:propose_create_task": {
-    autonomyLevel: 3,
-    requiresApproval: true,
-    riskLevel: "medium",
-    allowedChannels: ["internal"],
-    cooldownHours: 0,
-    reversibility: "full",
-  },
-  "Lima:propose_create_task": {
-    autonomyLevel: 3,
-    requiresApproval: true,
-    riskLevel: "medium",
-    allowedChannels: ["internal"],
-    cooldownHours: 0,
-    reversibility: "full",
-  },
   "Lima:create_invoice_from_offerte": {
     autonomyLevel: 3,
     requiresApproval: true,
@@ -141,6 +125,22 @@ const POLICIES: Record<
     allowedChannels: ["internal", "peppol"],
     cooldownHours: 0,
     reversibility: "partial",
+  },
+  "Nova:propose_create_task": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "low",
+    allowedChannels: ["internal"],
+    cooldownHours: 0,
+    reversibility: "full",
+  },
+  "Lima:propose_invoice_followup_task": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "low",
+    allowedChannels: ["internal"],
+    cooldownHours: 24,
+    reversibility: "full",
   },
 };
 
@@ -194,6 +194,7 @@ export function canApproveAction(userRole?: string | null): boolean {
   if (userRole == null) return false;
   const normalized = userRole.trim().toLowerCase();
   if (!normalized) return false;
+  // Deny-by-default: alleen expliciete allowlist.
   const allowed = new Set(["owner", "admin"]);
   return allowed.has(normalized);
 }

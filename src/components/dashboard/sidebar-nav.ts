@@ -3,6 +3,7 @@ import {
   Bot,
   BrainCircuit,
   CalendarDays,
+  CheckSquare,
   Contact,
   Crosshair,
   FileText,
@@ -12,6 +13,7 @@ import {
   LineChart,
   List,
   LogOut,
+  MessageCircle,
   Receipt,
   ScrollText,
   Search,
@@ -20,9 +22,15 @@ import {
   Tags,
   Users,
   Wallet,
-  CheckSquare,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
+
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  bouwnetwerkSidebarHint,
+  isBouwnetwerkUnlocked,
+} from "@/lib/bouwnetwerk-gate";
 
 export type SidebarItem = {
   label: string;
@@ -30,13 +38,29 @@ export type SidebarItem = {
   icon: LucideIcon;
   badge?: number;
   badgeTone?: "info" | "warning";
-  /** Optioneel label bv. "Beta" naast de link. */
+  /** Optioneel label bv. "Beta" of "WIP" naast de link. */
   tag?: string;
-  /** Opvallende kleur, bv. voor functies die pas bij 100 gebruikers live gaan. */
-  accent?: "amber";
+  /** Kleur van label/icoon — bv. waarschuwing voor modules die nog niet live zijn. */
+  labelTone?: "default" | "warning" | "danger";
   available?: boolean;
+  /** Tooltip wanneer item disabled of in waarschuwingsmodus is. */
+  hint?: string;
   children?: SidebarItem[];
 };
+
+export function bouwnetwerkSidebarMeta(
+  registeredUsers: number,
+): Pick<SidebarItem, "labelTone" | "tag" | "available" | "hint"> {
+  if (isBouwnetwerkUnlocked(registeredUsers)) {
+    return { labelTone: "default", available: true };
+  }
+  return {
+    labelTone: "warning",
+    tag: "WIP",
+    available: false,
+    hint: bouwnetwerkSidebarHint(BOUWNETWERK_REQUIRED_USERS),
+  };
+}
 
 export type SidebarGroup = {
   title: string;
@@ -44,7 +68,7 @@ export type SidebarGroup = {
   collapsible?: boolean;
 };
 
-export const SIDEBAR_GROUPS: SidebarGroup[] = [
+const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
   {
     title: "Overzicht",
     items: [
@@ -55,62 +79,17 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     title: "Operatie",
     items: [
       { label: "Contacten", href: "/dashboard/contacten", icon: Users },
-      { label: "Offertes", href: "/dashboard/offertes", icon: FileText,
-        children: [
-          {
-            label: "Prijslijst",
-            href: "/dashboard/prijslijst",
-            icon: Tags,
-          },
-        ],
+      {
+        label: "Prijslijst",
+        href: "/dashboard/prijslijst",
+        icon: Tags,
       },
+      { label: "Offertes", href: "/dashboard/offertes", icon: FileText },
       {
         label: "Projecten",
         href: "/dashboard/offertes/projecten",
         icon: FolderKanban,
       },
-      {
-        label: "Facturen",
-        href: "/dashboard/facturen",
-        icon: Receipt,
-        children: [
-          {
-            label: "E-Facturen",
-            href: "/dashboard/e-facturen",
-            icon: ScrollText,
-            tag: "Beta",
-          },
-          {
-            label: "Boekhouding",
-            href: "/dashboard/boekhouding",
-            icon: Wallet,
-          },
-        ],
-      },
-      {
-        label: "Leads / CRM",
-        href: "/dashboard/leads",
-        icon: Contact,
-        badge: 5,
-        badgeTone: "info",
-      },
-      {
-        label: "Bouwnetwerk",
-        href: "/dashboard/werkposts",
-        icon: HardHat,
-        accent: "amber",
-      },
-      {
-        label: "Samenwerkingen",
-        href: "/dashboard/werkposts/samenwerkingen",
-        icon: Handshake,
-        accent: "amber",
-      },
-    ],
-  },
-  {
-    title: "Administratie",
-    items: [
       {
         label: "Agenda",
         href: "/dashboard/agenda",
@@ -122,21 +101,89 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         icon: CheckSquare,
       },
       {
+        label: "Facturen",
+        href: "/dashboard/facturen",
+        icon: Receipt,
+      },
+      {
+        label: "Boekhouding",
+        href: "/dashboard/boekhouding",
+        icon: Wallet,
+      },
+      {
+        label: "Leads / CRM",
+        href: "/dashboard/leads",
+        icon: Contact,
+      },
+      { label: "Automatisaties", href: "/dashboard/automatisaties", icon: Zap },
+    ],
+  },
+  {
+    title: "Later",
+    collapsible: true,
+    items: [
+      {
+        label: "Bouwnetwerk",
+        href: "/dashboard/werkposts",
+        icon: HardHat,
+      },
+      {
+        label: "Samenwerkingen",
+        href: "/dashboard/werkposts/samenwerkingen",
+        icon: Handshake,
+      },
+    ],
+  },
+  {
+    title: "Beheer",
+    collapsible: true,
+    items: [
+      {
+        label: "E-Facturen",
+        href: "/dashboard/e-facturen",
+        icon: ScrollText,
+        tag: "Beta",
+      },
+      {
         label: "Activiteiten",
         href: "/dashboard/activiteit",
         icon: List,
       },
-      // Tijdelijk verborgen: Team, Audit, Telegram
+      {
+        label: "Team",
+        href: "/dashboard/team",
+        icon: Users,
+      },
+      {
+        label: "Audit",
+        href: "/dashboard/audit",
+        icon: Shield,
+      },
     ],
   },
   {
     title: "AI",
     items: [
       { label: "AI-agents", href: "/dashboard/command-center?view=crew", icon: Bot },
+      { label: "Comms", href: "/dashboard/comms", icon: MessageCircle },
       { label: "Geheugen", href: "/dashboard/geheugen", icon: BrainCircuit },
     ],
   },
 ];
+
+/** Sidebar-groepen met Bouwnetwerk/Samenwerkingen WIP-status o.b.v. echte teller. */
+export function getSidebarGroups(registeredUsers: number): SidebarGroup[] {
+  const meta = bouwnetwerkSidebarMeta(registeredUsers);
+  return SIDEBAR_GROUPS_BASE.map((group) => ({
+    ...group,
+    items: group.items.map((item) =>
+      item.href === "/dashboard/werkposts" ||
+      item.href === "/dashboard/werkposts/samenwerkingen"
+        ? { ...item, ...meta }
+        : item,
+    ),
+  }));
+}
 
 /** Observeer-links in de topbar (niet in sidebar). */
 export const TOPBAR_OBSERVEER_ITEMS: SidebarItem[] = [
@@ -196,19 +243,7 @@ export function sidebarItemIsActive(
   }
 
   if (target === "/dashboard/facturen") {
-    return (
-      current.startsWith("/dashboard/facturen") &&
-      !current.startsWith("/dashboard/e-facturen") &&
-      !current.startsWith("/dashboard/boekhouding")
-    );
-  }
-
-  if (target === "/dashboard/e-facturen") {
-    return current.startsWith("/dashboard/e-facturen");
-  }
-
-  if (target === "/dashboard/boekhouding") {
-    return current.startsWith("/dashboard/boekhouding");
+    return current.startsWith("/dashboard/facturen");
   }
 
   if (target === "/dashboard/werkposts") {

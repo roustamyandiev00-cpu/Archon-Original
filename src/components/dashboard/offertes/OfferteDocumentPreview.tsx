@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Eye,
   Loader2,
@@ -8,6 +9,7 @@ import {
   Minus,
   Plus,
   RefreshCw,
+  ChevronDown,
   X,
 } from "lucide-react";
 import {
@@ -146,12 +148,14 @@ function ZoomControls({
   onZoomIn,
   onReset,
   onFullscreen,
+  hideFullscreen = false,
 }: {
   zoom: number;
   onZoomOut: () => void;
   onZoomIn: () => void;
   onReset: () => void;
   onFullscreen: () => void;
+  hideFullscreen?: boolean;
 }) {
   return (
     <div className="flex items-center gap-1">
@@ -178,14 +182,16 @@ function ZoomControls({
       >
         <Plus size={14} />
       </button>
-      <button
-        type="button"
-        onClick={onFullscreen}
-        className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 px-2.5 text-[11px] font-medium text-zinc-200 hover:bg-white/5"
-      >
-        <Maximize2 size={13} />
-        Vergroten
-      </button>
+      {!hideFullscreen && (
+        <button
+          type="button"
+          onClick={onFullscreen}
+          className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 px-2.5 text-[11px] font-medium text-zinc-200 hover:bg-white/5"
+        >
+          <Maximize2 size={13} />
+          Vergroten
+        </button>
+      )}
     </div>
   );
 }
@@ -203,6 +209,7 @@ export default function OfferteDocumentPreview({
   lines,
   nummer,
   embedded = false,
+  collapsibleOnMobile = false,
 }: {
   templateId?: string;
   defaultTemplate: string;
@@ -216,11 +223,16 @@ export default function OfferteDocumentPreview({
   lines: OfferteLijnInput[];
   nummer?: string;
   embedded?: boolean;
+  collapsibleOnMobile?: boolean;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
+  const fullscreenDialogRef = useRef<HTMLDivElement>(null);
+  const fullscreenReturnFocusRef = useRef<HTMLElement | null>(null);
+  const fullscreenCloseRef = useRef<HTMLButtonElement>(null);
   const [fitScale, setFitScale] = useState(0.55);
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [panelMaxHeight, setPanelMaxHeight] = useState(560);
 
   const renderId = resolveDocumentTemplateId(templateId, defaultTemplate);
@@ -309,9 +321,12 @@ export default function OfferteDocumentPreview({
     if (!el) return;
 
     const update = () => {
-      const widthScale = Math.max(0.35, el.clientWidth / A4_W);
-      setFitScale(Math.min(widthScale, 1));
-      setPanelMaxHeight(Math.max(420, window.innerHeight - (embedded ? 200 : 160)));
+      const rect = el.getBoundingClientRect();
+      const availableHeight = Math.max(320, window.innerHeight - rect.top - 28);
+      const widthScale = el.clientWidth / A4_W;
+      const heightScale = (availableHeight - 24) / A4_H;
+      setFitScale(Math.min(Math.max(Math.min(widthScale, heightScale), 0.28), 1));
+      setPanelMaxHeight(availableHeight);
     };
 
     update();
@@ -322,9 +337,50 @@ export default function OfferteDocumentPreview({
       ro.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, [embedded, fullscreen]);
+  }, [embedded, fullscreen, mobileOpen]);
 
-  const scale = Math.min(Math.max(fitScale * zoom, 0.35), 1.6);
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.requestAnimationFrame(() => fullscreenCloseRef.current?.focus());
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullscreen(false);
+      if (event.key === "Tab") {
+        const focusable = Array.from(
+          fullscreenDialogRef.current?.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ) ?? [],
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+      window.requestAnimationFrame(() => fullscreenReturnFocusRef.current?.focus());
+    };
+  }, [fullscreen]);
+
+  const scale = Math.min(Math.max(fitScale * zoom, 0.28), 1.6);
+
+  function openFullscreen() {
+    fullscreenReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setFullscreen(true);
+  }
 
   const zoomControls = (
     <ZoomControls
@@ -336,7 +392,21 @@ export default function OfferteDocumentPreview({
         setZoom((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))))
       }
       onReset={() => setZoom(1)}
-      onFullscreen={() => setFullscreen(true)}
+      onFullscreen={openFullscreen}
+    />
+  );
+  const fullscreenZoomControls = (
+    <ZoomControls
+      zoom={zoom}
+      onZoomOut={() =>
+        setZoom((z) => Math.max(0.7, Number((z - 0.1).toFixed(2))))
+      }
+      onZoomIn={() =>
+        setZoom((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))))
+      }
+      onReset={() => setZoom(1)}
+      onFullscreen={openFullscreen}
+      hideFullscreen
     />
   );
 
@@ -344,7 +414,11 @@ export default function OfferteDocumentPreview({
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold text-zinc-100">Live preview</h2>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/12 px-2.5 py-1 text-[11px] font-semibold text-sky-400">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/12 px-2.5 py-1 text-[11px] font-semibold text-sky-400"
+          role="status"
+          aria-live="polite"
+        >
           {updating ? (
             <>
               <Loader2 size={11} className="animate-spin" /> Bijwerken…
@@ -361,7 +435,7 @@ export default function OfferteDocumentPreview({
   );
 
   const frame = (
-    <div ref={boxRef} className="min-w-0">
+    <div ref={boxRef} className="min-h-0 min-w-0 flex-1 overflow-hidden">
       <DocumentFrame html={html} scale={scale} maxHeight={panelMaxHeight} />
       <p className="mt-3 text-center text-[11px] text-zinc-600">
         Sjabloon: {templateLabel}
@@ -372,9 +446,36 @@ export default function OfferteDocumentPreview({
   return (
     <>
       {embedded ? (
-        <div className="flex min-w-0 flex-1 flex-col">
-          {toolbar}
-          {frame}
+        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+          {collapsibleOnMobile && (
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-sm font-semibold text-zinc-100 xl:hidden"
+              onClick={() => setMobileOpen((open) => !open)}
+              aria-expanded={mobileOpen}
+              aria-controls="offerte-mobile-preview"
+            >
+              <span className="flex items-center gap-2">
+                <Eye size={15} className="text-sky-400" />
+                Live preview
+              </span>
+              <ChevronDown
+                size={16}
+                className={`text-zinc-400 transition-transform ${
+                  mobileOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          )}
+          <div
+            id="offerte-mobile-preview"
+            className={`min-h-0 flex-1 flex-col ${
+              collapsibleOnMobile && !mobileOpen ? "hidden xl:flex" : "flex"
+            } ${collapsibleOnMobile ? "mt-3 xl:mt-0" : ""}`}
+          >
+            {toolbar}
+            {frame}
+          </div>
         </div>
       ) : (
         <div className="lg:sticky lg:top-4">
@@ -389,22 +490,36 @@ export default function OfferteDocumentPreview({
         </div>
       )}
 
-      {fullscreen && (
-        <div className="fixed inset-0 z-[80] flex flex-col bg-zinc-950/95 p-4 backdrop-blur-sm sm:p-6">
+      {fullscreen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+          className="fixed inset-0 z-[90] flex flex-col bg-zinc-950/95 p-4 backdrop-blur-sm sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="offerte-preview-dialog-title"
+          ref={fullscreenDialogRef}
+        >
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-zinc-100">Preview vergroten</p>
+              <p
+                className="text-sm font-semibold text-zinc-100"
+                id="offerte-preview-dialog-title"
+              >
+                Preview vergroten
+              </p>
               <p className="text-xs text-zinc-500">
                 Controleer de volledige offerte vóór opslaan of versturen.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {zoomControls}
+              {fullscreenZoomControls}
               <button
                 type="button"
                 onClick={() => setFullscreen(false)}
                 className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-zinc-300 hover:bg-white/5"
                 aria-label="Sluiten"
+                ref={fullscreenCloseRef}
               >
                 <X size={16} />
               </button>
@@ -420,8 +535,9 @@ export default function OfferteDocumentPreview({
               className="mx-auto"
             />
           </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

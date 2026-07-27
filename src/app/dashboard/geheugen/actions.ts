@@ -5,6 +5,7 @@ import { requireWriteAccess } from "@/components/dashboard/context";
 import {
   extractPreferenceFromChat,
   saveAgentMemory,
+  seedPricesFromOffertes,
   type MemoryType,
 } from "@/components/dashboard/agents/memory";
 import {
@@ -145,4 +146,22 @@ export async function rememberChatInsight(input: {
   revalidatePath("/dashboard/command-center");
 
   return { ok: true as const };
+}
+
+/** Leert unitprijzen uit historische offertes naar agentgeheugen. */
+export async function seedPriceMemories() {
+  const access = await requireWriteAccess();
+  if ("error" in access) return { error: access.error };
+  const { supabase, companyId, user } = access;
+
+  const result = await seedPricesFromOffertes(supabase, {
+    companyId,
+    userId: user.id,
+    limit: 50,
+  });
+
+  revalidatePath("/dashboard/geheugen");
+  revalidatePath("/dashboard/command-center");
+
+  return { ok: true as const, ...result };
 }

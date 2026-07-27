@@ -7,15 +7,30 @@ export type AgentVisual = {
   avatarUrl?: string | null;
 };
 
+/** Backend/UI-aliassen → builtin agent-id in DEFAULT_AGENTS. */
+const AGENT_NAME_ALIASES: Record<string, string> = {
+  nova: "nova",
+  lara: "nova",
+  ela: "nova",
+  lima: "facturatie",
+  nina: "facturatie",
+  facturatie: "facturatie",
+  schatter: "schatter",
+  viktor: "schatter",
+  opvolger: "opvolger",
+  daan: "opvolger",
+};
+
 export function resolveAgentVisual(agentName: string): AgentVisual {
   const trimmed = agentName.trim();
-  const normalized =
-    trimmed.toLowerCase() === "nova" ? "lima" : trimmed.toLowerCase();
+  const lower = trimmed.toLowerCase();
+  const normalized = AGENT_NAME_ALIASES[lower] ?? lower;
   const match =
     DEFAULT_AGENTS.find(
       (agent) =>
         agent.name.toLowerCase() === normalized ||
-        agent.id.toLowerCase() === normalized,
+        agent.id.toLowerCase() === normalized ||
+        agent.name.toLowerCase() === lower,
     ) ??
     DEFAULT_AGENTS.find((agent) =>
       normalized.includes(agent.name.toLowerCase()),
@@ -32,7 +47,7 @@ export function resolveAgentVisual(agentName: string): AgentVisual {
 
   return {
     id: "custom",
-    name: agentName.trim() || "Ela",
+    name: agentName.trim() || "Lara",
     gradient: "from-zinc-400 to-zinc-600",
   };
 }

@@ -1,10 +1,16 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Clock3,
+  FolderKanban,
+  ReceiptText,
+} from "lucide-react";
 import FactuurDetailSidebar, {
-  FactuurDetailHeaderActions,
   type FactuurActivityItem,
   type FactuurPaymentRow,
 } from "@/components/dashboard/facturen/FactuurDetailSidebar";
+import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
 import { formatDate, formatEuro } from "@/lib/offertes";
 import type { DocumentRow } from "@/components/dashboard/documenten/documentTemplate";
 
@@ -59,6 +65,8 @@ export default function FactuurDetailView({
   openAmount,
   payments,
   activity,
+  customerStats,
+  relatedProject,
   peppolConnected,
   peppolCanSend,
   currentTemplate,
@@ -94,6 +102,7 @@ export default function FactuurDetailView({
   typeMeta: { label: string; tone: string; dot: string };
   customerLabel: string;
   customerDetails: {
+    id?: number | null;
     email?: string | null;
     phone?: string | null;
     address?: string | null;
@@ -105,6 +114,16 @@ export default function FactuurDetailView({
   openAmount: number;
   payments: FactuurPaymentRow[];
   activity: FactuurActivityItem[];
+  customerStats: {
+    invoiceCount: number;
+    projectCount: number;
+    openAmount: number;
+  };
+  relatedProject: {
+    id: string;
+    naam: string;
+    status: string;
+  } | null;
   peppolConnected: boolean;
   peppolCanSend: boolean;
   currentTemplate: string;
@@ -118,11 +137,18 @@ export default function FactuurDetailView({
     paidAmount,
     openAmount,
   });
+  const totalAmount = Number(factuur.totaal_bedrag ?? totals.totaal);
+  const aiMissingFields = [
+    !customerDetails?.email ? "e-mailadres van de klant" : null,
+    !customerDetails?.address ? "adres van de klant" : null,
+    !isProforma && !factuur.vervaldatum ? "vervaldatum" : null,
+    lines.length === 0 ? "factuurregels" : null,
+  ].filter((field): field is string => Boolean(field));
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] space-y-5 pb-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-2">
+    <div className="mx-auto w-full max-w-[1400px] space-y-5 pb-10">
+      <header className="rounded-2xl border border-white/[0.06] bg-zinc-900/25 px-4 py-4 sm:px-5">
+        <div className="min-w-0 space-y-3">
           <Link
             href="/dashboard/facturen/lijst"
             className="group inline-flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
@@ -134,19 +160,19 @@ export default function FactuurDetailView({
             Terug naar facturen
           </Link>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-mono text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="font-mono text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
               {nummer}
             </h1>
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${typeMeta.tone}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${typeMeta.tone}`}
               title="Documenttype"
             >
               <span className={`h-1.5 w-1.5 rounded-full ${typeMeta.dot}`} />
               {typeMeta.label}
             </span>
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${meta.tone}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${meta.tone}`}
               title="Status"
             >
               <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
@@ -154,22 +180,16 @@ export default function FactuurDetailView({
             </span>
           </div>
 
-          <p className="truncate text-base text-zinc-300">{customerLabel}</p>
+          <p className="truncate text-base font-medium text-zinc-300">
+            {customerLabel}
+          </p>
         </div>
+      </header>
 
-        <FactuurDetailHeaderActions
-          factuurId={factuur.id}
-          nummer={nummer}
-          status={factuur.status}
-          isProforma={isProforma}
-          isPaid={isPaid}
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)] lg:items-start">
-        <div className="min-w-0 space-y-4">
-          <section className="rounded-xl border border-white/[0.08] bg-zinc-900/40 p-4 sm:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/[0.08] pb-4">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+        <main className="min-w-0 space-y-5">
+          <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-4 shadow-sm sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-5 border-b border-white/[0.08] pb-5">
               <div className="min-w-0">
                 <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-500">
                   Factuur
@@ -178,23 +198,19 @@ export default function FactuurDetailView({
                   {nummer}
                 </p>
                 <p className="mt-1 text-sm text-zinc-300">{customerLabel}</p>
-                {customerDetails ? (
-                  <div className="mt-2 space-y-0.5 text-xs text-zinc-500">
-                    {customerDetails.address ? (
-                      <p>{customerDetails.address}</p>
-                    ) : null}
-                    {customerDetails.email ? <p>{customerDetails.email}</p> : null}
-                    {customerDetails.phone ? <p>{customerDetails.phone}</p> : null}
-                    {customerDetails.btw ? <p>BTW {customerDetails.btw}</p> : null}
-                  </div>
-                ) : null}
+                <p className="mt-1 text-sm text-zinc-400">
+                  {factuur.omschrijving || "Factuurdocument"}
+                </p>
               </div>
-              <div className="text-right">
+              <div className="min-w-[12rem] rounded-2xl border border-sky-500/15 bg-sky-500/[0.06] px-4 py-3 text-right">
                 <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-500">
                   {isProforma ? "Totaal" : isPaid ? "Betaald" : "Te betalen"}
                 </p>
-                <p className="mt-1 font-mono text-2xl font-semibold text-zinc-50">
+                <p className="mt-1 font-mono text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
                   {formatEuro(displayedAmount)}
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {isPaid ? "Volledig voldaan" : isProforma ? "Documenttotaal" : "Nog te betalen"}
                 </p>
               </div>
             </div>
@@ -221,18 +237,18 @@ export default function FactuurDetailView({
             ) : null}
 
             {/* Desktop / tablet table */}
-            <div className="hidden overflow-x-auto rounded-xl border border-white/[0.08] sm:block">
+            <div className="hidden overflow-x-auto rounded-2xl border border-white/[0.08] sm:block">
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
-                  <tr className="border-b border-white/[0.08] bg-zinc-950/40 text-left text-[11px] uppercase tracking-wider text-zinc-500">
-                    <th className="px-3 py-2.5 font-semibold">Omschrijving</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">Aantal</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">Eenheid</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">
+                  <tr className="border-b border-white/[0.08] bg-zinc-950/55 text-left text-[11px] uppercase tracking-wider text-zinc-500">
+                    <th className="px-4 py-3 font-semibold">Omschrijving</th>
+                    <th className="px-4 py-3 text-right font-semibold">Aantal</th>
+                    <th className="px-4 py-3 text-right font-semibold">Eenheid</th>
+                    <th className="px-4 py-3 text-right font-semibold">
                       Eenheidsprijs
                     </th>
-                    <th className="px-3 py-2.5 text-right font-semibold">BTW</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">Totaal</th>
+                    <th className="px-4 py-3 text-right font-semibold">BTW</th>
+                    <th className="px-4 py-3 text-right font-semibold">Totaal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -240,24 +256,24 @@ export default function FactuurDetailView({
                     lines.map((l, i) => (
                       <tr
                         key={i}
-                        className="border-b border-white/[0.05] last:border-0"
+                        className="border-b border-white/[0.05] transition-colors odd:bg-white/[0.012] hover:bg-sky-500/[0.04] last:border-0"
                       >
-                        <td className="max-w-[18rem] break-words px-3 py-2.5 text-zinc-200">
+                        <td className="max-w-[18rem] break-words px-4 py-3.5 font-medium text-zinc-200">
                           {l.omschrijving || "—"}
                         </td>
-                        <td className="px-3 py-2.5 text-right font-mono text-zinc-400">
+                        <td className="px-4 py-3.5 text-right font-mono text-zinc-400">
                           {l.aantal}
                         </td>
-                        <td className="px-3 py-2.5 text-right text-zinc-400">
+                        <td className="px-4 py-3.5 text-right text-zinc-400">
                           {l.eenheid}
                         </td>
-                        <td className="px-3 py-2.5 text-right font-mono text-zinc-400">
+                        <td className="px-4 py-3.5 text-right font-mono text-zinc-400">
                           {formatEuro(l.prijs_per_eenheid)}
                         </td>
-                        <td className="px-3 py-2.5 text-right text-zinc-400">
+                        <td className="px-4 py-3.5 text-right text-zinc-400">
                           {l.btw_percentage}%
                         </td>
-                        <td className="px-3 py-2.5 text-right font-mono text-zinc-100">
+                        <td className="px-4 py-3.5 text-right font-mono font-medium text-zinc-100">
                           {formatEuro(l.aantal * l.prijs_per_eenheid)}
                         </td>
                       </tr>
@@ -373,16 +389,146 @@ export default function FactuurDetailView({
               </div>
             ) : null}
 
-            {factuur.offerte_id ? (
-              <Link
-                href={`/dashboard/offertes/${factuur.offerte_id}`}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-300 transition-colors hover:bg-sky-500/20"
-              >
-                Bekijk bronofferte
-              </Link>
-            ) : null}
           </section>
-        </div>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-300">
+                    <Building2 size={18} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold text-zinc-100">
+                      Klantdossier
+                    </h2>
+                    <p className="truncate text-sm text-zinc-400">
+                      {customerLabel}
+                    </p>
+                  </div>
+                </div>
+                <DocumentContactActions
+                  soort={isProforma ? "proforma" : "factuur"}
+                  nummer={nummer}
+                  klant={customerLabel}
+                  bedrag={totalAmount}
+                  email={customerDetails?.email ?? null}
+                  phone={customerDetails?.phone ?? null}
+                />
+              </div>
+
+              <div className="mt-4 space-y-1 text-xs leading-relaxed text-zinc-500">
+                {customerDetails?.address ? <p>{customerDetails.address}</p> : null}
+                {customerDetails?.email ? <p>{customerDetails.email}</p> : null}
+                {customerDetails?.phone ? <p>{customerDetails.phone}</p> : null}
+                {customerDetails?.btw ? <p>BTW {customerDetails.btw}</p> : null}
+                {!customerDetails ? <p>Geen gekoppeld klantdossier.</p> : null}
+              </div>
+
+              <dl className="mt-5 grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-zinc-950/45 p-3">
+                  <dt className="text-[10px] uppercase tracking-wider text-zinc-500">
+                    Facturen
+                  </dt>
+                  <dd className="mt-1 font-mono text-lg font-semibold text-zinc-100">
+                    {customerStats.invoiceCount}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-zinc-950/45 p-3">
+                  <dt className="text-[10px] uppercase tracking-wider text-zinc-500">
+                    Projecten
+                  </dt>
+                  <dd className="mt-1 font-mono text-lg font-semibold text-zinc-100">
+                    {customerStats.projectCount}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-zinc-950/45 p-3">
+                  <dt className="text-[10px] uppercase tracking-wider text-zinc-500">
+                    Openstaand
+                  </dt>
+                  <dd className="mt-1 font-mono text-sm font-semibold text-zinc-100">
+                    {formatEuro(customerStats.openAmount)}
+                  </dd>
+                </div>
+              </dl>
+
+              {relatedProject || factuur.offerte_id ? (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.08] pt-4">
+                  {relatedProject ? (
+                    <Link
+                      href={`/dashboard/offertes/projecten/${relatedProject.id}`}
+                      className="inline-flex items-center gap-2 rounded-lg border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-xs font-medium text-violet-200 transition-colors hover:bg-violet-500/15"
+                    >
+                      <FolderKanban size={14} aria-hidden="true" />
+                      {relatedProject.naam}
+                    </Link>
+                  ) : null}
+                  {factuur.offerte_id ? (
+                    <Link
+                      href={`/dashboard/offertes/${factuur.offerte_id}`}
+                      className="inline-flex items-center gap-2 rounded-lg border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-200 transition-colors hover:bg-sky-500/15"
+                    >
+                      <ReceiptText size={14} aria-hidden="true" />
+                      Bronofferte
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-300">
+                  <Clock3 size={18} aria-hidden="true" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-zinc-100">
+                    Documentactiviteit
+                  </h2>
+                  <p className="text-xs text-zinc-500">
+                    Alleen geregistreerde gebeurtenissen
+                  </p>
+                </div>
+              </div>
+
+              {activity.length > 0 ? (
+                <ol className="mt-5 space-y-0">
+                  {activity.map((item, index) => (
+                    <li
+                      key={`${item.label}-${item.at}-${index}`}
+                      className="relative flex gap-3 pb-4 last:pb-0"
+                    >
+                      {index < activity.length - 1 ? (
+                        <span className="absolute bottom-0 left-[5px] top-3 w-px bg-white/[0.08]" />
+                      ) : null}
+                      <span className="relative mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-zinc-900 bg-sky-400 ring-2 ring-sky-400/15" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-zinc-200">
+                          {item.label}
+                        </p>
+                        {item.detail ? (
+                          <p className="mt-0.5 text-xs text-zinc-400">
+                            {item.detail}
+                          </p>
+                        ) : null}
+                        <time
+                          dateTime={item.at}
+                          className="mt-1 block font-mono text-[11px] text-zinc-500"
+                        >
+                          {formatDate(item.at)}
+                        </time>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="mt-5 text-sm text-zinc-500">
+                  Nog geen geregistreerde activiteit.
+                </p>
+              )}
+            </section>
+          </div>
+        </main>
 
         <FactuurDetailSidebar
           factuurId={factuur.id}
@@ -400,7 +546,17 @@ export default function FactuurDetailView({
           paidAmount={paidAmount}
           openAmount={openAmount}
           payments={payments}
-          activity={activity}
+          aiContext={{
+            customerLabel,
+            statusLabel: meta.label,
+            invoiceDate: factuur.datum,
+            dueDate: factuur.vervaldatum,
+            totalAmount,
+            openAmount,
+            lineCount: lines.length,
+            missingFields: aiMissingFields,
+            isProforma,
+          }}
           peppolConnected={peppolConnected}
           peppolCanSend={peppolCanSend}
           buyerReference={factuur.buyer_reference}

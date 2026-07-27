@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   AlertTriangle,
-  ChevronDown,
   Coins,
   DollarSign,
   Plus,
@@ -40,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type {
   CompanyTokenUsage,
+  TokenUsageTrendPoint,
   TokenUsageSummary,
 } from "@/lib/admin/ai-tokens";
 import { TokenUsageChart } from "./TokenUsageChart";
@@ -47,9 +47,10 @@ import { TokenUsageChart } from "./TokenUsageChart";
 type Props = {
   companies: CompanyTokenUsage[];
   summary: TokenUsageSummary;
+  trend: TokenUsageTrendPoint[];
 };
 
-export default function AiTokensManagement({ companies, summary }: Props) {
+export default function AiTokensManagement({ companies, summary, trend }: Props) {
   const [selectedCompany, setSelectedCompany] = useState<CompanyTokenUsage | null>(
     null,
   );
@@ -60,7 +61,9 @@ export default function AiTokensManagement({ companies, summary }: Props) {
   const [tokensInput, setTokensInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "trial" | "low">("all");
+  const grantIdempotencyKey = useRef("");
 
   const filteredCompanies = companies.filter((c) => {
     if (filter === "trial") return c.isTrialUser;
@@ -72,10 +75,12 @@ export default function AiTokensManagement({ companies, summary }: Props) {
   });
 
   const handleGrantTokens = (company: CompanyTokenUsage) => {
+    grantIdempotencyKey.current = crypto.randomUUID();
     setSelectedCompany(company);
     setDialogType("grant");
     setTokensInput("");
     setNoteInput("");
+    setSubmitError(null);
     setDialogOpen(true);
   };
 
@@ -83,12 +88,14 @@ export default function AiTokensManagement({ companies, summary }: Props) {
     setSelectedCompany(company);
     setDialogType("limit");
     setTokensInput(company.tokenLimit?.toString() ?? "");
+    setSubmitError(null);
     setDialogOpen(true);
   };
 
   const handleBulkUpdate = () => {
     setDialogType("bulk");
     setTokensInput("50000");
+    setSubmitError(null);
     setDialogOpen(true);
   };
 
@@ -96,6 +103,7 @@ export default function AiTokensManagement({ companies, summary }: Props) {
     if (!tokensInput || loading) return;
 
     setLoading(true);
+    setSubmitError(null);
     try {
       const tokens = Number(tokensInput);
 
@@ -105,6 +113,7 @@ export default function AiTokensManagement({ companies, summary }: Props) {
           action: "grant_tokens",
           companyId: selectedCompany.companyId,
           tokensToAdd: tokens,
+          idempotencyKey: grantIdempotencyKey.current,
           note: noteInput || undefined,
         };
       } else if (dialogType === "limit" && selectedCompany) {
@@ -129,28 +138,23 @@ export default function AiTokensManagement({ companies, summary }: Props) {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        alert(`Error: ${data.error}`);
+        const data = (await response.json()) as { error?: string };
+        setSubmitError(data.error ?? "De beheeractie is mislukt.");
         return;
       }
 
       setDialogOpen(false);
       window.location.reload();
     } catch (error) {
-      alert(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "De beheeractie is mislukt.",
+      );
     } finally {
       setLoading(false);
     }
   };
-
-  const mockChartData = [
-    { date: "Jan", tokens: 45000, cost: 2.5 },
-    { date: "Feb", tokens: 52000, cost: 2.9 },
-    { date: "Mar", tokens: 61000, cost: 3.4 },
-    { date: "Apr", tokens: 58000, cost: 3.2 },
-    { date: "Mei", tokens: 71000, cost: 3.9 },
-    { date: "Jun", tokens: 83000, cost: 4.6 },
-  ];
 
   return (
     <div className="space-y-6">
@@ -163,10 +167,10 @@ export default function AiTokensManagement({ companies, summary }: Props) {
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Platform AI Management
+              Platformbeheer
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
-              AI Token Dashboard
+              AI-tokenbeheer
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
               Beheer AI-tokens, limieten en kosten per bedrijf. Monitor verbruik
@@ -175,7 +179,7 @@ export default function AiTokensManagement({ companies, summary }: Props) {
           </div>
           <Button onClick={handleBulkUpdate} variant="secondary" size="sm">
             <Settings className="mr-2 h-4 w-4" />
-            Bulk Update Trial
+            Proeflimieten aanpassen
           </Button>
         </div>
       </header>
@@ -184,20 +188,20 @@ export default function AiTokensManagement({ companies, summary }: Props) {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Totaal Bedrijven</CardTitle>
+            <CardTitle className="text-sm font-medium">Totaal bedrijven</CardTitle>
             <Users className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.totalCompanies}</div>
             <p className="text-xs text-zinc-500">
-              {summary.trialUsersCount} in trial
+              {summary.trialUsersCount} in proefperiode
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tokens Gebruikt</CardTitle>
+            <CardTitle className="text-sm font-medium">Tokens gebruikt</CardTitle>
             <Coins className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
@@ -212,20 +216,20 @@ export default function AiTokensManagement({ companies, summary }: Props) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Totale Kosten</CardTitle>
+            <CardTitle className="text-sm font-medium">Totale kosten</CardTitle>
             <DollarSign className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               €{summary.totalSpent.toFixed(2)}
             </div>
-            <p className="text-xs text-zinc-500">Platform-wide</p>
+            <p className="text-xs text-zinc-500">Platformbreed geregistreerd</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lage Balans</CardTitle>
+            <CardTitle className="text-sm font-medium">Laag saldo</CardTitle>
             <AlertTriangle className="h-4 w-4 text-amber-400" />
           </CardHeader>
           <CardContent>
@@ -240,12 +244,14 @@ export default function AiTokensManagement({ companies, summary }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-violet-400" />
-            Token Verbruik Trend
+            Werkelijk tokenverbruik
           </CardTitle>
-          <CardDescription>Laatste 6 maanden — platform totaal</CardDescription>
+          <CardDescription>
+            Verbruikstransacties van de laatste 6 maanden
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <TokenUsageChart data={mockChartData} />
+          <TokenUsageChart data={trend} />
         </CardContent>
       </Card>
 
@@ -270,7 +276,7 @@ export default function AiTokensManagement({ companies, summary }: Props) {
           size="sm"
           onClick={() => setFilter("low")}
         >
-          Lage Balans ({summary.lowBalanceCount})
+          Laag saldo ({summary.lowBalanceCount})
         </Button>
       </div>
 
@@ -283,7 +289,8 @@ export default function AiTokensManagement({ companies, summary }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+          <Table className="min-w-[840px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Bedrijf</TableHead>
@@ -296,6 +303,16 @@ export default function AiTokensManagement({ companies, summary }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {filteredCompanies.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="h-28 text-center text-sm text-zinc-500"
+                  >
+                    Geen bedrijven gevonden voor dit filter.
+                  </TableCell>
+                </TableRow>
+              )}
               {filteredCompanies.map((company) => {
                 const isLowBalance =
                   company.lowBalanceThreshold &&
@@ -351,6 +368,7 @@ export default function AiTokensManagement({ companies, summary }: Props) {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleGrantTokens(company)}
+                          aria-label={`AI-credits toewijzen aan ${company.companyName}`}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -358,6 +376,7 @@ export default function AiTokensManagement({ companies, summary }: Props) {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleSetLimit(company)}
+                          aria-label={`Tokenlimiet aanpassen voor ${company.companyName}`}
                         >
                           <Settings className="h-3 w-3" />
                         </Button>
@@ -368,6 +387,7 @@ export default function AiTokensManagement({ companies, summary }: Props) {
               })}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -401,6 +421,8 @@ export default function AiTokensManagement({ companies, summary }: Props) {
                 placeholder="50000"
                 value={tokensInput}
                 onChange={(e) => setTokensInput(e.target.value)}
+                min={dialogType === "grant" ? 1 : 0}
+                max={dialogType === "grant" ? 10_000_000 : 1_000_000_000}
               />
             </div>
 
@@ -414,6 +436,12 @@ export default function AiTokensManagement({ companies, summary }: Props) {
                   onChange={(e) => setNoteInput(e.target.value)}
                 />
               </div>
+            )}
+
+            {submitError && (
+              <p role="alert" className="text-sm text-red-400">
+                {submitError}
+              </p>
             )}
 
             {dialogType === "limit" && (

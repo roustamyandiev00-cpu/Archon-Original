@@ -9,7 +9,15 @@ import {
   type PointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { GripHorizontal, Mic, MicOff, Minus, Send, X } from "lucide-react";
+import {
+  ChevronUp,
+  GripHorizontal,
+  Mic,
+  MicOff,
+  Minus,
+  Send,
+  X,
+} from "lucide-react";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 import AgentPortrait from "@/components/dashboard/agents/AgentPortrait";
 import { useSpeechInput } from "@/hooks/useSpeechInput";
@@ -21,6 +29,7 @@ const serverSnapshot = () => false;
 export default function AgentChatWidget() {
   const {
     view,
+    open,
     minimize,
     close,
     activeAgent,
@@ -29,6 +38,7 @@ export default function AgentChatWidget() {
     messages,
     sendMessage,
     isTyping,
+    hasUnread,
   } = useAgentChat();
   const [input, setInput] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -77,7 +87,7 @@ export default function AgentChatWidget() {
     };
   }, [dragging, setPosition]);
 
-  if (!mounted || view !== "open") return null;
+  if (!mounted || view === "closed") return null;
 
   function onDragStart(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
@@ -101,6 +111,63 @@ export default function AgentChatWidget() {
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     submitCurrent();
+  }
+
+  if (view === "minimized") {
+    const compactPanel = (
+      <div className="fixed bottom-[calc(6.25rem+env(safe-area-inset-bottom))] right-3 z-[80] flex w-[min(90vw,320px)] items-center overflow-hidden rounded-2xl border border-white/15 bg-zinc-900/95 shadow-2xl shadow-black/40 backdrop-blur-xl lg:bottom-6 lg:right-6">
+        <button
+          type="button"
+          onClick={open}
+          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
+          aria-label={`Open chat met ${activeAgent.name}`}
+        >
+          <div className="relative shrink-0">
+            <AgentPortrait
+              name={activeAgent.name}
+              gradient={activeAgent.gradient}
+              avatarUrl={activeAgent.avatarUrl}
+              size="md"
+              showNovaIcon={activeAgent.id === "nova" && !activeAgent.avatarUrl}
+              className="h-9 w-9 rounded-xl"
+            />
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-zinc-900 ${
+                hasUnread
+                  ? "bg-amber-400"
+                  : isTyping
+                    ? "animate-pulse bg-sky-400"
+                    : "bg-emerald-400"
+              }`}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-zinc-50">
+              {activeAgent.name}
+            </p>
+            <p className="truncate text-[11px] text-zinc-400">
+              {hasUnread
+                ? "Nieuw bericht · klik om te openen"
+                : isTyping
+                  ? `${activeAgent.name} is bezig…`
+                  : "Chat actief · klik om verder te gaan"}
+            </p>
+          </div>
+          <ChevronUp size={17} className="shrink-0 text-zinc-400" />
+        </button>
+        <button
+          type="button"
+          onClick={close}
+          aria-label="Sluit actieve chat"
+          className="mr-2 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-white/5 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+        >
+          <X size={15} />
+        </button>
+      </div>
+    );
+
+    return createPortal(compactPanel, document.body);
   }
 
   const panel = (
@@ -150,7 +217,7 @@ export default function AgentChatWidget() {
               event.stopPropagation();
               minimize();
             }}
-            aria-label="Minimaliseer naar topbar"
+            aria-label="Minimaliseer chat naar onderbalk"
             className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
           >
             <Minus size={16} />

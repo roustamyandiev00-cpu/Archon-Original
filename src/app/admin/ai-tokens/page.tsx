@@ -1,7 +1,8 @@
-import AiTokensManagement from "@/components/dashboard/admin/AiTokensManagement";
 import { AlertTriangle } from "lucide-react";
+import AiTokensManagement from "@/components/dashboard/admin/AiTokensManagement";
 import {
   fetchCompanyTokenUsage,
+  fetchTokenUsageTrend,
   getTokenUsageSummary,
 } from "@/lib/admin/ai-tokens";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
@@ -11,7 +12,10 @@ export const metadata = { title: "AI Tokens — Admin Dashboard" };
 export default async function AiTokensPage() {
   const { serviceSupabase } = await requirePlatformAdmin();
 
-  const result = await fetchCompanyTokenUsage(serviceSupabase);
+  const [result, trend] = await Promise.all([
+    fetchCompanyTokenUsage(serviceSupabase),
+    fetchTokenUsageTrend(serviceSupabase),
+  ]);
 
   if (result.error) {
     return (
@@ -46,5 +50,11 @@ export default async function AiTokensPage() {
 
   const summary = getTokenUsageSummary(result.companies);
 
-  return <AiTokensManagement companies={result.companies} summary={summary} />;
+  return (
+    <AiTokensManagement
+      companies={result.companies}
+      summary={summary}
+      trend={trend}
+    />
+  );
 }

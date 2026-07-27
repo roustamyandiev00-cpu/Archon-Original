@@ -47,7 +47,6 @@ export default function FactuurDocumentPreview({
   nummer,
   bare = false,
   discountAmount = 0,
-  previewSubtotaal,
   previewBtw,
   previewTotaal,
 }: {

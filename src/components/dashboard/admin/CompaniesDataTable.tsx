@@ -332,12 +332,12 @@ export default function CompaniesDataTable({
               <Table className="min-w-[1320px]">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="min-w-[260px]">Company Name</TableHead>
-                    <TableHead className="min-w-[190px]">Owner</TableHead>
-                    <TableHead>Subscription Plan</TableHead>
-                    <TableHead className="text-right">Active Users</TableHead>
-                    <TableHead className="text-right">AI Tokens Used</TableHead>
-                    <TableHead className="text-right">AI Cost</TableHead>
+                    <TableHead className="min-w-[260px]">Bedrijf</TableHead>
+                    <TableHead className="min-w-[190px]">Eigenaar</TableHead>
+                    <TableHead>Abonnement</TableHead>
+                    <TableHead className="text-right">Actieve gebruikers</TableHead>
+                    <TableHead className="text-right">AI-tokens</TableHead>
+                    <TableHead className="text-right">Geregistreerde AI-kosten</TableHead>
                     <TableHead className="text-right">
                       <button
                         type="button"
@@ -353,13 +353,13 @@ export default function CompaniesDataTable({
                         )}
                       </button>
                     </TableHead>
-                    <TableHead className="text-right">Storage Used</TableHead>
-                    <TableHead>Last Login</TableHead>
+                    <TableHead className="text-right">Opslag</TableHead>
+                    <TableHead>Laatste login</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Risico</TableHead>
-                    <TableHead>Created Date</TableHead>
+                    <TableHead>Aangemaakt</TableHead>
                     <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">Acties</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>

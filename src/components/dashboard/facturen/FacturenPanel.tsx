@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Plus, Receipt, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import FacturenDataTable, {
   FACTUUR_COLUMN_OPTIONS,
   defaultFactuurColumnVisibility,
@@ -61,7 +60,7 @@ export default function FacturenPanel({
           </CardDescription>
         </div>
 
-        {!loadError && facturen.length > 0 ? (
+        {!loadError ? (
           <DataPanelToolbar
             showFilters={showFilters}
             onToggleFilters={() => setShowFilters((value) => !value)}
@@ -120,30 +119,6 @@ export default function FacturenPanel({
                   <RefreshCw size={15} />
                   Opnieuw proberen
                 </Button>
-              </div>
-            </div>
-          ) : facturen.length === 0 ? (
-            <div className="grid min-h-64 flex-1 place-items-center rounded-xl border border-white/10 bg-zinc-950/25 px-6 py-12 text-center">
-              <div className="max-w-sm">
-                <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-white/[0.08] bg-zinc-900 text-sky-400">
-                  <Receipt size={22} />
-                </span>
-                <h3 className="mt-3 text-base font-semibold text-zinc-50">
-                  Nog geen facturen
-                </h3>
-                <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-                  Maak je eerste factuur of proforma aan en volg betalingen
-                  vanuit één overzicht.
-                </p>
-                {!isDemo ? (
-                  <Link
-                    href="/dashboard/facturen/nieuw"
-                    className="mx-auto mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400"
-                  >
-                    <Plus size={16} />
-                    Eerste factuur aanmaken
-                  </Link>
-                ) : null}
               </div>
             </div>
           ) : (

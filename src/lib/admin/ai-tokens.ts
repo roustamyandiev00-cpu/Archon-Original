@@ -3,6 +3,29 @@ import type { Database } from "@/types/database.types";
 
 type ServiceSupabase = SupabaseClient<Database>;
 
+type AtomicGrantRow = {
+  transaction_id: string;
+  credits_before: number;
+  credits_after: number;
+  applied: boolean;
+};
+
+type AtomicGrantRpcClient = {
+  rpc: (
+    functionName: "ceo_grant_ai_credits",
+    parameters: {
+      p_company_id: number;
+      p_tokens: number;
+      p_actor_user_id: string;
+      p_idempotency_key: string;
+      p_note: string | null;
+    },
+  ) => PromiseLike<{
+    data: AtomicGrantRow[] | null;
+    error: { message: string } | null;
+  }>;
+};
+
 export type CompanyTokenUsage = {
   companyId: number;
   companyName: string;
@@ -31,6 +54,11 @@ export type TokenUsageSummary = {
 export type CompanyTokenUsageResult = {
   companies: CompanyTokenUsage[];
   error: string | null;
+};
+
+export type TokenUsageTrendPoint = {
+  date: string;
+  tokens: number;
 };
 
 export function describeTokenUsageLoadError(
@@ -82,9 +110,25 @@ export async function fetchCompanyTokenUsage(
     };
   }
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email");
+  const ownerIds = Array.from(
+    new Set(
+      (companies ?? [])
+        .map((company) => company.owner_user_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const { data: profiles, error: profilesError } =
+    ownerIds.length > 0
+      ? await supabase.from("profiles").select("id, email").in("id", ownerIds)
+      : { data: [], error: null };
+
+  if (profilesError) {
+    console.error("fetchCompanyTokenUsage - profiles:", profilesError.message);
+    return {
+      companies: [],
+      error: "De bedrijfseigenaars konden niet veilig worden geladen.",
+    };
+  }
 
   const creditsByCompany = new Map(
     (credits ?? []).map((c) => [c.company_id, c]),
@@ -128,6 +172,55 @@ export async function fetchCompanyTokenUsage(
     }),
     error: null,
   };
+}
+
+export async function fetchTokenUsageTrend(
+  supabase: ServiceSupabase,
+): Promise<TokenUsageTrendPoint[]> {
+  const monthStarts = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setUTCDate(1);
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCMonth(date.getUTCMonth() - (5 - index));
+    return date;
+  });
+  const firstMonth = monthStarts[0];
+  if (!firstMonth) return [];
+
+  const { data, error } = await supabase
+    .from("ai_credit_transactions")
+    .select("amount, created_at")
+    .gte("created_at", firstMonth.toISOString())
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Tokenhistoriek kon niet worden geladen: ${error.message}`);
+  }
+
+  const tokensByMonth = new Map(
+    monthStarts.map((date) => [
+      `${date.getUTCFullYear()}-${date.getUTCMonth()}`,
+      0,
+    ]),
+  );
+  for (const transaction of data ?? []) {
+    if (transaction.amount >= 0) continue;
+    const createdAt = new Date(transaction.created_at);
+    const key = `${createdAt.getUTCFullYear()}-${createdAt.getUTCMonth()}`;
+    if (tokensByMonth.has(key)) {
+      tokensByMonth.set(key, (tokensByMonth.get(key) ?? 0) + Math.abs(transaction.amount));
+    }
+  }
+
+  return monthStarts.map((date) => ({
+    date: date.toLocaleDateString("nl-BE", {
+      month: "short",
+      year: "2-digit",
+      timeZone: "UTC",
+    }),
+    tokens:
+      tokensByMonth.get(`${date.getUTCFullYear()}-${date.getUTCMonth()}`) ?? 0,
+  }));
 }
 
 export function getTokenUsageSummary(
@@ -175,44 +268,44 @@ export async function grantCompanyTokens(
   supabase: ServiceSupabase,
   companyId: number,
   tokensToAdd: number,
+  actorUserId: string,
+  idempotencyKey: string,
   note?: string,
-): Promise<{ ok: boolean; error?: string }> {
-  const { data: current } = await supabase
-    .from("company_ai_credits")
-    .select("credits_remaining, credits_used, total_purchased")
-    .eq("company_id", companyId)
-    .maybeSingle();
-
-  if (!current) {
-    return { ok: false, error: "Company credits record not found" };
-  }
-
-  const newRemaining = current.credits_remaining + tokensToAdd;
-  const newPurchased = current.total_purchased + tokensToAdd;
-
-  const { error: updateError } = await supabase
-    .from("company_ai_credits")
-    .update({
-      credits_remaining: newRemaining,
-      total_purchased: newPurchased,
-    })
-    .eq("company_id", companyId);
-
-  if (updateError) {
-    return { ok: false, error: updateError.message };
-  }
-
-  // Log transaction
-  await supabase.from("ai_credit_transactions").insert({
-    company_id: companyId,
-    type: "admin_grant",
-    amount: tokensToAdd,
-    credits_before: current.credits_remaining,
-    credits_after: newRemaining,
-    description: note || `Admin granted ${tokensToAdd} tokens`,
+): Promise<
+  | {
+      ok: true;
+      applied: boolean;
+      transactionId: string;
+      creditsBefore: number;
+      creditsAfter: number;
+    }
+  | { ok: false; error: string }
+> {
+  const rpcClient = supabase as unknown as AtomicGrantRpcClient;
+  const { data, error } = await rpcClient.rpc("ceo_grant_ai_credits", {
+    p_company_id: companyId,
+    p_tokens: tokensToAdd,
+    p_actor_user_id: actorUserId,
+    p_idempotency_key: idempotencyKey,
+    p_note: note ?? null,
   });
 
-  return { ok: true };
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  const grant = data?.[0];
+  if (!grant) {
+    return { ok: false, error: "AI credit grant returned no audit record" };
+  }
+
+  return {
+    ok: true,
+    applied: grant.applied,
+    transactionId: grant.transaction_id,
+    creditsBefore: grant.credits_before,
+    creditsAfter: grant.credits_after,
+  };
 }
 
 export async function bulkUpdateTrialLimits(

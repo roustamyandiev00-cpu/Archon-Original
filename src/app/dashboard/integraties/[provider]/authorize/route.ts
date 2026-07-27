@@ -1,9 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
-import { getCompanyContext } from "@/lib/company";
-import { untyped, integratiesSettingsUrl } from "@/lib/integraties";
+import { requireAdminAccess } from "@/components/dashboard/context";
+import {
+  isPlatformOAuthProvider,
+  untyped,
+  integratiesSettingsUrl,
+} from "@/lib/integraties";
 import { oauthConfig, oauthRedirectUri } from "@/lib/oauth";
+import { getPlatformOAuthCredentials } from "@/components/dashboard/integraties/platformOAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,10 +25,12 @@ export async function GET(
     return NextResponse.redirect(dashboard);
   }
 
-  const { supabase, companyId } = await getCompanyContext();
-  if (!companyId) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+  const access = await requireAdminAccess();
+  if ("error" in access) {
+    dashboard.searchParams.set("error", access.error);
+    return NextResponse.redirect(dashboard);
   }
+  const { supabase, companyId } = access;
 
   const { data } = await untyped(supabase)
     .from("integraties")
@@ -32,8 +39,52 @@ export async function GET(
     .eq("provider", provider)
     .maybeSingle();
 
-  const config = (data?.config ?? {}) as Record<string, string>;
-  if (!config.clientId) {
+  let config = (data?.config ?? {}) as Record<string, string>;
+
+  if (isPlatformOAuthProvider(provider)) {
+    const platform = getPlatformOAuthCredentials(provider);
+    if (!platform) {
+      dashboard.searchParams.set(
+        "error",
+        `${provider}: platform-credentials ontbreken in .env.`,
+      );
+      return NextResponse.redirect(dashboard);
+    }
+
+    const now = new Date().toISOString();
+    config = { ...config, authMode: "platform" };
+    delete config.clientId;
+    delete config.clientSecret;
+
+    const persistResult = data
+      ? await untyped(supabase)
+        .from("integraties")
+        .update({
+          config,
+          status: config.tokens ? "connected" : "configured",
+          updated_at: now,
+        })
+        .eq("bedrijf_id", companyId)
+        .eq("provider", provider)
+      : await untyped(supabase).from("integraties").insert({
+          bedrijf_id: companyId,
+          provider,
+          status: "configured",
+          config,
+          created_at: now,
+          updated_at: now,
+        });
+
+    if (persistResult.error) {
+      dashboard.searchParams.set("error", persistResult.error.message);
+      return NextResponse.redirect(dashboard);
+    }
+  }
+
+  const clientId = isPlatformOAuthProvider(provider)
+    ? getPlatformOAuthCredentials(provider)?.clientId
+    : config.clientId;
+  if (!clientId) {
     dashboard.searchParams.set(
       "error",
       "Configureer eerst Client ID en Client Secret.",
@@ -52,7 +103,7 @@ export async function GET(
   });
 
   const authorizeUrl = new URL(cfg.authorizeUrl);
-  authorizeUrl.searchParams.set("client_id", config.clientId);
+  authorizeUrl.searchParams.set("client_id", clientId);
   authorizeUrl.searchParams.set(
     "redirect_uri",
     oauthRedirectUri(req.nextUrl.origin, provider),

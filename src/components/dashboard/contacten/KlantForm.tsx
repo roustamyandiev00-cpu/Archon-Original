@@ -453,13 +453,16 @@ export default function KlantForm({
             </Field>
 
             {error && (
-              <p className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+              <p
+                role="alert"
+                className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-300"
+              >
                 {error}
               </p>
             )}
           </div>
 
-          <div className="flex shrink-0 justify-end gap-2 border-t border-white/10 bg-zinc-950 px-5 py-4">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-white/10 bg-zinc-950 py-4 pl-5 pr-14 sm:px-5">
             <button
               type="button"
               onClick={onClose}

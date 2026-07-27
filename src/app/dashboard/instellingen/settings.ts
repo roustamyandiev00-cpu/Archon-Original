@@ -18,11 +18,20 @@ export type IncassoConfig = {
   deurwaarderEmail: string;
 };
 
+/** Hoe offertes, incasso en documentmails verstuurd worden. */
+export type EmailDeliveryMode = "smtp" | "mailto";
+
+export type EmailConfig = {
+  /** smtp = via Gmail/SMTP in ArchonPro; mailto = open e-mailprogramma. */
+  deliveryMode: EmailDeliveryMode;
+};
+
 export type Extras = {
   ai: AiConfig;
   standaardBtw: number;
   agents?: CustomAgent[];
   incasso?: IncassoConfig;
+  email?: EmailConfig;
 };
 
 export type SettingsInput = {
@@ -122,12 +131,24 @@ export const defaultIncassoConfig: IncassoConfig = {
   deurwaarderEmail: "",
 };
 
+export const defaultEmailConfig: EmailConfig = {
+  deliveryMode: "mailto",
+};
+
+function parseEmailConfig(raw: Partial<EmailConfig> | undefined): EmailConfig {
+  const mode = raw?.deliveryMode;
+  return {
+    deliveryMode: mode === "smtp" || mode === "mailto" ? mode : "mailto",
+  };
+}
+
 export function parseExtras(raw: string | null): Extras {
   if (!raw) {
     return {
       ai: { ...defaultAiConfig },
       standaardBtw: 21,
       incasso: { ...defaultIncassoConfig },
+      email: { ...defaultEmailConfig },
     };
   }
   try {
@@ -143,6 +164,7 @@ export function parseExtras(raw: string | null): Extras {
             ...defaultIncassoConfig,
             ...(parsed.incasso ?? {}),
           },
+          email: parseEmailConfig(parsed.email),
         };
       }
       if ("toon" in parsed) {
@@ -150,6 +172,7 @@ export function parseExtras(raw: string | null): Extras {
           ai: { ...defaultAiConfig, ...(parsed as Partial<AiConfig>) },
           standaardBtw: 21,
           incasso: { ...defaultIncassoConfig },
+          email: { ...defaultEmailConfig },
         };
       }
     }
@@ -158,11 +181,13 @@ export function parseExtras(raw: string | null): Extras {
       ai: { ...defaultAiConfig, instructies: raw },
       standaardBtw: 21,
       incasso: { ...defaultIncassoConfig },
+      email: { ...defaultEmailConfig },
     };
   }
   return {
     ai: { ...defaultAiConfig },
     standaardBtw: 21,
     incasso: { ...defaultIncassoConfig },
+    email: { ...defaultEmailConfig },
   };
 }

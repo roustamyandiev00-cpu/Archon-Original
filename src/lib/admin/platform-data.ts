@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchPlatformBillingInvoices } from "@/lib/admin/platform-billing";
 import type { Database } from "@/types/database.types";
 import type {
   AiError,
@@ -798,6 +799,7 @@ export async function fetchCompanyDetail(
     { data: credits },
     { data: activity },
     { data: bedrijf },
+    platformInvoices,
   ] = await Promise.all([
     supabase
       .from("company_memberships")
@@ -832,6 +834,7 @@ export async function fetchCompanyDetail(
       .select("ai_assistant, subscription_status, risicostatus, verificatiestatus")
       .eq("id", companyId)
       .maybeSingle(),
+    fetchPlatformBillingInvoices(supabase, companyId),
   ]);
 
   const profileById = new Map(
@@ -902,6 +905,7 @@ export async function fetchCompanyDetail(
 
   return {
     company,
+    platformInvoices,
     stripeCustomerId: credits?.stripe_customer_id ?? "—",
     subscriptionStatus:
       (bedrijf?.subscription_status as CompanyDetail["subscriptionStatus"]) ??

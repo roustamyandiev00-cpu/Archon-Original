@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import CompanyDetailView from "@/components/dashboard/admin/CompanyDetailView";
 import { fetchCompanyDetail } from "@/lib/admin/platform-data";
@@ -8,24 +7,7 @@ type CompanyDetailPageProps = {
   params: Promise<{ companyId: string }>;
 };
 
-export async function generateMetadata({
-  params,
-}: CompanyDetailPageProps): Promise<Metadata> {
-  const { companyId } = await params;
-  const id = Number(companyId);
-  if (!Number.isFinite(id)) {
-    return { title: "Company Detail — ArchonPro" };
-  }
-
-  const { serviceSupabase } = await requirePlatformAdmin();
-  const detail = await fetchCompanyDetail(serviceSupabase, id);
-
-  return {
-    title: detail
-      ? `${detail.company.name} — Company Detail — ArchonPro`
-      : "Company Detail — ArchonPro",
-  };
-}
+export const metadata = { title: "Bedrijfsdossier — ArchonPro" };
 
 export default async function CompanyDetailPage({
   params,

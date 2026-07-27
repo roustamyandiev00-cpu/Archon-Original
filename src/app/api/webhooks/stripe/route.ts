@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { grantAiCreditsAfterPayment } from "@/lib/ai/grant-credits";
 import { getStripe } from "@/lib/stripe";
-import { createServiceClient } from "@/lib/supabase/service";
-import { untyped } from "@/lib/integraties";
 import {
   claimStripeWebhookEvent,
   completeStripeWebhookEvent,
   failStripeWebhookEvent,
   hashStripePayload,
 } from "@/lib/stripe/webhook-events";
+import { createServiceClient } from "@/lib/supabase/service";
+import { untyped } from "@/lib/integraties";
+import { syncStripeInvoice } from "@/lib/admin/platform-billing";
 
 export const runtime = "nodejs";
 
@@ -94,23 +95,26 @@ export async function POST(request: Request) {
   try {
     event = getStripe().webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (err) {
-    // Invalid signature: do NOT register in stripe_webhook_events.
     const message = err instanceof Error ? err.message : "Invalid signature";
+    // Ongeldige signature mag nooit in de ledger terechtkomen.
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const supabase = createServiceClient();
   const payloadHash = hashStripePayload(rawBody);
-  const claim = await claimStripeWebhookEvent(supabase, {
-    stripeEventId: event.id,
-    eventType: event.type,
-    livemode: Boolean(event.livemode),
-    payloadHash,
-  });
 
-  if (claim.outcome === "error") {
-    console.error("stripe webhook claim:", claim.error);
-    return NextResponse.json({ error: claim.error }, { status: 500 });
+  let claim;
+  try {
+    claim = await claimStripeWebhookEvent(supabase, {
+      stripeEventId: event.id,
+      eventType: event.type,
+      livemode: Boolean(event.livemode),
+      payloadHash,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "claim failed";
+    console.error("stripe webhook claim:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   if (claim.outcome === "duplicate") {
@@ -133,6 +137,20 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: result.error }, { status: 500 });
         }
       }
+    } else if (
+      event.type === "invoice.created" ||
+      event.type === "invoice.finalized" ||
+      event.type === "invoice.paid" ||
+      event.type === "invoice.payment_succeeded" ||
+      event.type === "invoice.payment_failed" ||
+      event.type === "invoice.voided" ||
+      event.type === "invoice.marked_uncollectible"
+    ) {
+      await syncStripeInvoice(
+        createServiceClient(),
+        event.data.object as Stripe.Invoice,
+        event.created,
+      );
     }
 
     await completeStripeWebhookEvent(supabase, rowId, "processed");

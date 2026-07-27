@@ -42,6 +42,7 @@ export default function SmtpSettingsPanel({
     smtp_pass: "",
     from_email: initial.from_email || companyEmail,
     from_name: initial.from_name || companyName,
+    deliveryMode: initial.deliveryMode,
   });
   const [pending, startTransition] = useTransition();
   const [testing, startTest] = useTransition();

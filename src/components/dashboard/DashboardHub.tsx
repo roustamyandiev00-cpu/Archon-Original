@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
@@ -72,7 +72,7 @@ const VIEWS: ViewDef[] = [
   },
   {
     id: "crew",
-    label: "AI-agents",
+    label: "AI Crew",
     icon: Users,
     shortcut: "⌘5",
     badge: (m) => m.agents.filter((a) => a.pending > 0).length,
@@ -117,16 +117,17 @@ export default function DashboardHub({
 }: DashboardHubProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [activeView, setActiveView] = useState<DashboardViewId>(() =>
-    defaultView !== "command" ? defaultView : readStoredView(defaultView),
-  );
-  const [prevDefaultView, setPrevDefaultView] = useState(defaultView);
-  if (prevDefaultView !== defaultView) {
-    setPrevDefaultView(defaultView);
-    setActiveView(defaultView !== "command" ? defaultView : readStoredView(defaultView));
-  }
+  const [activeView, setActiveView] = useState<DashboardViewId>(defaultView);
   const [lastUpdated, setLastUpdated] = useState(() => new Date());
   const [updatedLabel, setUpdatedLabel] = useState("zojuist bijgewerkt");
+  const [isRefreshing, startRefreshTransition] = useTransition();
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveView(
+      defaultView !== "command" ? defaultView : readStoredView(defaultView),
+    );
+  }, [defaultView]);
 
   useEffect(() => {
     const tick = () => setUpdatedLabel(formatLastUpdated(lastUpdated));
@@ -167,7 +168,12 @@ export default function DashboardHub({
     [mission],
   );
 
-  const refresh = () => setLastUpdated(new Date());
+  const refresh = () => {
+    startRefreshTransition(() => {
+      router.refresh();
+      setLastUpdated(new Date());
+    });
+  };
 
   return (
     <div className="dashboard-hub dashboard-page flex h-full min-h-0 flex-1 flex-col space-y-3 lg:space-y-0">
@@ -237,10 +243,11 @@ export default function DashboardHub({
             <button
               type="button"
               onClick={refresh}
-              className="grid h-8 w-8 place-items-center rounded-lg border border-white/[0.08] text-zinc-500 transition-colors hover:border-white/15 hover:bg-white/[0.04] hover:text-zinc-300"
-              aria-label="Vernieuwen"
+              disabled={isRefreshing}
+              className="grid h-8 w-8 place-items-center rounded-lg border border-white/[0.08] text-zinc-500 transition-colors hover:border-white/15 hover:bg-white/[0.04] hover:text-zinc-300 disabled:cursor-wait disabled:opacity-60"
+              aria-label={isRefreshing ? "Dashboard wordt vernieuwd" : "Dashboard vernieuwen"}
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={14} className={isRefreshing ? "animate-spin" : undefined} />
             </button>
             <Link
               href="/dashboard/instellingen"
@@ -274,9 +281,10 @@ export default function DashboardHub({
         </div>
       )}
       {activeView === "crew" && (
-        <div className="dashboard-hub-view overflow-hidden">
+        <div className="dashboard-hub-view min-h-0 flex-1 overflow-hidden">
           <AiCrewView
             mission={mission}
+            agentName={agentName}
             companyAgents={companyAgents}
             initialPanel={crewPanel}
           />

@@ -50,6 +50,19 @@ describe("facturen read-path regressions", () => {
     );
   });
 
+  it("houdt klant- en projectverrijking expliciet binnen dezelfde tenant", () => {
+    const detailPage = source("src/app/dashboard/facturen/[id]/page.tsx");
+    expect(detailPage).toMatch(
+      /from\("projecten"\)[\s\S]*?eq\("id", factuur\.project_id\)[\s\S]*?eq\("bedrijf_id", companyId\)/,
+    );
+    expect(detailPage).toMatch(
+      /from\("facturen"\)[\s\S]*?eq\("customer_id", factuur\.customer_id\)[\s\S]*?eq\("bedrijf_id", companyId\)/,
+    );
+    expect(detailPage).toMatch(
+      /from\("betalingen"\)[\s\S]*?eq\("bedrijf_id", companyId\)[\s\S]*?\.in\(/,
+    );
+  });
+
   it("toont betaald en openstaand zonder een geldige nul te vervangen", () => {
     expect(
       displayedFactuurAmount({ isPaid: true, paidAmount: 125, openAmount: 0 }),
@@ -65,6 +78,17 @@ describe("facturen read-path regressions", () => {
     );
     expect(table).toContain("setActionError(result.error)");
     expect(table).toContain('role="alert"');
+  });
+
+  it("toont één primaire verzendactie en gebruikt echte AI-chat zonder claims", () => {
+    const sidebar = source(
+      "src/components/dashboard/facturen/FactuurDetailSidebar.tsx",
+    );
+    expect(sidebar.match(/Markeer als verzonden/g)).toHaveLength(1);
+    expect(sidebar).toContain("sendMessage(");
+    expect(sidebar).toContain("Wijzig, verstuur of boek niets");
+    expect(sidebar).not.toContain("Factuur lijkt correct");
+    expect(sidebar).not.toContain("Kans op tijdige betaling");
   });
 
   it("bevat geen hardcoded facturenbadge", () => {

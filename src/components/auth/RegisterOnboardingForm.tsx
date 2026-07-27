@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { redirectAfterAuth } from "@/lib/auth/redirect-after-auth";
 import {
   ArrowLeft,
@@ -70,7 +70,6 @@ const inputClass =
   "w-full rounded-xl border border-white/10 bg-zinc-900/60 py-2.5 pl-10 pr-4 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-500 focus:border-sky-500/60 focus:bg-zinc-900";
 
 export default function RegisterOnboardingForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "/dashboard/command-center?tour=1";
   const refFromUrl = searchParams.get("ref")?.trim() ?? "";
