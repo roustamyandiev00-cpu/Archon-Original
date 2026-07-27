@@ -7227,10 +7227,6 @@ export type Database = {
         Args: { p_factuur_id: string }
         Returns: number
       }
-      can_write_company_tasks: {
-        Args: { p_company_id: number }
-        Returns: boolean
-      }
       check_quota: {
         Args: { p_company_id: number; quota_key: string }
         Returns: boolean
