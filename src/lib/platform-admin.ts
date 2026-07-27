@@ -102,14 +102,14 @@ export async function isPlatformAdmin(
   const bootstrapEmails = bootstrapPlatformAdminEmails();
   const normalizedEmail = normalizeEmail(email);
 
-  if (bootstrapEmails.length > 0) {
-    // Bootstrap vereist altijd een bekende, geverifieerde gebruiker + e-mailmatch.
-    if (!userId || !normalizedEmail) return false;
-    const matched = bootstrapEmails.includes(normalizedEmail);
-    if (matched) {
+  // Bootstrap is additief: een niet-matchend e-mailadres mag een geldige
+  // platform_admins-rij nooit blokkeren, anders sluit een aanstaande bootstrap
+  // de echte CEO buiten.
+  if (bootstrapEmails.length > 0 && userId && normalizedEmail) {
+    if (bootstrapEmails.includes(normalizedEmail)) {
       await auditBootstrapAccess(userId, normalizedEmail);
+      return true;
     }
-    return matched;
   }
 
   if (!userId) return false;

@@ -62,10 +62,27 @@ describe("platform admin access", () => {
     await expect(isPlatformAdmin("ceo-id", "CEO@example.com")).resolves.toBe(
       true,
     );
+    // Niet-matchend adres krijgt geen bootstraptoegang, maar valt wel door naar
+    // de database — bootstrap mag een echte platform_admins-rij niet blokkeren.
     await expect(
       isPlatformAdmin("other-id", "other@example.com"),
     ).resolves.toBe(false);
-    expect(rpc).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith("is_platform_admin", {
+      p_user_id: "other-id",
+    });
+  });
+
+  it("sluit database-admins niet buiten terwijl bootstrap aan staat", async () => {
+    vi.stubEnv("PLATFORM_ADMIN_BOOTSTRAP_ENABLED", "true");
+    vi.stubEnv("PLATFORM_CEO_EMAIL", "ceo@example.com");
+    rpc.mockResolvedValue({ data: true, error: null });
+
+    await expect(
+      isPlatformAdmin("db-admin-id", "db-admin@example.com"),
+    ).resolves.toBe(true);
+    expect(rpc).toHaveBeenCalledWith("is_platform_admin", {
+      p_user_id: "db-admin-id",
+    });
   });
 
   it("accepteert meerdere bootstrap-admins via PLATFORM_ADMIN_EMAILS", async () => {
