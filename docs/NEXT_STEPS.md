@@ -11,16 +11,15 @@ Branch: `feature/tasks-module` (lokaal, HEAD `3f44cb3`)
 |---|---|
 | 1. Branch-divergentie oplossen | **KLAAR** — zie `consolidate/tasks-module`, merge `f1aee4b`. Keuze onderbouwd in `docs/TAKEN_MODULE_KEUZE.md` |
 | 5. Bootstrap-adminlek dichten | **KLAAR** — commit `835f981`; de vlag wordt nu gelezen én bootstrap sluit database-admins niet meer buit |
-| 2. Merge naar `main` | KLAAR — [PR #3](https://github.com/roustamyandiev00-cpu/Archon-Original/pull/3), wacht op jouw review |
+| 2. Merge naar `main` | OPEN — [PR #3](https://github.com/roustamyandiev00-cpu/Archon-Original/pull/3) open; Vercel faalde door Hobby-cronlimiet |
+| 2b. Vercel Hobby-cronfix | **KLAAR** — `task-reminders` van `*/15` naar dagelijks `0 8 * * *` (Hobby laat geen sub-dagelijkse crons toe) |
 | 3. Env-sleutels invullen | OPEN — vereist jouw secrets |
-| 4. Supabase linken + migraties + `types:generate` | **GEBLOKKEERD** — zie sectie hieronder; niet uitvoerbaar zoals oorspronkelijk beschreven |
-| 6. Handmatige kernflow-test op staging | OPEN — kan pas na 3–4 |
+| 4. Supabase linken + migraties + `types:generate` | DEELS — live project `vqiyftyqfpfbpwhadpvn` bereikbaar; Taken/Stripe-migraties staan al live (andere timestamps); verse staging nog geblokkeerd zonder baseline |
+| 6. Handmatige kernflow-test op staging | OPEN — kan pas na merge + secrets |
 
-Status na consolidatie: lint volledig schoon, typecheck groen, **148 tests groen**,
-build groen. Securityreview op de PR: geen HIGH/MEDIUM-bevindingen.
-
-Nog niet geverifieerd: het live schema. De conclusie over `tasks.project_id`
-steunt op `supabase/recovered_migrations/`, niet op de echte database.
+Status na consolidatie: lint/typecheck/build groen. Live geverifieerd (2026-07-30):
+`tasks.project_id` is **bigint**, RLS aan op `tasks` + kindtabellen, `stripe_webhook_events`
+en tasks-hardeningmigraties staan op productie (versienummers wijken af van de repo-bestanden).
 
 ---
 
