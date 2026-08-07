@@ -25,7 +25,7 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
       id: "metrics",
       target: '[data-tour="dash-metrics"]',
       title: "Kerncijfers in één oogopslag",
-      text: "Vandaag, Aandacht, Cashflow en Pipeline geven je een snelle snapshot van je bedrijf zonder door menu's te moeten klikken.",
+      text: "Contacten, Aandacht, Vervallen en Offertes geven je een snelle snapshot van je bedrijf zonder door menu's te moeten klikken.",
     },
     {
       id: "actions",
@@ -37,7 +37,7 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
       id: "agents",
       target: '[data-tour="dash-agents"]',
       title: "AI Command Center",
-      text: "Zes AI-agents voor offertes, facturen, projecten, klanten, planning en documenten. Klik op een kaart om direct naar die module te gaan.",
+      text: "Zes werkgebieden: Offerte, Factuur, Project, Klant, Planning en Document. Klik op een kaart om die module te openen.",
     },
     {
       id: "inbox",
@@ -100,8 +100,8 @@ export const DASHBOARD_TOURS: Record<TourIntent, TourStep[]> = {
     {
       id: "metrics",
       target: '[data-tour="dash-metrics"]',
-      title: "Cashflow & vervallen facturen",
-      text: "De Cashflow-tegel toont meteen hoeveel facturen vervallen zijn en wat er nog openstaat.",
+      title: "Vervallen facturen in één oogopslag",
+      text: "De tegel Vervallen toont meteen hoeveel facturen open staan. Bedragen vind je in het Cashflow-panel eronder.",
     },
     {
       id: "actions",

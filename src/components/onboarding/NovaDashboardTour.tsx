@@ -238,7 +238,7 @@ export default function NovaDashboardTour() {
       )}
 
       <div
-        className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-4 right-4 z-[85] max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl backdrop-blur-xl sm:bottom-6 sm:left-auto sm:right-6 sm:w-[min(100vw-2rem,24rem)] sm:max-h-[calc(100dvh-3rem)]"
+        className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-4 right-4 z-[85] max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl backdrop-blur-xl sm:bottom-6 sm:left-6 sm:right-auto sm:w-[min(100vw-2rem,24rem)] sm:max-h-[calc(100dvh-3rem)] lg:left-[calc(220px+1.5rem)]"
         role="dialog"
         aria-label="Ela rondleiding"
       >

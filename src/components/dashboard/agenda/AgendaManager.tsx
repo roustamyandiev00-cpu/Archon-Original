@@ -470,7 +470,7 @@ export default function AgendaManager({
     return (
       <div
         key={afspraak.id}
-        className="group rounded-lg border border-sky-400/25 bg-sky-400/10 p-2 text-left shadow-sm shadow-black/20"
+        className="dashboard-agenda-appointment group rounded-lg border border-sky-400/25 bg-sky-400/10 p-2 text-left shadow-sm shadow-black/20"
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -531,8 +531,8 @@ export default function AgendaManager({
 
   function calendarGrid() {
     return (
-      <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/45">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+      <section className="dashboard-agenda-calendar flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/45">
+        <div className="dashboard-agenda-calendar-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
           <div>
             <p className="text-sm font-semibold text-zinc-100">
               {calendarTitle}
@@ -568,14 +568,14 @@ export default function AgendaManager({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="dashboard-agenda-calendar-scroll min-h-0 flex-1 overflow-auto">
           <div
-            className="grid min-w-[760px]"
+            className="dashboard-agenda-calendar-grid grid min-w-[760px]"
             style={{
-              gridTemplateColumns: `72px repeat(${visibleDays.length}, minmax(130px, 1fr))`,
+              gridTemplateColumns: `72px repeat(${visibleDays.length}, minmax(0, 1fr))`,
             }}
           >
-            <div className="sticky left-0 top-0 z-30 border-b border-r border-white/10 bg-zinc-950/95 backdrop-blur" />
+            <div className="dashboard-agenda-corner sticky left-0 top-0 z-30 border-b border-r border-white/10 bg-zinc-950/95 backdrop-blur" />
             {visibleDays.map((day) => {
               const header = formatDayHeader(day);
               const isToday = dateKey(day) === todayLocal();
@@ -583,8 +583,10 @@ export default function AgendaManager({
                 <div
                   key={dateKey(day)}
                   className={cn(
-                    "sticky top-0 z-20 border-b border-r border-white/10 px-3 py-3 last:border-r-0 backdrop-blur",
-                    isToday ? "bg-sky-500/10" : "bg-zinc-950/95",
+                    "dashboard-agenda-day-header sticky top-0 z-20 border-b border-r border-white/10 px-3 py-3 last:border-r-0 backdrop-blur",
+                    isToday
+                      ? "dashboard-agenda-day-header--today bg-sky-500/10"
+                      : "bg-zinc-950/95",
                   )}
                 >
                   <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
@@ -599,7 +601,7 @@ export default function AgendaManager({
 
             {WORK_HOURS.map((hour) => (
               <div key={hour} className="contents">
-                <div className="sticky left-0 z-10 border-r border-t border-white/10 bg-zinc-950/95 px-3 py-3 text-xs text-zinc-500 backdrop-blur">
+                <div className="dashboard-agenda-time-cell sticky left-0 z-10 border-r border-t border-white/10 bg-zinc-950/95 px-3 py-3 text-xs text-zinc-500 backdrop-blur">
                   {hourLabel(hour)}
                 </div>
                 {visibleDays.map((day) => {
@@ -610,12 +612,12 @@ export default function AgendaManager({
                       key={slotKey}
                       type="button"
                       onClick={() => openAtSlot(day, hour)}
-                      className="min-h-[78px] border-r border-t border-white/10 p-2 text-left transition-colors last:border-r-0 hover:bg-white/[0.03]"
+                      className="dashboard-agenda-slot min-h-[78px] border-r border-t border-white/10 p-2 text-left transition-colors last:border-r-0 hover:bg-white/[0.03]"
                       aria-label={`Afspraak plannen op ${dateKey(day)} om ${hourLabel(hour)}`}
                     >
                       <div className="space-y-2">
                         {items.length === 0 ? (
-                          <span className="text-[11px] text-zinc-700">
+                          <span className="dashboard-agenda-slot-empty text-[11px] text-zinc-700">
                             Vrij
                           </span>
                         ) : (

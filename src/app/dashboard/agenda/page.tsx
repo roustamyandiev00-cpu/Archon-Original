@@ -56,7 +56,7 @@ export default async function AgendaPage() {
   );
 
   return (
-    <div className="mx-auto flex h-full min-h-0 max-w-[1100px] flex-col gap-5">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1160px] flex-col gap-5">
       <PageHeader
         icon={<CalendarDays size={20} />}
         title="Agenda"
