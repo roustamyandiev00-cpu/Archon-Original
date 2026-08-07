@@ -58,7 +58,7 @@ export async function updateCompanyStatusAction(input: {
       actor_id: user.id,
       event_category: "platform_admin",
       event_type: `platform.company.${input.status}.requested`,
-      severity: input.status === "suspended" ? "warning" : "info",
+      severity: input.status === "suspended" ? "warn" : "info",
       target_type: "company",
       target_id: String(input.companyId),
       metadata: {
@@ -99,7 +99,7 @@ export async function updateCompanyStatusAction(input: {
         actor_id: user.id,
         event_category: "platform_admin",
         event_type: `platform.company.${input.status}.failed`,
-        severity: "warning",
+        severity: "warn",
         target_type: "company",
         target_id: String(input.companyId),
         metadata: {
@@ -124,7 +124,7 @@ export async function updateCompanyStatusAction(input: {
       actor_id: user.id,
       event_category: "platform_admin",
       event_type: `platform.company.${input.status}.completed`,
-      severity: input.status === "suspended" ? "warning" : "info",
+      severity: input.status === "suspended" ? "warn" : "info",
       target_type: "company",
       target_id: String(input.companyId),
       metadata: {
@@ -223,7 +223,7 @@ export async function createStripeBillingPortalAction(input: {
       actor_id: user.id,
       event_category: "platform_admin",
       event_type: "platform.billing_portal.requested",
-      severity: "warning",
+      severity: "warn",
       target_type: "stripe_customer",
       target_id: customerId,
       metadata: { correlationId, outcome: "requested" } as Json,
@@ -257,7 +257,7 @@ export async function createStripeBillingPortalAction(input: {
         actor_id: user.id,
         event_category: "platform_admin",
         event_type: "platform.billing_portal.created",
-        severity: "warning",
+        severity: "warn",
         target_type: "stripe_customer",
         target_id: customerId,
         metadata: {
@@ -282,7 +282,7 @@ export async function createStripeBillingPortalAction(input: {
       actor_id: user.id,
       event_category: "platform_admin",
       event_type: "platform.billing_portal.failed",
-      severity: "warning",
+      severity: "warn",
       target_type: "stripe_customer",
       target_id: customerId,
       metadata: { correlationId, outcome: "failed" } as Json,

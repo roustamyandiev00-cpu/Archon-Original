@@ -49,18 +49,33 @@ describe("platform admin access", () => {
   it("laat bootstrap CEO-mail toe wanneer flag aan staat", async () => {
     vi.stubEnv("PLATFORM_ADMIN_BOOTSTRAP_ENABLED", "true");
     vi.stubEnv("PLATFORM_CEO_EMAIL", "ceo@example.com");
-    serviceFrom.mockImplementation(() => ({
-      select: () => ({
-        eq: () => ({
-          limit: () => ({
-            maybeSingle: async () => ({ data: null, error: null }),
+    const auditInsert = vi.fn(async () => ({ error: null }));
+    serviceFrom.mockImplementation((table: string) => {
+      if (table === "company_memberships") {
+        return {
+          select: () => ({
+            eq: () => ({
+              limit: () => ({
+                maybeSingle: async () => ({
+                  data: { company_id: 42 },
+                  error: null,
+                }),
+              }),
+            }),
           }),
-        }),
-      }),
-    }));
+        };
+      }
+      if (table === "audit_logs") {
+        return { insert: auditInsert };
+      }
+      throw new Error(`Onverwachte tabel: ${table}`);
+    });
 
     await expect(isPlatformAdmin("ceo-id", "CEO@example.com")).resolves.toBe(
       true,
+    );
+    expect(auditInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: "warn" }),
     );
     // Niet-matchend adres krijgt geen bootstraptoegang, maar valt wel door naar
     // de database — bootstrap mag een echte platform_admins-rij niet blokkeren.

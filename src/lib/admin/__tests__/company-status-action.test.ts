@@ -136,6 +136,10 @@ describe("updateCompanyStatusAction", () => {
     });
     expect(service.updates[0]).not.toHaveProperty("subscription_status");
     expect(service.auditInserts).toHaveLength(2);
+    expect(service.auditInserts).toEqual([
+      expect.objectContaining({ severity: "warn" }),
+      expect.objectContaining({ severity: "warn" }),
+    ]);
   });
 
   it("herstelt een proefaccount als proefperiode en niet als betaald account", async () => {

@@ -153,6 +153,10 @@ describe("createStripeBillingPortalAction", () => {
       return_url: "https://app.archonpro.test/admin/companies/42",
     });
     expect(service.auditInserts).toHaveLength(2);
+    expect(service.auditInserts).toEqual([
+      expect.objectContaining({ severity: "warn" }),
+      expect.objectContaining({ severity: "warn" }),
+    ]);
   });
 
   it("geeft de portalsessie niet vrij wanneer de afrondende audit faalt", async () => {

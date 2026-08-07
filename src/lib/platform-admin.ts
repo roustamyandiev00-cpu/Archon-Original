@@ -73,7 +73,7 @@ async function auditBootstrapAccess(userId: string, email: string): Promise<void
       actor_id: userId,
       event_category: "platform_admin",
       event_type: "platform.admin.bootstrap_access",
-      severity: "warning",
+      severity: "warn",
       target_type: "user",
       target_id: userId,
       metadata: {

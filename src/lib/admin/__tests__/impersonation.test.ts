@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   cookieGet: vi.fn(),
   getUser: vi.fn(),
   isPlatformAdmin: vi.fn(),
+  auditInsert: vi.fn(),
   serviceFrom: vi.fn(),
   createServiceClient: vi.fn(),
 }));
@@ -36,6 +37,9 @@ function configureService(options?: {
   auditFails?: boolean;
   otherPlatformAdmin?: boolean;
 }) {
+  mocks.auditInsert.mockImplementation(async () => ({
+    error: options?.auditFails ? { message: "audit_logs fail" } : null,
+  }));
   mocks.serviceFrom.mockImplementation((table: string) => {
     if (table === "bedrijven") {
       const query = {
@@ -86,9 +90,7 @@ function configureService(options?: {
     }
     if (table === "audit_logs") {
       return {
-        insert: vi.fn(async () => ({
-          error: options?.auditFails ? { message: "audit_logs fail" } : null,
-        })),
+        insert: mocks.auditInsert,
       };
     }
     throw new Error(`Onverwachte tabel: ${table}`);
@@ -160,6 +162,9 @@ describe("startImpersonation", () => {
       ok: true,
     });
     expect(mocks.cookieSet).toHaveBeenCalledTimes(1);
+    expect(mocks.auditInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: "warn" }),
+    );
     expect(mocks.cookieSet).toHaveBeenCalledWith(
       "archon_impersonation",
       expect.any(String),

@@ -70,7 +70,7 @@ async function writeImpersonationAudit(input: {
       actor_id: input.actorId,
       event_category: "platform_admin",
       event_type: input.eventType,
-      severity: "warning",
+      severity: "warn",
       target_type: "company",
       target_id: String(input.companyId),
       metadata: {
