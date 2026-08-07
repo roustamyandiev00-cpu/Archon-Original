@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminAccess } from "@/components/dashboard/context";
-import { untyped } from "@/lib/integraties";
 
 export type TeamRole = "admin" | "member";
 
@@ -18,7 +17,7 @@ export async function addTeamMember(input: { email: string; role: TeamRole }) {
   if (!email) return { error: "Vul een e-mailadres in." };
   if (!validRole(input.role)) return { error: "Ongeldige rol." };
 
-  const { error } = await untyped(access.supabase).rpc("team_add_member", {
+  const { error } = await access.supabase.rpc("team_add_member", {
     p_company_id: access.companyId,
     p_email: email,
     p_role: input.role,
@@ -43,7 +42,7 @@ export async function updateTeamMember(input: {
   }
   if (!validRole(input.role)) return { error: "Ongeldige rol." };
 
-  const { error } = await untyped(access.supabase).rpc("team_update_member", {
+  const { error } = await access.supabase.rpc("team_update_member", {
     p_company_id: access.companyId,
     p_membership_id: input.membershipId,
     p_role: input.role,

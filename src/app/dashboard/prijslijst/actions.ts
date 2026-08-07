@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
-import { untyped } from "@/lib/integraties";
 
 export type PrijslijstItemInput = {
   omschrijving: string;
@@ -31,7 +30,7 @@ export async function createPrijslijstItem(input: PrijslijstItemInput) {
   if (!row.omschrijving) return { error: "Omschrijving is verplicht." };
   if (row.prijs < 0) return { error: "Prijs mag niet negatief zijn." };
 
-  const { data, error } = await untyped(supabase)
+  const { data, error } = await supabase
     .from("prijslijst_items")
     .insert({
       company_id: companyId,
@@ -60,7 +59,7 @@ export async function updatePrijslijstItem(
   if (!row.omschrijving) return { error: "Omschrijving is verplicht." };
   if (row.prijs < 0) return { error: "Prijs mag niet negatief zijn." };
 
-  const { error } = await untyped(supabase)
+  const { error } = await supabase
     .from("prijslijst_items")
     .update({
       ...row,
@@ -80,7 +79,7 @@ export async function setPrijslijstItemActive(id: number, isActive: boolean) {
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 
-  const { error } = await untyped(supabase)
+  const { error } = await supabase
     .from("prijslijst_items")
     .update({
       is_active: isActive,
