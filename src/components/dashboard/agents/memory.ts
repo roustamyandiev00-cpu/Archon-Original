@@ -464,6 +464,21 @@ export function memoriesFromExecutedAction(input: {
     return memories;
   }
 
+  if (actionType === "propose_create_task" || actionType === "propose_invoice_followup_task") {
+    const taskId = payload.taskId as number | undefined;
+    const title = payload.title as string | undefined;
+    const factuurId = payload.factuurId as number | undefined;
+    memories.push({
+      content: factuurId
+        ? `${agentName} heeft opvolgingstaak aangemaakt voor factuur #${factuurId ?? "?"}: ${title ?? "Onbekend"}.`
+        : `${agentName} heeft taak aangemaakt: ${title ?? "Onbekend"}.`,
+      memoryType: "interaction",
+      importance: 5,
+      metadata: { taskId, title, factuurId: factuurId ?? null },
+    });
+    return memories;
+  }
+
   return memories;
 }
 

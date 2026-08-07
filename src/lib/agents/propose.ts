@@ -8,6 +8,8 @@ import type {
   ProposeWerkpostMatchPayload,
   ProposeMateriaalvoorraadPayload,
   ProposeGeschilSamenvattingPayload,
+  ProposeCreateTaskPayload,
+  ProposeInvoiceFollowupTaskPayload,
   SendOffertePayload,
   SendPaymentReminderPayload,
   SendQuoteFollowupPayload,
@@ -29,7 +31,9 @@ type ProposeInput = {
     | ProposeChatSanctionPayload
     | ProposeWerkpostMatchPayload
     | ProposeMateriaalvoorraadPayload
-    | ProposeGeschilSamenvattingPayload;
+    | ProposeGeschilSamenvattingPayload
+    | ProposeCreateTaskPayload
+    | ProposeInvoiceFollowupTaskPayload;
   targetEntityType?: string | null;
   targetEntityId?: number | null;
   targetRoute?: string | null;

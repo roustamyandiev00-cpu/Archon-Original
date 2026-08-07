@@ -12,7 +12,9 @@ export type AgentActionType =
   | "propose_chat_sanction"
   | "propose_werkpost_match"
   | "propose_materiaal_zoek"
-  | "propose_geschil_samenvatting";
+  | "propose_geschil_samenvatting"
+  | "propose_create_task"
+  | "propose_invoice_followup_task";
 
 export type ProposeMateriaalvoorraadPayload = {
   query: string;
@@ -32,6 +34,28 @@ export type ProposeMateriaalvoorraadPayload = {
 export type ProposeGeschilSamenvattingPayload = {
   geschilId: string;
   samenvatting: string;
+};
+
+export type ProposeCreateTaskPayload = {
+  title: string;
+  description?: string | null;
+  priority?: "low" | "medium" | "high" | "urgent";
+  dueAt?: string | null;
+  assignedToUserId?: string | null;
+  contactId?: number | null;
+  offerteId?: number | null;
+  factuurId?: number | null;
+  projectId?: number | null;
+  relatedEntityType?: string | null;
+  relatedEntityId?: number | null;
+};
+
+export type ProposeInvoiceFollowupTaskPayload = {
+  factuurId: number;
+  title: string;
+  description?: string | null;
+  dueAt?: string | null;
+  assignedToUserId?: string | null;
 };
 
 export type ProposeChatSanctionPayload = {

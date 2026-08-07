@@ -16,13 +16,14 @@ import type {
   ProposeChatSanctionPayload,
   ProposeWerkpostMatchPayload,
   ProposeGeschilSamenvattingPayload,
+  ProposeCreateTaskPayload,
+  ProposeInvoiceFollowupTaskPayload,
   SendOffertePayload,
   SendPaymentReminderPayload,
   SendQuoteFollowupPayload,
 } from "@/lib/agents/types";
 import { executeIncassoStep } from "@/app/dashboard/facturen/incasso-actions";
 import { executeQuoteFollowup } from "@/lib/agents/followup-actions";
-import { untyped } from "@/lib/integraties";
 import { refreshBetrouwbaarheidsscore } from "@/lib/bouwnetwerk/betrouwbaarheid";
 
 async function logActivity(
@@ -393,7 +394,7 @@ export async function executeAgentAction(input: {
       const isWarning = p.sanctionType === "waarschuwing";
       const sanctieStatus = isWarning ? "bevestigd" : "voorgesteld";
 
-      const { data: sanctie, error: sanctieError } = await untyped(supabase)
+      const { data: sanctie, error: sanctieError } = await supabase
         .from("bedrijf_sancties")
         .insert({
           bedrijf_id: p.bedrijfId,
@@ -546,7 +547,7 @@ export async function executeAgentAction(input: {
 
     if (action.action_type === "propose_geschil_samenvatting") {
       const p = payload as unknown as ProposeGeschilSamenvattingPayload;
-      await untyped(supabase)
+      await supabase
         .from("geschillen")
         .update({
           ai_samenvatting: p.samenvatting,
@@ -589,6 +590,132 @@ export async function executeAgentAction(input: {
         })
         .eq("id", actionId);
       return { ok: true, route: "/dashboard/bouwmaterialen" };
+    }
+
+    if (action.action_type === "propose_create_task") {
+      const p = payload as unknown as ProposeCreateTaskPayload;
+      if (!p.title?.trim()) throw new Error("Taaktitel is verplicht.");
+
+      const now = new Date().toISOString();
+      const { data: task, error: taskError } = await supabase
+        .from("tasks")
+        .insert({
+          company_id: companyId,
+          title: p.title.trim(),
+          description: p.description ?? null,
+          priority: p.priority ?? "medium",
+          due_at: p.dueAt ?? null,
+          assigned_to_user_id: p.assignedToUserId ?? null,
+          contact_id: p.contactId ?? null,
+          offerte_id: p.offerteId ?? null,
+          factuur_id: p.factuurId ?? null,
+          project_id: p.projectId ?? null,
+          related_entity_type: p.relatedEntityType ?? null,
+          related_entity_id: p.relatedEntityId ?? null,
+          source: "agent",
+          ai_generated: true,
+          requires_approval: false,
+          status: "todo",
+          created_by_user_id: userId,
+          created_by: userId,
+          updated_at: now,
+        })
+        .select("id")
+        .single();
+
+      if (taskError) throw new Error(taskError.message);
+
+      const route = `/dashboard/taken/${task.id}`;
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: now,
+          target_entity_type: "task",
+          target_entity_id: task.id,
+          target_route: route,
+          updated_at: now,
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Taak aangemaakt: ${p.title.trim()}`,
+        outputJson: { taskId: task.id },
+      });
+
+      revalidatePath("/dashboard/taken");
+      revalidatePath("/dashboard/command-center");
+      revalidatePath("/dashboard/automatisaties");
+      return { ok: true, taskId: task.id, route };
+    }
+
+    if (action.action_type === "propose_invoice_followup_task") {
+      const p = payload as unknown as ProposeInvoiceFollowupTaskPayload;
+      if (!p.factuurId || typeof p.factuurId !== "number") {
+        throw new Error("Factuur-ID is verplicht voor opvolgingstaak.");
+      }
+      const title = p.title?.trim() || `Opvolging factuur #${p.factuurId}`;
+
+      const now = new Date().toISOString();
+      const dueAt =
+        p.dueAt ?? new Date(Date.now() + 3 * 86_400_000).toISOString();
+
+      const { data: task, error: taskError } = await supabase
+        .from("tasks")
+        .insert({
+          company_id: companyId,
+          title,
+          description: p.description ?? null,
+          priority: "high",
+          due_at: dueAt,
+          assigned_to_user_id: p.assignedToUserId ?? null,
+          factuur_id: p.factuurId,
+          related_entity_type: "factuur",
+          related_entity_id: p.factuurId,
+          source: "agent",
+          ai_generated: true,
+          requires_approval: false,
+          status: "todo",
+          created_by_user_id: userId,
+          created_by: userId,
+          updated_at: now,
+        })
+        .select("id")
+        .single();
+
+      if (taskError) throw new Error(taskError.message);
+
+      const route = `/dashboard/taken/${task.id}`;
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: now,
+          target_entity_type: "task",
+          target_entity_id: task.id,
+          target_route: route,
+          updated_at: now,
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Opvolgingstaak aangemaakt voor factuur #${p.factuurId}: ${title}`,
+        outputJson: { taskId: task.id, factuurId: p.factuurId },
+      });
+
+      revalidatePath("/dashboard/taken");
+      revalidatePath(`/dashboard/facturen/${p.factuurId}`);
+      revalidatePath("/dashboard/command-center");
+      revalidatePath("/dashboard/automatisaties");
+      return { ok: true, taskId: task.id, route };
     }
 
     return { error: `Onbekend actietype: ${action.action_type}` };
