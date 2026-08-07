@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database.types";
 import type { StoredDomainEvent } from "@/lib/agents/events/types";
 import { getPrimaryAgent } from "@/lib/agents/router";
 import {
@@ -13,7 +14,8 @@ import { handleQuoteFollowupDue } from "@/lib/agents/handlers/quote-followup-due
 import { handleInvoiceOverdue } from "@/lib/agents/handlers/invoice-overdue";
 import { handlePaymentReceived } from "@/lib/agents/handlers/payment-received";
 import { writeAuditEntry } from "@/lib/agents/audit";
-import { untyped } from "@/lib/integraties";
+
+type TypedSupabase = SupabaseClient<Database>;
 
 export type DispatchResult = {
   processed: number;
@@ -26,11 +28,11 @@ export type DispatchOpts = {
 };
 
 async function countCorrelationActions(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   tenantId: number,
   correlationId: string,
 ): Promise<number> {
-  const { count } = await untyped(supabase)
+  const { count } = await supabase
     .from("agent_runs")
     .select("id", { count: "exact", head: true })
     .eq("tenant_id", tenantId)
@@ -40,7 +42,7 @@ async function countCorrelationActions(
 }
 
 async function dispatchEvent(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   event: StoredDomainEvent,
   opts?: DispatchOpts,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -106,7 +108,7 @@ async function dispatchEvent(
 }
 
 export async function dispatchPendingEvents(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   tenantId: number,
   opts?: DispatchOpts,
 ): Promise<DispatchResult> {
@@ -126,11 +128,11 @@ export async function dispatchPendingEvents(
 }
 
 export async function dispatchSingleEvent(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   eventDbId: string,
   opts?: DispatchOpts,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { data } = await untyped(supabase)
+  const { data } = await supabase
     .from("domain_events")
     .select("*")
     .eq("id", eventDbId)
@@ -139,23 +141,23 @@ export async function dispatchSingleEvent(
   if (!data) return { ok: false, error: "Event niet gevonden" };
 
   const event: StoredDomainEvent = {
-    id: data.id as string,
-    eventId: data.event_id as string,
+    id: data.id,
+    eventId: data.event_id,
     eventType: data.event_type as StoredDomainEvent["eventType"],
-    tenantId: data.tenant_id as number,
-    entityType: data.entity_type as string,
-    entityId: data.entity_id as number,
+    tenantId: data.tenant_id,
+    entityType: data.entity_type,
+    entityId: data.entity_id,
     actorType: data.actor_type as StoredDomainEvent["actorType"],
-    actorId: data.actor_id as string | null,
-    occurredAt: data.occurred_at as string,
-    correlationId: data.correlation_id as string,
-    causationId: data.causation_id as string | null,
-    originAgentId: data.origin_agent_id as string | null,
-    payloadVersion: data.payload_version as number,
+    actorId: data.actor_id,
+    occurredAt: data.occurred_at,
+    correlationId: data.correlation_id,
+    causationId: data.causation_id,
+    originAgentId: data.origin_agent_id,
+    payloadVersion: data.payload_version,
     payload: (data.payload ?? {}) as Record<string, unknown>,
-    idempotencyKey: data.idempotency_key as string | null,
-    processedAt: data.processed_at as string | null,
-    createdAt: data.created_at as string,
+    idempotencyKey: data.idempotency_key,
+    processedAt: data.processed_at,
+    createdAt: data.created_at,
   };
 
   return dispatchEvent(supabase, event, opts);
