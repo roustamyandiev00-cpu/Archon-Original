@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
 import { matchBankTransactions } from "@/lib/bank/matching";
 import { parseBankStatement } from "@/lib/bank/parse-statement";
-import { untyped } from "@/lib/integraties";
 
 export async function importBankStatementAction(formData: FormData) {
   const access = await requireWriteAccess();
@@ -22,7 +21,7 @@ export async function importBankStatementAction(formData: FormData) {
   }
 
   const now = new Date().toISOString();
-  const { data: rekening } = await untyped(access.supabase)
+  const { data: rekening } = await access.supabase
     .from("bank_rekeningen")
     .upsert(
       {
@@ -40,7 +39,7 @@ export async function importBankStatementAction(formData: FormData) {
   let imported = 0;
 
   for (const row of rows) {
-    const { error } = await untyped(access.supabase)
+    const { error } = await access.supabase
       .from("bank_transacties")
       .upsert(
         {
@@ -99,7 +98,7 @@ export async function addBankAccountAction(iban: string, alias?: string) {
   const normalized = iban.replace(/\s+/g, "").toUpperCase();
   if (normalized.length < 15) return { error: "Ongeldig IBAN." };
 
-  const { error } = await untyped(access.supabase).from("bank_rekeningen").upsert(
+  const { error } = await access.supabase.from("bank_rekeningen").upsert(
     {
       bedrijf_id: access.companyId,
       iban: normalized,

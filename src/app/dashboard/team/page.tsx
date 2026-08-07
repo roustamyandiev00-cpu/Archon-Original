@@ -1,6 +1,5 @@
 import { Users } from "lucide-react";
 import { getCompanyContext } from "@/lib/company";
-import { untyped } from "@/lib/integraties";
 import ModuleWipBanner from "@/components/dashboard/ModuleWipBanner";
 import TeamManager, {
   type TeamMember,
@@ -34,7 +33,7 @@ export default async function TeamPage() {
   }
 
   const [{ data: memberRows, error }, { data: isAdmin }] = await Promise.all([
-    untyped(supabase).rpc("team_list_members", { p_company_id: companyId }),
+    supabase.rpc("team_list_members", { p_company_id: companyId }),
     supabase.rpc("is_company_admin", { p_company_id: companyId }),
   ]);
 

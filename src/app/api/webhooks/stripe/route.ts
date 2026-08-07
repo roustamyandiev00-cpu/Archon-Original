@@ -9,7 +9,6 @@ import {
   hashStripePayload,
 } from "@/lib/stripe/webhook-events";
 import { createServiceClient } from "@/lib/supabase/service";
-import { untyped } from "@/lib/integraties";
 import { syncStripeInvoice } from "@/lib/admin/platform-billing";
 
 export const runtime = "nodejs";
@@ -30,7 +29,7 @@ async function fulfillCheckoutSession(session: Stripe.Checkout.Session) {
   const supabase = createServiceClient();
 
   if (purchaseId) {
-    const { data: existing } = await untyped(supabase)
+    const { data: existing } = await supabase
       .from("ai_token_purchases")
       .select("id, status")
       .eq("id", purchaseId)
@@ -51,7 +50,7 @@ async function fulfillCheckoutSession(session: Stripe.Checkout.Session) {
   if (!grant.ok) return { error: grant.error };
 
   if (purchaseId) {
-    await untyped(supabase)
+    await supabase
       .from("ai_token_purchases")
       .update({
         status: "completed",
@@ -66,7 +65,7 @@ async function fulfillCheckoutSession(session: Stripe.Checkout.Session) {
   }
 
   if (session.customer && typeof session.customer === "string") {
-    await untyped(supabase)
+    await supabase
       .from("company_ai_credits")
       .update({ stripe_customer_id: session.customer })
       .eq("company_id", companyId);

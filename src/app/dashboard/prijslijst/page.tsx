@@ -4,7 +4,6 @@ import { isActivePreviewMode } from "@/components/dashboard/context";
 import { getCompanyContext } from "@/lib/company";
 import { DEMO_PRIJSLIJST } from "@/lib/demo";
 import { showDemoData } from "@/lib/demo-mode";
-import { untyped } from "@/lib/integraties";
 import {
   PageHeader,
   NoCompanyNotice,
@@ -34,7 +33,7 @@ export default async function PrijslijstPage() {
   let error: { message: string } | null = null;
 
   if (companyId) {
-    const res = await untyped(supabase)
+    const res = await supabase
       .from("prijslijst_items")
       .select(
         "id, omschrijving, eenheid, prijs, btw_percentage, categorie, is_active",
