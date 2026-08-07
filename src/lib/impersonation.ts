@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isPlatformAdmin } from "@/lib/platform-admin";
-import { untyped } from "@/lib/integraties";
 
 export const IMPERSONATION_COOKIE = "archon_impersonation";
 const SESSION_SECONDS = 30 * 60; // 30 minuten
@@ -63,7 +62,7 @@ async function writeImpersonationAudit(input: {
   reason?: string;
   outcome: string;
 }): Promise<{ error?: string }> {
-  const { error } = await untyped(createServiceClient())
+  const { error } = await createServiceClient()
     .from("audit_logs")
     .insert({
       company_id: input.companyId,
@@ -104,7 +103,7 @@ export async function startImpersonation(
   if (!allowed) return { error: "Geen platform-admin rechten." };
 
   const serviceSupabase = createServiceClient();
-  const { data: company, error: companyError } = await untyped(serviceSupabase)
+  const { data: company, error: companyError } = await serviceSupabase
     .from("bedrijven")
     .select("id")
     .eq("id", targetCompanyId)
@@ -117,7 +116,7 @@ export async function startImpersonation(
   if (!company) return { error: "Bedrijf niet gevonden." };
 
   // Blokkeer impersonatie van bedrijven waar een andere platform-CEO lid is.
-  const { data: members } = await untyped(serviceSupabase)
+  const { data: members } = await serviceSupabase
     .from("company_memberships")
     .select("user_id")
     .eq("company_id", targetCompanyId);
@@ -127,7 +126,7 @@ export async function startImpersonation(
     .filter((id): id is string => Boolean(id) && id !== user.id);
 
   if (memberIds.length > 0) {
-    const { data: otherAdmins } = await untyped(serviceSupabase)
+    const { data: otherAdmins } = await serviceSupabase
       .from("platform_admins")
       .select("user_id")
       .eq("role", "ceo")
@@ -143,7 +142,7 @@ export async function startImpersonation(
 
   const trimmedReason = reason?.trim() || undefined;
 
-  const { error: logError } = await untyped(serviceSupabase)
+  const { error: logError } = await serviceSupabase
     .from("admin_impersonation_log")
     .insert({
       admin_user_id: user.id,

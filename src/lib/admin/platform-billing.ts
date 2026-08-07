@@ -1,6 +1,8 @@
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { untyped } from "@/lib/integraties";
+import type { Database } from "@/types/database.types";
+
+type TypedSupabase = SupabaseClient<Database>;
 
 export type PlatformBillingInvoice = {
   id: number;
@@ -77,12 +79,12 @@ export function stripeInvoiceToRow(
 }
 
 async function resolveCompanyId(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   invoice: Stripe.Invoice,
 ): Promise<number | null> {
   const customerId = stripeId(invoice.customer);
   if (customerId) {
-    const { data } = await untyped(supabase)
+    const { data } = await supabase
       .from("company_ai_credits")
       .select("company_id")
       .eq("stripe_customer_id", customerId)
@@ -92,7 +94,7 @@ async function resolveCompanyId(
 
   const metadataCompanyId = Number(invoice.metadata?.companyId);
   if (Number.isInteger(metadataCompanyId) && metadataCompanyId > 0) {
-    const { data } = await untyped(supabase)
+    const { data } = await supabase
       .from("bedrijven")
       .select("id")
       .eq("id", metadataCompanyId)
@@ -104,7 +106,7 @@ async function resolveCompanyId(
 }
 
 export async function syncStripeInvoice(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   invoice: Stripe.Invoice,
   eventCreated: number,
 ) {
@@ -112,7 +114,7 @@ export async function syncStripeInvoice(
   if (!companyId) return { synced: false as const, reason: "company_not_found" };
 
   const eventIso = new Date(eventCreated * 1000).toISOString();
-  const { data: existing } = await untyped(supabase)
+  const { data: existing } = await supabase
     .from("platform_billing_invoices")
     .select("last_event_created_at")
     .eq("stripe_invoice_id", invoice.id)
@@ -130,7 +132,7 @@ export async function syncStripeInvoice(
     return { synced: false as const, reason: "customer_not_found" };
   }
 
-  const { error } = await untyped(supabase)
+  const { error } = await supabase
     .from("platform_billing_invoices")
     .upsert(row, { onConflict: "stripe_invoice_id" });
 
@@ -139,10 +141,10 @@ export async function syncStripeInvoice(
 }
 
 export async function fetchPlatformBillingInvoices(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   companyId: number,
 ): Promise<PlatformBillingInvoice[]> {
-  const { data, error } = await untyped(supabase)
+  const { data, error } = await supabase
     .from("platform_billing_invoices")
     .select(
       "id, stripe_invoice_id, number, status, currency, amount_due, amount_paid, customer_email, hosted_invoice_url, invoice_pdf_url, period_start, period_end, paid_at, livemode, created_at",

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { untyped } from "@/lib/integraties";
 
 function normalizeEmail(value: string | null | undefined): string | null {
   const email = value?.trim().toLowerCase();
@@ -57,7 +56,7 @@ async function auditBootstrapAccess(userId: string, email: string): Promise<void
   // we loggen daarom best-effort zonder de auth-beslissing te blokkeren.
   try {
     const service = createServiceClient();
-    const { data: membership } = await untyped(service)
+    const { data: membership } = await service
       .from("company_memberships")
       .select("company_id")
       .eq("user_id", userId)
@@ -68,7 +67,7 @@ async function auditBootstrapAccess(userId: string, email: string): Promise<void
       typeof membership?.company_id === "number" ? membership.company_id : null;
     if (!companyId) return;
 
-    const { error } = await untyped(service).from("audit_logs").insert({
+    const { error } = await service.from("audit_logs").insert({
       company_id: companyId,
       actor_id: userId,
       event_category: "platform_admin",
