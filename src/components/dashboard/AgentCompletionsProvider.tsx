@@ -197,7 +197,14 @@ export function AgentCompletionsProvider({
   useEffect(() => {
     if (!enabled || !companyId) return;
 
-    const tick = () => void poll();
+    const tick = () => {
+      void poll().catch((error: unknown) => {
+        console.warn(
+          "[agent-completions] Achtergrondcontrole tijdelijk overgeslagen.",
+          error,
+        );
+      });
+    };
     const initialId = window.setTimeout(tick, 0);
     const intervalId = window.setInterval(tick, POLL_MS);
     return () => {
