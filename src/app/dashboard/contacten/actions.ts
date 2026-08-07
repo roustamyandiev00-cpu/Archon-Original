@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
-import { untyped } from "@/lib/integraties";
 import {
   normalizeBelgianVat,
   normalizeKbo,
@@ -95,7 +94,7 @@ export async function createKlant(input: KlantInput) {
   const row = clean(input);
   if (!row.name) return { error: "Naam is verplicht." };
 
-  const { data, error } = await untyped(supabase)
+  const { data, error } = await supabase
     .from("customers")
     .insert({
       company_id: companyId,
@@ -120,7 +119,7 @@ export async function updateKlant(id: number, input: KlantInput) {
   const row = clean(input);
   if (!row.name) return { error: "Naam is verplicht." };
 
-  const { error } = await untyped(supabase)
+  const { error } = await supabase
     .from("customers")
     .update({
       ...row,
