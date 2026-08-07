@@ -1,32 +1,39 @@
-const partners = [
-  { name: "Bouwgroep De Meyer", initials: "BD", color: "text-sky-400" },
-  { name: "Dakwerken Janssens", initials: "DJ", color: "text-cyan-400" },
-  { name: "Construct BVBA", initials: "CB", color: "text-indigo-400" },
-  { name: "Renovatie Peeters", initials: "RP", color: "text-violet-400" },
+import { BadgeCheck, MapPinned, UserRoundCheck } from "lucide-react";
+
+const trustPoints = [
+  {
+    title: "Gebouwd in België",
+    detail: "Data blijft in de EU",
+    icon: MapPinned,
+  },
+  {
+    title: "GDPR-bewust",
+    detail: "Jouw data blijft van jou",
+    icon: BadgeCheck,
+  },
+  {
+    title: "Menselijke controle",
+    detail: "AI met jouw goedkeuring",
+    icon: UserRoundCheck,
+  },
 ];
 
 export default function HeroTrustBar() {
   return (
-    <div className="relative z-10 border-t border-white/[0.06] bg-zinc-950/50 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 px-6 py-5 sm:flex-row lg:px-8">
-        <p className="shrink-0 text-center text-sm text-zinc-500 sm:text-left">
-          Vertrouwd door bouwbedrijven in België
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 sm:justify-end lg:gap-x-8">
-          {partners.map((partner) => (
-            <span
-              key={partner.name}
-              className="flex items-center gap-2.5 text-sm font-medium text-zinc-400"
+    <div className="relative z-10 border-y border-white/[0.09] bg-[#081728]/90 backdrop-blur-md">
+      <div className="mx-auto grid max-w-[90rem] divide-y divide-white/[0.08] px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6 lg:px-10">
+          {trustPoints.map((point) => (
+            <div
+              key={point.title}
+              className="flex items-center gap-4 px-2 py-5 sm:justify-center sm:px-6 sm:py-6"
             >
-              <span
-                className={`grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-[10px] font-bold ${partner.color}`}
-              >
-                {partner.initials}
-              </span>
-              <span className="hidden sm:inline">{partner.name}</span>
-            </span>
+              <point.icon size={28} strokeWidth={1.5} className="shrink-0 text-orange-300" />
+              <div>
+                <p className="text-sm font-semibold text-slate-100">{point.title}</p>
+                <p className="mt-1 text-xs text-slate-400 sm:text-sm">{point.detail}</p>
+              </div>
+            </div>
           ))}
-        </div>
       </div>
     </div>
   );

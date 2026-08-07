@@ -27,12 +27,28 @@ const links = [
   { label: "Community", href: "/gemeenschap" },
 ];
 
-type NavbarTheme = "dark" | "light";
+const executiveLinks = [
+  { label: "Product", href: "/functies", children: functies },
+  { label: "Oplossingen", href: "/functies" },
+  { label: "Prijzen", href: "/prijzen" },
+  { label: "Over ons", href: "/over" },
+];
 
-export default function Navbar({ theme = "dark" }: { theme?: NavbarTheme }) {
+type NavbarTheme = "dark" | "light";
+type NavbarVariant = "default" | "executive";
+
+export default function Navbar({
+  theme = "dark",
+  variant = "default",
+}: {
+  theme?: NavbarTheme;
+  variant?: NavbarVariant;
+}) {
   const [open, setOpen] = useState(false);
   const [funcOpen, setFuncOpen] = useState(false);
   const isLight = theme === "light";
+  const isExecutive = variant === "executive";
+  const navigationLinks = isExecutive ? executiveLinks : links;
 
   const closeMenu = () => {
     setOpen(false);
@@ -48,12 +64,18 @@ export default function Navbar({ theme = "dark" }: { theme?: NavbarTheme }) {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top)]">
-      <div className="mx-auto max-w-7xl px-3 sm:px-6">
+      <div
+        className={`mx-auto px-3 sm:px-6 ${
+          isExecutive ? "max-w-[90rem] lg:px-10" : "max-w-7xl"
+        }`}
+      >
         <nav
-          className={`mt-2 flex items-center justify-between rounded-2xl px-3 py-2 backdrop-blur-xl sm:mt-4 sm:rounded-full sm:px-4 sm:py-2.5 ${
+          className={`flex items-center justify-between px-3 py-2.5 backdrop-blur-xl sm:px-4 ${
             isLight
               ? "border border-zinc-200/90 bg-white/90 shadow-sm"
-              : "border border-white/[0.08] bg-zinc-950/70"
+              : isExecutive
+                ? "mt-0 border-b border-white/[0.08] bg-[#030914]/88 sm:py-4"
+                : "mt-2 rounded-2xl border border-white/[0.08] bg-zinc-950/70 sm:mt-4 sm:rounded-full sm:py-2.5"
           }`}
         >
           <Link href="/" className="flex min-h-10 items-center gap-2 pl-0.5 sm:pl-1">
@@ -76,7 +98,7 @@ export default function Navbar({ theme = "dark" }: { theme?: NavbarTheme }) {
           </Link>
 
           <div className="hidden items-center gap-7 md:flex">
-            {links.map((l) =>
+            {navigationLinks.map((l) =>
               l.children ? (
                 <div key={l.label} className="group relative">
                   <button
@@ -188,7 +210,7 @@ export default function Navbar({ theme = "dark" }: { theme?: NavbarTheme }) {
               onPointerDown={(e) => { e.preventDefault(); closeMenu(); }}
             />
             <div
-              className={`relative z-10 mt-2 flex max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl md:hidden ${
+              className={`relative z-50 mt-2 flex max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl md:hidden ${
                 isLight
                   ? "border-zinc-200 bg-white"
                   : "border-white/10 bg-zinc-900/95"
@@ -196,7 +218,7 @@ export default function Navbar({ theme = "dark" }: { theme?: NavbarTheme }) {
             >
               <div className="flex-1 overflow-y-auto overscroll-contain p-3 [-webkit-overflow-scrolling:touch]">
                 <div className="flex flex-col gap-0.5">
-                  {links.map((l) =>
+                  {navigationLinks.map((l) =>
                     l.children ? (
                       <div key={l.label}>
                         <button

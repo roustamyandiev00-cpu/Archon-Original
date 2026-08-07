@@ -64,11 +64,9 @@ export default function AutomationShowcase() {
 
   return (
     <div className="relative">
-      <div className="aurora-glow opacity-60" />
-
-      <div className="relative z-10 overflow-hidden rounded-2xl bg-white/[0.02] shadow-2xl shadow-sky-500/5 backdrop-blur-xl ring-1 ring-inset ring-white/5">
+      <div className="relative z-10 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#050b14] shadow-[0_24px_72px_rgba(0,0,0,0.3)]">
         {/* Header */}
-        <div className="flex flex-col gap-2 border-b border-white/5 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+        <div className="flex flex-col gap-2 border-b border-white/[0.08] bg-[#08111d] px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -78,20 +76,20 @@ export default function AutomationShowcase() {
               3 AI-agents actief in je crew
             </span>
           </div>
-          <div className="flex w-fit items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-300">
+          <div className="flex w-fit items-center gap-1.5 rounded-full border border-sky-300/25 bg-sky-400/[0.08] px-2.5 py-1 text-[11px] font-medium text-sky-300">
             <Zap size={11} />
             Automatisering aan
           </div>
         </div>
 
         {/* How it works strip */}
-        <div className="flex flex-col border-b border-white/5 bg-white/[0.02] sm:grid sm:grid-cols-3">
+        <div className="flex flex-col border-b border-white/[0.08] bg-[#071526] sm:grid sm:grid-cols-3">
           {workflow.map((step, i) => (
             <div
               key={step.label}
               className={`px-3 py-2.5 sm:px-3 ${
                 i < workflow.length - 1
-                  ? "border-b border-white/5 sm:border-b-0 sm:border-r"
+                  ? "border-b border-white/[0.08] sm:border-b-0 sm:border-r"
                   : ""
               }`}
             >
@@ -106,7 +104,7 @@ export default function AutomationShowcase() {
         </div>
 
         {/* AI reasoning strip */}
-        <div className="border-b border-white/5 bg-sky-500/5 px-4 py-2.5">
+        <div className="border-b border-white/[0.08] bg-sky-400/[0.05] px-4 py-2.5">
           <div className="flex items-start gap-2">
             <Sparkles size={14} className="mt-0.5 shrink-0 text-sky-400" />
             <p className="text-xs leading-relaxed text-zinc-300">
@@ -122,7 +120,7 @@ export default function AutomationShowcase() {
           {agents.map((agent) => (
             <div
               key={agent.name}
-              className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5 sm:p-3"
+              className="rounded-xl border border-white/[0.08] bg-[#08111d] p-2.5 sm:p-3"
             >
               <div className="flex items-start gap-2.5 sm:gap-3">
                 <AgentPortrait
@@ -152,7 +150,7 @@ export default function AutomationShowcase() {
                     {agent.capabilities.map((cap) => (
                       <span
                         key={cap}
-                        className="rounded-full border border-white/8 bg-zinc-800/50 px-1.5 py-0.5 text-[9px] text-zinc-400"
+                        className="rounded-full border border-white/[0.08] bg-white/[0.025] px-1.5 py-0.5 text-[9px] text-slate-400"
                       >
                         {cap}
                       </span>
@@ -189,14 +187,14 @@ export default function AutomationShowcase() {
         </div>
 
         {/* Avatar picker demo */}
-        <div className="border-t border-white/5 bg-violet-500/5 px-3 py-3 sm:px-4">
+        <div className="border-t border-white/[0.08] bg-[#081525] px-3 py-3 sm:px-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
             <AgentPortrait
               name="Jouw agent"
               gradient="from-violet-400 to-purple-500"
               avatarUrl={selectedAvatar}
               size="md"
-              className="mx-auto h-11 w-11 rounded-xl ring-2 ring-violet-400/40 sm:mx-0"
+              className="mx-auto h-11 w-11 rounded-xl ring-1 ring-sky-300/40 sm:mx-0"
             />
             <div className="min-w-0 flex-1 text-center sm:text-left">
               <p className="text-xs font-semibold text-zinc-200">
@@ -217,7 +215,7 @@ export default function AutomationShowcase() {
                       onClick={() => setSelectedAvatar(option.url)}
                       className={`rounded-lg p-0.5 transition-all ${
                         selected
-                          ? "ring-2 ring-violet-400 ring-offset-1 ring-offset-zinc-950"
+                          ? "ring-2 ring-sky-300 ring-offset-1 ring-offset-[#081525]"
                           : "ring-1 ring-white/10 hover:ring-white/25"
                       }`}
                     >
@@ -240,7 +238,7 @@ export default function AutomationShowcase() {
         </div>
 
         {/* Automation progress */}
-        <div className="border-t border-white/5 bg-white/[0.015] px-4 py-3">
+        <div className="border-t border-white/[0.08] bg-[#07101b] px-4 py-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[11px] font-medium text-zinc-400">
               Automatiseringen vandaag
@@ -259,7 +257,7 @@ export default function AutomationShowcase() {
                 </div>
                 <div className="h-1 overflow-hidden rounded-full bg-zinc-800">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-1000"
+                    className="h-full rounded-full bg-sky-400 transition-all duration-1000"
                     style={{ width: `${item.progress}%` }}
                   />
                 </div>

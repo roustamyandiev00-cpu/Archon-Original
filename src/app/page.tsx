@@ -1,13 +1,12 @@
-import IntroOverlay from "@/components/IntroOverlay";
 import PrefetchRoutes from "@/components/PrefetchRoutes";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import Realtime from "@/components/Realtime";
 import Genius from "@/components/Genius";
+import HomepageWorkflow from "@/components/HomepageWorkflow";
 import Footer from "@/components/Footer";
 import JsonLd from "@/components/seo/JsonLd";
-import { createClient } from "@/lib/supabase/server";
 import {
   buildPageMetadata,
   organizationJsonLd,
@@ -30,12 +29,7 @@ export const metadata: Metadata = buildPageMetadata({
   ],
 });
 
-export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+export default function Home() {
   return (
     <>
       <JsonLd
@@ -46,10 +40,10 @@ export default async function Home() {
         ]}
       />
       <PrefetchRoutes />
-      <IntroOverlay skipIntro={!!user} />
-      <Navbar />
-      <main>
+      <Navbar variant="executive" />
+      <main className="bg-[#030914]">
         <Hero />
+        <HomepageWorkflow />
         <Features />
         <Realtime />
         <Genius />
