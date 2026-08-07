@@ -2,6 +2,7 @@
 
 import { Mic, MicOff } from "lucide-react";
 import { useSpeechInput } from "@/hooks/useSpeechInput";
+import { speechSupportMessage } from "@/lib/speech/speechRecognition";
 
 type VoiceInputButtonProps = {
   onTranscript: (text: string) => void;
@@ -30,32 +31,62 @@ export default function VoiceInputButton({
   variant = "sky",
   size = "md",
 }: VoiceInputButtonProps) {
-  const { isListening, supported, toggle } = useSpeechInput({
-    onFinal: onTranscript,
-    spaceKey: true,
-  });
-
-  if (!supported) return null;
+  const { isListening, supported, supportReason, error, toggle } =
+    useSpeechInput({
+      onFinal: onTranscript,
+      spaceKey: true,
+    });
 
   const sizeClass =
     size === "sm"
       ? "px-3 py-2 text-xs gap-1.5"
       : "px-4 py-2.5 text-sm gap-2";
 
+  // Tijdens SSR/hydratatie nog geen oordeel — voorkomt "niet beschikbaar"-flits
+  if (supportReason === "ssr") {
+    return null;
+  }
+
+  if (!supported) {
+    const message =
+      error ??
+      speechSupportMessage(supportReason) ??
+      "Spraakinvoer niet beschikbaar in deze browser.";
+    return (
+      <p
+        className={`rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-zinc-500 ${className}`}
+        role="status"
+      >
+        {message}
+      </p>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-pressed={isListening}
-      aria-label={isListening ? listeningLabel : label}
-      className={`inline-flex w-full items-center justify-center rounded-xl border font-medium transition-all ${sizeClass} ${
-        isListening
-          ? "border-rose-500/50 bg-rose-500/15 text-rose-200 animate-pulse"
-          : variantClass[variant]
-      } ${className}`}
-    >
-      {isListening ? <MicOff size={size === "sm" ? 14 : 16} /> : <Mic size={size === "sm" ? 14 : 16} />}
-      {isListening ? listeningLabel : `${label} (of spatie)`}
-    </button>
+    <div className={className}>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-pressed={isListening}
+        aria-label={isListening ? listeningLabel : label}
+        className={`inline-flex w-full items-center justify-center rounded-xl border font-medium transition-all touch-manipulation ${sizeClass} ${
+          isListening
+            ? "border-rose-500/50 bg-rose-500/15 text-rose-200 animate-pulse"
+            : variantClass[variant]
+        }`}
+      >
+        {isListening ? (
+          <MicOff size={size === "sm" ? 14 : 16} />
+        ) : (
+          <Mic size={size === "sm" ? 14 : 16} />
+        )}
+        {isListening ? listeningLabel : `${label} (of spatie)`}
+      </button>
+      {error ? (
+        <p className="mt-1.5 text-[11px] text-rose-300" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

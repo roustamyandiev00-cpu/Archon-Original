@@ -21,6 +21,7 @@ import {
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 import AgentPortrait from "@/components/dashboard/agents/AgentPortrait";
 import { useSpeechInput } from "@/hooks/useSpeechInput";
+import { speechSupportMessage } from "@/lib/speech/speechRecognition";
 
 const subscribeToClient = () => () => {};
 const clientSnapshot = () => true;
@@ -42,19 +43,30 @@ export default function AgentChatWidget() {
   } = useAgentChat();
   const [input, setInput] = useState("");
   const [dragging, setDragging] = useState(false);
-  const { isListening, supported: voiceSupported, toggle: toggleVoice } =
-    useSpeechInput({
-      continuous: true,
-      spaceKey: true,
-      onResult: (text) => setInput(text),
-      onFinal: (text) => setInput(text),
-    });
+  const {
+    isListening,
+    supported: voiceSupported,
+    supportReason,
+    error: voiceError,
+    start: startVoice,
+    stop: stopVoice,
+    toggle: toggleVoice,
+    clearError: clearVoiceError,
+  } = useSpeechInput({
+    // false + herstart in de hook werkt beter op iOS/Android dan native continuous
+    continuous: false,
+    spaceKey: true,
+    onResult: (text) => setInput(text),
+    onFinal: (text) => setInput(text),
+  });
   const mounted = useSyncExternalStore(
     subscribeToClient,
     clientSnapshot,
     serverSnapshot,
   );
   const dragOffset = useRef({ x: 0, y: 0 });
+  const touchMicRef = useRef(false);
+  const suppressMicClickRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -308,23 +320,63 @@ export default function AgentChatWidget() {
               }
             }}
           />
-          {voiceSupported && (
-            <button
-              type="button"
-              onClick={toggleVoice}
-              aria-pressed={isListening}
-              aria-label={
-                isListening ? "Stop met opnemen" : "Spreek je vraag in"
+          <button
+            type="button"
+            disabled={!voiceSupported}
+            onPointerDown={(event) => {
+              if (!voiceSupported) return;
+              if (event.pointerType === "touch" || event.pointerType === "pen") {
+                event.preventDefault();
+                touchMicRef.current = true;
+                suppressMicClickRef.current = true;
+                clearVoiceError();
+                void startVoice();
               }
-              className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition-colors ${
-                isListening
+            }}
+            onPointerUp={() => {
+              if (!touchMicRef.current) return;
+              touchMicRef.current = false;
+              stopVoice();
+            }}
+            onPointerCancel={() => {
+              if (!touchMicRef.current) return;
+              touchMicRef.current = false;
+              stopVoice();
+            }}
+            onClick={() => {
+              if (!voiceSupported) return;
+              // Touch gebruikt vasthouden; negeer de synthetische click erna
+              if (suppressMicClickRef.current) {
+                suppressMicClickRef.current = false;
+                return;
+              }
+              toggleVoice();
+            }}
+            aria-pressed={isListening}
+            aria-label={
+              !voiceSupported
+                ? "Spraakinvoer niet beschikbaar"
+                : isListening
+                  ? "Stop met opnemen"
+                  : "Spreek je vraag in"
+            }
+            title={
+              !voiceSupported
+                ? "Spraakinvoer niet beschikbaar in deze browser"
+                : isListening
+                  ? "Opname actief — tik opnieuw of laat los om te stoppen"
+                  : "Tik om te spreken (mobiel: vasthouden)"
+            }
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition-colors touch-manipulation ${
+              !voiceSupported
+                ? "cursor-not-allowed border-white/10 bg-zinc-800/40 text-zinc-600"
+                : isListening
                   ? "border-rose-500/50 bg-rose-500/15 text-rose-300 animate-pulse"
                   : "border-white/15 bg-zinc-800/60 text-zinc-300 hover:border-white/25 hover:text-zinc-100"
-              }`}
-            >
-              {isListening ? <MicOff size={16} /> : <Mic size={16} />}
-            </button>
-          )}
+            }`}
+          >
+            {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+          </button>
           <button
             type="submit"
             disabled={!input.trim() || isTyping}
@@ -334,13 +386,24 @@ export default function AgentChatWidget() {
             <Send size={16} />
           </button>
         </div>
-        <p className="mt-2.5 text-[10px] text-zinc-500">
-          Acties worden klaargezet ter goedkeuring · Houd{" "}
-          <kbd className="rounded border border-white/10 bg-white/5 px-1 font-mono text-[9px]">
-            spatie
-          </kbd>{" "}
-          ingedrukt om te spreken
-        </p>
+        {voiceError ? (
+          <p className="mt-2 text-[10px] text-rose-300" role="alert">
+            {voiceError}
+          </p>
+        ) : supportReason !== "ssr" && !voiceSupported ? (
+          <p className="mt-2 text-[10px] text-zinc-500" role="status">
+            {speechSupportMessage(supportReason) ??
+              "Spraakinvoer niet beschikbaar in deze browser."}
+          </p>
+        ) : (
+          <p className="mt-2.5 text-[10px] text-zinc-500">
+            Acties worden klaargezet ter goedkeuring · Desktop:{" "}
+            <kbd className="rounded border border-white/10 bg-white/5 px-1 font-mono text-[9px]">
+              spatie
+            </kbd>{" "}
+            of mic · Mobiel: mic vasthouden
+          </p>
+        )}
       </form>
     </div>
   );
