@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
   AlertTriangle,
   CalendarIcon,
   CheckCircle2,
+  ChevronLeft,
   ExternalLink,
   FileText,
   FolderKanban,
@@ -36,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import type { BedrijfLite } from "@/lib/documentData";
 import { formatEuro, lineTotals, type OfferteLijnInput } from "@/lib/offertes";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
@@ -213,6 +215,18 @@ export default function InvoiceCreateView(props: Props) {
     .filter(Boolean)
     .join(", ");
 
+  const customerOptions = useMemo(
+    () =>
+      customers.map((c) => ({
+        value: String(c.id),
+        label: customerDisplayName(c),
+        description: c.email ?? undefined,
+      })),
+    [customers],
+  );
+
+  const selectedCustomer = customers.find((c) => String(c.id) === customerId);
+
   const selectValue = customerId
     ? customerId
     : isDemo && studioInvoiceClients.some((c) => c.name === klantNaam)
@@ -340,38 +354,27 @@ export default function InvoiceCreateView(props: Props) {
                   </option>
                 ))}
               </Select>
+            ) : customers.length > 0 ? (
+              <Combobox
+                options={customerOptions}
+                value={customerId}
+                onChange={onCustomerIdChange}
+                placeholder="Zoek of kies een klant…"
+                searchPlaceholder="Zoek op naam of e-mail…"
+                emptyText="Geen klant gevonden."
+                className="h-8 text-xs dark:bg-zinc-950/55"
+              />
             ) : (
-              <Select
-                id="client-select"
-                value={selectValue}
-                onChange={(event) => {
-                  const v = event.target.value;
-                  if (v === "" || v === "custom") {
-                    onCustomerIdChange("");
-                    return;
-                  }
-                  onCustomerIdChange(v);
-                }}
+              <Input
+                value={klantVrij}
+                onChange={(e) => onKlantVrijChange(e.target.value)}
+                placeholder="Klantnaam"
                 className="h-8 text-xs"
-              >
-                <option value="">Kies een klant…</option>
-                {customers.map((c) => {
-                  const label = customerDisplayName(c);
-                  return (
-                    <option key={c.id} value={String(c.id)}>
-                      {label}
-                      {c.email ? ` — ${c.email}` : ""}
-                    </option>
-                  );
-                })}
-                {selectValue === "custom" ? (
-                  <option value="custom">{klantNaam}</option>
-                ) : null}
-              </Select>
+              />
             )}
           </div>
 
-          {!isDemo && !customerId ? (
+          {!isDemo && !customerId && customers.length > 0 ? (
             <div className="flex flex-col gap-0.5">
               <label className="text-[11px] text-zinc-500">Of typ naam</label>
               <Input
@@ -395,6 +398,22 @@ export default function InvoiceCreateView(props: Props) {
             </div>
           )}
         </div>
+
+        {selectedCustomer && !isDemo ? (
+          <div className="rounded-lg border border-white/10 bg-zinc-950/50 px-2.5 py-2 text-xs text-zinc-400">
+            <p className="font-medium text-zinc-200">
+              {selectedCustomer.name}
+              {selectedCustomer.company_name
+                ? ` · ${selectedCustomer.company_name}`
+                : ""}
+            </p>
+            <p className="mt-0.5">
+              {[selectedCustomer.email, selectedCustomer.phone, selectedCustomer.address]
+                .filter(Boolean)
+                .join(" · ") || "Geen contactgegevens"}
+            </p>
+          </div>
+        ) : null}
 
         {onProjectIdChange && (
           <div className="flex flex-col gap-0.5">
@@ -465,7 +484,7 @@ export default function InvoiceCreateView(props: Props) {
             <span />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="hidden flex-col gap-1.5 md:flex">
             {lines.map((line, index) => {
               const lineTotal =
                 (Number(line.aantal) || 0) * (Number(line.prijs_per_eenheid) || 0);
@@ -551,6 +570,98 @@ export default function InvoiceCreateView(props: Props) {
                   >
                     <Trash2 size={14} />
                   </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col gap-2 md:hidden">
+            {lines.map((line, index) => {
+              const lineTotal =
+                (Number(line.aantal) || 0) * (Number(line.prijs_per_eenheid) || 0);
+
+              return (
+                <div
+                  key={`mobile-${index}`}
+                  className="space-y-2 rounded-lg border border-white/[0.08] bg-zinc-950/40 p-2.5"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+                    Regel {index + 1}
+                  </p>
+                  <Input
+                    value={line.omschrijving}
+                    onChange={(event) =>
+                      onUpdateLine(index, { omschrijving: event.target.value })
+                    }
+                    placeholder="Werkpost"
+                    aria-label={`Regel ${index + 1} omschrijving`}
+                    className="h-8 text-xs"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="number"
+                      step="any"
+                      min={0}
+                      value={line.aantal}
+                      onChange={(event) =>
+                        onUpdateLine(index, { aantal: Number(event.target.value) })
+                      }
+                      aria-label={`Regel ${index + 1} aantal`}
+                      className="h-8 text-xs"
+                    />
+                    <Input
+                      value={line.eenheid}
+                      onChange={(event) =>
+                        onUpdateLine(index, { eenheid: event.target.value })
+                      }
+                      aria-label={`Regel ${index + 1} eenheid`}
+                      className="h-8 text-xs"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      value={line.prijs_per_eenheid}
+                      onChange={(event) =>
+                        onUpdateLine(index, {
+                          prijs_per_eenheid: Number(event.target.value),
+                        })
+                      }
+                      aria-label={`Regel ${index + 1} prijs`}
+                      className="h-8 text-xs"
+                    />
+                    <Input
+                      type="number"
+                      step="any"
+                      min={0}
+                      max={100}
+                      value={line.btw_percentage}
+                      onChange={(event) =>
+                        onUpdateLine(index, {
+                          btw_percentage: Number(event.target.value),
+                        })
+                      }
+                      aria-label={`Regel ${index + 1} BTW`}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs tabular-nums text-zinc-400">
+                      {formatEuro(lineTotal)} excl.
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-zinc-400"
+                      aria-label={`Regel ${index + 1} verwijderen`}
+                      onClick={() => onRemoveLine(index)}
+                      disabled={lines.length === 1}
+                    >
+                      <Trash2 size={14} />
+                      Verwijder
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -812,6 +923,13 @@ export default function InvoiceCreateView(props: Props) {
     <div className="studio-invoice-create flex h-full min-h-0 flex-col gap-2 overflow-hidden">
       <div className="flex shrink-0 items-center justify-between gap-3">
         <div className="min-w-0">
+          <Link
+            href="/dashboard/facturen/lijst"
+            className="mb-1 inline-flex items-center gap-0.5 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+          >
+            <ChevronLeft size={14} />
+            Terug naar facturen
+          </Link>
           <h1 className="truncate text-lg font-medium leading-none tracking-tight text-zinc-50">
             Nieuwe factuur
           </h1>

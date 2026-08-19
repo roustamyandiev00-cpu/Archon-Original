@@ -58,15 +58,15 @@ export default function FactuurInvoicePreview(props: Props) {
   });
 
   return (
-    <div className="invoice-create-preview-shell flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-white/10 dark:bg-zinc-900/40">
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-200/80 px-4 py-4 dark:border-white/10">
-        <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">Preview</h2>
-        <div className="flex items-center gap-2">
+    <div className="studio-invoice-preview invoice-create-preview-shell flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950/50">
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3">
+        <h2 className="text-sm font-medium text-zinc-100">Voorbeeld</h2>
+        <div className="flex items-center gap-1.5">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="h-7 border border-white/10 bg-white/[0.04] px-2 text-xs text-zinc-200 hover:bg-white/[0.08]"
             onClick={() => window.print()}
           >
             <Printer size={14} />
@@ -74,21 +74,21 @@ export default function FactuurInvoicePreview(props: Props) {
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant="ghost"
             size="sm"
             disabled
             title="Beschikbaar zodra de factuur is opgeslagen"
-            className="border-zinc-900 bg-zinc-900 text-zinc-50 hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="h-7 border border-white/10 bg-white/[0.04] px-2 text-xs text-zinc-400"
           >
             <Download size={14} />
-            PDF downloaden
+            PDF
           </Button>
         </div>
       </div>
 
       <div
         ref={previewBodyRef}
-        className="@container/preview invoice-preview-canvas relative min-h-[420px] flex-1 overflow-hidden rounded-b-xl bg-zinc-100 p-4 dark:bg-zinc-950/60 sm:min-h-[calc(100svh-15rem)]"
+        className="@container/preview invoice-preview-canvas relative min-h-[280px] flex-1 overflow-hidden bg-zinc-900/80 p-3 sm:min-h-[360px]"
       >
         {paperLayout === null ? (
           <div className="absolute inset-0 grid place-items-center text-sm text-zinc-500">
