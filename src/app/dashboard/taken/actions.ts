@@ -15,8 +15,6 @@ import {
   isTaskPriority,
   isTaskStatus,
   type TaskListFilters,
-  type TaskPriority,
-  type TaskStatus,
 } from "@/lib/tasks/types";
 import {
   addRecurrenceInterval,
@@ -882,5 +880,3 @@ export async function getTaskActivity(taskId: number) {
   if (error) return { error: error.message };
   return { ok: true as const, activity: data ?? [] };
 }
-
-export type { TaskStatus, TaskPriority, TaskListFilters, CreateTaskInput };
