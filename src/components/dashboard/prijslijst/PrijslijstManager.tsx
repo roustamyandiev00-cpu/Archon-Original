@@ -174,16 +174,22 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
     };
 
     startTransition(async () => {
-      const result = editingId
-        ? await updatePrijslijstItem(editingId, payload)
-        : await createPrijslijstItem(payload);
-      if ("error" in result) {
-        setError(result.error ?? "Opslaan mislukt.");
-        return;
+      try {
+        const result = editingId
+          ? await updatePrijslijstItem(editingId, payload)
+          : await createPrijslijstItem(payload);
+        if ("error" in result) {
+          setError(result.error ?? "Opslaan mislukt.");
+          return;
+        }
+        setSuccess(editingId ? "Artikel bijgewerkt." : "Artikel toegevoegd.");
+        close();
+        router.refresh();
+      } catch {
+        setError(
+          "Opslaan is niet gelukt door een verbindingsprobleem. Probeer het opnieuw.",
+        );
       }
-      setSuccess(editingId ? "Artikel bijgewerkt." : "Artikel toegevoegd.");
-      close();
-      router.refresh();
     });
   }
 
@@ -194,13 +200,19 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
     setError(null);
     setSuccess(null);
     startTransition(async () => {
-      const result = await setPrijslijstItemActive(item.id, !item.isActive);
-      if ("error" in result) {
-        setError(result.error ?? "Status wijzigen mislukt.");
-        return;
+      try {
+        const result = await setPrijslijstItemActive(item.id, !item.isActive);
+        if ("error" in result) {
+          setError(result.error ?? "Status wijzigen mislukt.");
+          return;
+        }
+        setSuccess(item.isActive ? "Artikel gedeactiveerd." : "Artikel geactiveerd.");
+        router.refresh();
+      } catch {
+        setError(
+          "De status kon niet worden gewijzigd door een verbindingsprobleem. Probeer het opnieuw.",
+        );
       }
-      setSuccess(item.isActive ? "Artikel gedeactiveerd." : "Artikel geactiveerd.");
-      router.refresh();
     });
   }
 
@@ -290,7 +302,7 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
         </div>
       ) : null}
 
-      {error && (
+      {error && !open && (
         <p
           role="alert"
           className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
@@ -303,31 +315,80 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
           role="status"
           className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
         >
-          <Check size={16} />
+          <Check size={16} aria-hidden="true" />
           {success}
         </p>
       )}
 
       {items.length === 0 ? (
-        <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-zinc-950/40 px-4 py-12 text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
-            <PackagePlus size={22} />
-          </span>
-          <h2 className="mt-4 text-base font-semibold text-zinc-100">
-            Bouw je eerste prijslijst op
-          </h2>
-          <p className="mt-1 max-w-sm text-sm leading-6 text-zinc-500">
-            Voeg materialen, werkuren of diensten toe. Je gebruikt ze daarna
-            opnieuw in je offertes en facturen.
-          </p>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400"
-          >
-            <Plus size={16} />
-            Eerste artikel toevoegen
-          </button>
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/50 shadow-[0_24px_80px_-48px_rgba(14,165,233,0.45)]">
+          <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
+            <div className="flex flex-col items-start px-6 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl border border-sky-400/15 bg-sky-500/10 text-sky-400 shadow-inner shadow-sky-400/5">
+                <PackagePlus size={22} aria-hidden="true" />
+              </span>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-sky-400">
+                Eén keer invoeren, overal hergebruiken
+              </p>
+              <h2 className="mt-2 max-w-xl text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
+                Bouw een betrouwbare basis voor elke offerte
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base sm:leading-7">
+                Bewaar je vaste materialen, werkuren en diensten met hun eenheid,
+                prijs en btw-tarief. Zo stel je offertes en facturen sneller en
+                consistenter op.
+              </p>
+              <button
+                type="button"
+                onClick={openCreate}
+                className="mt-7 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-sky-500 px-5 text-sm font-semibold text-zinc-950 shadow-lg shadow-sky-950/30 transition hover:bg-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+              >
+                <Plus size={17} aria-hidden="true" />
+                Eerste artikel toevoegen
+              </button>
+              <p className="mt-3 text-xs leading-5 text-zinc-500">
+                Je kunt artikelen later altijd aanpassen of tijdelijk deactiveren.
+              </p>
+            </div>
+
+            <div className="border-t border-white/10 bg-white/[0.025] px-6 py-8 sm:px-8 lg:border-l lg:border-t-0 lg:py-10">
+              <p className="text-sm font-semibold text-zinc-200">Wat je hier beheert</p>
+              <div className="mt-5 space-y-3">
+                {[
+                  {
+                    icon: Package,
+                    title: "Materialen",
+                    description: "Vaste verkoopprijzen per stuk, meter of m².",
+                  },
+                  {
+                    icon: CircleCheck,
+                    title: "Werkuren",
+                    description: "Uurtarieven voor plaatsing, afwerking en service.",
+                  },
+                  {
+                    icon: Tags,
+                    title: "Diensten",
+                    description: "Herbruikbare prestaties met het juiste btw-tarief.",
+                  },
+                ].map(({ icon: Icon, title, description }) => (
+                  <div
+                    key={title}
+                    className="flex gap-3 rounded-2xl border border-white/[0.07] bg-black/20 p-4"
+                  >
+                    <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-400">
+                      <Icon size={17} aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-100">{title}</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-400">
+                        {description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-zinc-950/40 px-4 py-12 text-center">
@@ -420,6 +481,8 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
             role="dialog"
             aria-modal="true"
             aria-labelledby="prijslijst-form-title"
+            aria-describedby={error ? "prijslijst-form-error" : undefined}
+            aria-busy={pending}
             onSubmit={(event) => {
               event.preventDefault();
               submit();
@@ -436,12 +499,23 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
               <button
                 type="button"
                 onClick={close}
+                disabled={pending}
                 aria-label="Sluit formulier"
-                className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
+
+            {error && (
+              <p
+                id="prijslijst-form-error"
+                role="alert"
+                className="mb-4 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
+              >
+                {error}
+              </p>
+            )}
 
             <div className="space-y-3">
               <div>
@@ -528,7 +602,8 @@ export default function PrijslijstManager({ items }: { items: PrijslijstItem[] }
               <button
                 type="button"
                 onClick={close}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:bg-white/5"
+                disabled={pending}
+                className="rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Annuleren
               </button>
