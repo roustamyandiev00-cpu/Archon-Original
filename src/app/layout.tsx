@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { rootMetadata } from "@/lib/seo";
 import AppearanceProvider from "@/lib/appearance/AppearanceProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -57,6 +58,7 @@ export default function RootLayout({
         <AppearanceProvider>
           {children}
         </AppearanceProvider>
+        <Analytics />
       </body>
     </html>
   );
