@@ -14,7 +14,7 @@ import { FastLink } from "@/components/FastLink";
 
 export default function Hero() {
   return (
-    <section className="relative flex w-full flex-col overflow-hidden bg-[#030914]">
+    <section className="relative flex w-full flex-col overflow-hidden bg-[#030914] lg:min-h-svh">
       <Image
         src="/hero-executive-blueprint.jpg"
         alt=""
@@ -30,8 +30,8 @@ export default function Hero() {
         <MobileHeroExperience />
       </div>
 
-      <div className="relative z-10 hidden flex-1 flex-col pt-[calc(6.5rem+env(safe-area-inset-top))] lg:flex">
-        <div className="mx-auto grid w-full max-w-[90rem] min-w-0 grid-cols-[minmax(0,1fr)] flex-1 items-center gap-10 px-4 pb-10 sm:px-6 lg:grid-cols-[minmax(0,0.76fr)_minmax(0,1.24fr)] lg:gap-8 lg:px-10 lg:pb-12 xl:gap-12">
+      <div className="relative z-10 hidden min-h-0 flex-1 flex-col pt-[calc(clamp(5rem,10vh,6.5rem)+env(safe-area-inset-top))] lg:flex">
+        <div className="mx-auto grid w-full max-w-[90rem] min-w-0 grid-cols-[minmax(0,1fr)] flex-1 items-center gap-10 px-4 pb-[clamp(1rem,4vh,3rem)] sm:px-6 lg:grid-cols-[minmax(0,0.76fr)_minmax(0,1.24fr)] lg:gap-8 lg:px-10 xl:gap-12">
           <div className="w-full min-w-0 max-w-xl text-center lg:max-w-[36rem] lg:text-left">
               <div className="mb-5 inline-flex max-w-full items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-300 sm:mb-6 sm:text-xs">
                 <Sparkles size={13} className="shrink-0 text-sky-400" />
@@ -87,7 +87,7 @@ export default function Hero() {
               </ul>
           </div>
 
-          <div className="relative flex min-h-0 w-full min-w-0 max-w-full items-center justify-center overflow-hidden lg:min-h-[500px] lg:justify-end lg:overflow-visible xl:min-h-[540px]">
+          <div className="relative flex min-h-0 w-full min-w-0 max-w-full items-center justify-center overflow-hidden lg:min-h-[clamp(24rem,55vh,33.75rem)] lg:justify-end lg:overflow-visible">
             <HeroDashboard />
           </div>
         </div>

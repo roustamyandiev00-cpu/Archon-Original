@@ -25,7 +25,7 @@ export default function HeroTrustBar() {
           {trustPoints.map((point) => (
             <div
               key={point.title}
-              className="flex items-center gap-4 px-2 py-5 sm:justify-center sm:px-6 sm:py-6"
+              className="flex items-center gap-4 px-2 py-5 sm:justify-center sm:px-6 sm:py-6 lg:py-3 min-[1440px]:py-5"
             >
               <point.icon size={28} strokeWidth={1.5} className="shrink-0 text-orange-300" />
               <div>

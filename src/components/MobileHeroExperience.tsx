@@ -247,6 +247,7 @@ export default function MobileHeroExperience() {
                 role="tabpanel"
                 aria-labelledby={"mobile-hero-tab-" + page.id}
                 aria-hidden={activePage !== index}
+                inert={activePage !== index}
                 className="relative min-w-full snap-center overflow-hidden px-4 py-4"
               >
                 <div
