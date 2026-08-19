@@ -19,6 +19,7 @@ import { REFERRAL_REWARDS } from "@/components/ReferralProgram";
 import { redirectAfterAuth } from "@/lib/auth/redirect-after-auth";
 import { finalizeNewAccount } from "@/app/register/actions";
 import { signInWithPasswordAction } from "@/app/login/actions";
+import { classifySignUpResult } from "@/lib/auth/registration";
 
 type Mode = "login" | "register";
 
@@ -92,7 +93,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
     try {
       if (isRegister) {
-        const { data, error } = await supabase.auth.signUp({
+        const signUpResult = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -106,22 +107,27 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
           },
         });
-        if (error) throw error;
-        if (data.session) {
-          if (data.user) {
-            await supabase.rpc("ensure_user_referral", {
-              p_user_id: data.user.id,
-              p_full_name: name.trim() || undefined,
-              p_referred_by: referralCode.trim().toUpperCase() || undefined,
-            });
-          }
-          await finalizeNewAccount();
-          redirectAfterAuth(redirectTo);
+        const outcome = classifySignUpResult(signUpResult);
+        if (outcome.kind === "error" || outcome.kind === "invalid") {
+          setError(outcome.message);
           return;
-        } else {
+        }
+        if (outcome.kind === "confirmation_required") {
           setNotice(
             "Account aangemaakt. Check je e-mail om je adres te bevestigen en log daarna in.",
           );
+          return;
+        }
+
+        if (outcome.kind === "authenticated") {
+          await supabase.rpc("ensure_user_referral", {
+            p_user_id: outcome.userId,
+            p_full_name: name.trim() || undefined,
+            p_referred_by: referralCode.trim().toUpperCase() || undefined,
+          });
+          await finalizeNewAccount();
+          redirectAfterAuth(redirectTo);
+          return;
         }
       } else {
         const result = await signInWithPasswordAction({

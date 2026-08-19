@@ -30,39 +30,15 @@ import {
   getOnboardingProfile,
   saveOnboardingProfile,
 } from "@/lib/onboarding/storage";
+import {
+  classifySignUpResult,
+  ONBOARDING_CHALLENGES,
+  ONBOARDING_GOALS,
+  ONBOARDING_SECTORS,
+  ONBOARDING_TEAM_SIZES,
+  parseOnboardingProfile,
+} from "@/lib/auth/registration";
 import { LANGUAGES, persistLanguage, type AppLanguage } from "@/lib/appearance/config";
-
-const VAKGEBIEDEN = [
-  "Algemene bouw",
-  "Renovatie",
-  "Dakwerken",
-  "Elektriciteit",
-  "Sanitair & verwarming",
-  "Schilderwerken",
-  "Andere",
-];
-
-const TEAM_SIZES = [
-  { id: "solo", label: "Alleen ik" },
-  { id: "klein", label: "2 – 5 mensen" },
-  { id: "middel", label: "6 – 15 mensen" },
-  { id: "groot", label: "16+ mensen" },
-];
-
-const UITDAGINGEN = [
-  "Te veel tijd aan administratie",
-  "Offertes duren te lang",
-  "Facturen worden te laat betaald",
-  "Geen overzicht op werven",
-  "Alles zit verspreid in Excel/WhatsApp",
-];
-
-const DOELEN = [
-  { id: "offertes", label: "Sneller offertes maken" },
-  { id: "facturatie", label: "Facturatie op orde" },
-  { id: "projecten", label: "Werven beter opvolgen" },
-  { id: "overzicht", label: "Alles op één plek" },
-];
 
 const TOTAL_STEPS = 7;
 
@@ -81,10 +57,10 @@ export default function RegisterOnboardingForm() {
 
   function handleOptionVoice(
     spoken: string,
-    options: string[],
+    options: readonly string[],
     onMatch: (value: string) => void,
   ) {
-    const match = matchSpokenOption(spoken, options);
+    const match = matchSpokenOption(spoken, [...options]);
     if (match) {
       onMatch(match);
       speak(`Oké, ${match}.`);
@@ -135,7 +111,13 @@ export default function RegisterOnboardingForm() {
   }, [step, speak]);
 
   function persistProfile() {
-    saveOnboardingProfile({ vakgebied, teamSize, uitdaging, doel });
+    const parsed = parseOnboardingProfile({
+      vakgebied,
+      teamSize,
+      uitdaging,
+      doel,
+    });
+    if (parsed.success) saveOnboardingProfile(parsed.data);
   }
 
   function canAdvance(): boolean {
@@ -180,11 +162,22 @@ export default function RegisterOnboardingForm() {
     setLoading(true);
     persistProfile();
 
-    const onboarding = { vakgebied, teamSize, uitdaging, doel };
+    const parsedOnboarding = parseOnboardingProfile({
+      vakgebied,
+      teamSize,
+      uitdaging,
+      doel,
+    });
+    if (!parsedOnboarding.success) {
+      setError(parsedOnboarding.error);
+      setLoading(false);
+      return;
+    }
+    const onboarding = parsedOnboarding.data;
     const supabase = createClient();
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const signUpResult = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -199,22 +192,27 @@ export default function RegisterOnboardingForm() {
           emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
         },
       });
-      if (signUpError) throw signUpError;
-      if (data.session) {
-        if (data.user) {
-          await supabase.rpc("ensure_user_referral", {
-            p_user_id: data.user.id,
-            p_full_name: name.trim() || undefined,
-            p_referred_by: referralCode.trim().toUpperCase() || undefined,
-          });
-        }
-        await finalizeNewAccount();
-        redirectAfterAuth(redirectTo);
+      const outcome = classifySignUpResult(signUpResult);
+      if (outcome.kind === "error" || outcome.kind === "invalid") {
+        setError(outcome.message);
         return;
-      } else {
+      }
+      if (outcome.kind === "confirmation_required") {
         setNotice(
           "Account aangemaakt. Check je e-mail om je adres te bevestigen en log daarna in.",
         );
+        return;
+      }
+
+      if (outcome.kind === "authenticated") {
+        await supabase.rpc("ensure_user_referral", {
+          p_user_id: outcome.userId,
+          p_full_name: name.trim() || undefined,
+          p_referred_by: referralCode.trim().toUpperCase() || undefined,
+        });
+        await finalizeNewAccount();
+        redirectAfterAuth(redirectTo);
+        return;
       }
     } catch (err) {
       setError(
@@ -330,11 +328,11 @@ export default function RegisterOnboardingForm() {
         {step === 2 && (
           <OptionGrid
             label="In welk vakgebied werk je?"
-            options={VAKGEBIEDEN}
+            options={ONBOARDING_SECTORS}
             value={vakgebied}
             onChange={setVakgebied}
             onVoice={(text) =>
-              handleOptionVoice(text, VAKGEBIEDEN, setVakgebied)
+              handleOptionVoice(text, ONBOARDING_SECTORS, setVakgebied)
             }
           />
         )}
@@ -342,18 +340,18 @@ export default function RegisterOnboardingForm() {
         {step === 3 && (
           <OptionGrid
             label="Hoe groot is je team?"
-            options={TEAM_SIZES.map((t) => t.label)}
-            value={TEAM_SIZES.find((t) => t.id === teamSize)?.label ?? ""}
+            options={ONBOARDING_TEAM_SIZES.map((t) => t.label)}
+            value={ONBOARDING_TEAM_SIZES.find((t) => t.id === teamSize)?.label ?? ""}
             onChange={(label) => {
-              const match = TEAM_SIZES.find((t) => t.label === label);
+              const match = ONBOARDING_TEAM_SIZES.find((t) => t.label === label);
               if (match) setTeamSize(match.id);
             }}
             onVoice={(text) =>
               handleOptionVoice(
                 text,
-                TEAM_SIZES.map((t) => t.label),
+                ONBOARDING_TEAM_SIZES.map((t) => t.label),
                 (label) => {
-                  const match = TEAM_SIZES.find((t) => t.label === label);
+                  const match = ONBOARDING_TEAM_SIZES.find((t) => t.label === label);
                   if (match) setTeamSize(match.id);
                 },
               )
@@ -364,11 +362,11 @@ export default function RegisterOnboardingForm() {
         {step === 4 && (
           <OptionGrid
             label="Wat is je grootste uitdaging?"
-            options={UITDAGINGEN}
+            options={ONBOARDING_CHALLENGES}
             value={uitdaging}
             onChange={setUitdaging}
             onVoice={(text) =>
-              handleOptionVoice(text, UITDAGINGEN, setUitdaging)
+              handleOptionVoice(text, ONBOARDING_CHALLENGES, setUitdaging)
             }
           />
         )}
@@ -376,18 +374,18 @@ export default function RegisterOnboardingForm() {
         {step === 5 && (
           <OptionGrid
             label="Wat wil je vooral bereiken?"
-            options={DOELEN.map((d) => d.label)}
-            value={DOELEN.find((d) => d.id === doel)?.label ?? ""}
+            options={ONBOARDING_GOALS.map((d) => d.label)}
+            value={ONBOARDING_GOALS.find((d) => d.id === doel)?.label ?? ""}
             onChange={(label) => {
-              const match = DOELEN.find((d) => d.label === label);
+              const match = ONBOARDING_GOALS.find((d) => d.label === label);
               if (match) setDoel(match.id);
             }}
             onVoice={(text) =>
               handleOptionVoice(
                 text,
-                DOELEN.map((d) => d.label),
+                ONBOARDING_GOALS.map((d) => d.label),
                 (label) => {
-                  const match = DOELEN.find((d) => d.label === label);
+                  const match = ONBOARDING_GOALS.find((d) => d.label === label);
                   if (match) setDoel(match.id);
                 },
               )
@@ -614,7 +612,7 @@ function OptionGrid({
   onVoice,
 }: {
   label: string;
-  options: string[];
+  options: readonly string[];
   value: string;
   onChange: (v: string) => void;
   onVoice?: (text: string) => void;

@@ -4,15 +4,6 @@ import { PREVIEW_COOKIE } from "@/components/dashboard/trial";
 import type { Database } from "@/types/database.types";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
-function hasSupabaseAuthCookie(request: NextRequest) {
-  return request.cookies
-    .getAll()
-    .some(
-      (cookie) =>
-        cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"),
-    );
-}
-
 function applyAuthCookies(
   response: NextResponse,
   cookiesToSet: {
@@ -28,6 +19,23 @@ function applyAuthCookies(
       sameSite: "lax",
       path: "/",
     }),
+  );
+}
+
+function copyResponseCookies(source: NextResponse, target: NextResponse) {
+  source.cookies.getAll().forEach((cookie) => {
+    target.cookies.set(cookie.name, cookie.value, cookie);
+  });
+  return target;
+}
+
+function isMissingAuthSession(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const authError = error as { code?: unknown; message?: unknown };
+  return (
+    authError.code === "session_not_found" ||
+    authError.message === "Auth session missing!" ||
+    authError.message === "Auth session missing"
   );
 }
 
@@ -56,18 +64,16 @@ export async function updateSession(request: NextRequest) {
   let user: Awaited<
     ReturnType<typeof supabase.auth.getUser>
   >["data"]["user"] = null;
-  let authCheckFailed = false;
-
   try {
     const { data, error } = await supabase.auth.getUser();
     if (error) {
-      authCheckFailed = true;
-      console.error("[auth] getUser error in middleware:", error.message);
+      if (!isMissingAuthSession(error)) {
+        console.error("[auth] getUser error in middleware:", error.message);
+      }
     } else {
       user = data.user;
     }
   } catch (error) {
-    authCheckFailed = true;
     console.error("[auth] getUser failed in middleware:", error);
   }
 
@@ -76,20 +82,14 @@ export async function updateSession(request: NextRequest) {
   const isPreviewEntry = request.nextUrl.pathname === "/dashboard/voorbeeld";
   const isPreviewMode =
     request.cookies.get(PREVIEW_COOKIE)?.value === "1" || isPreviewEntry;
-  const hasAuthCookie = hasSupabaseAuthCookie(request);
-
-  if (
-    !user &&
-    (isAdmin || (isDashboard && !isPreviewMode)) &&
-    !(authCheckFailed && hasAuthCookie)
-  ) {
+  if (!user && (isAdmin || (isDashboard && !isPreviewMode))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set(
       "redirect",
       `${request.nextUrl.pathname}${request.nextUrl.search}`,
     );
-    return NextResponse.redirect(url);
+    return copyResponseCookies(supabaseResponse, NextResponse.redirect(url));
   }
 
   if (user && request.cookies.get(PREVIEW_COOKIE)?.value === "1") {
