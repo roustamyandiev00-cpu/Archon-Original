@@ -21,17 +21,12 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import StudioInvoicePreview from "@/components/dashboard/facturen/studio/StudioInvoicePreview";
+import FactuurInvoicePreview from "@/components/dashboard/facturen/FactuurInvoicePreview";
 import {
-  buildStudioInvoiceValues,
   customerDisplayName,
-  formatStudioCurrency,
   formatStudioDisplayDate,
   getInitials,
-  getStudioLineAmount,
   studioInvoiceClients,
-  studioInvoiceTaxOptions,
-  type StudioInvoiceDiscountType,
 } from "@/components/dashboard/facturen/studio/studio-invoice-data";
 import type { FactuurDocumentContext } from "@/components/dashboard/facturen/FactuurForm";
 import PrijslijstPicker from "@/components/dashboard/prijslijst/PrijslijstPicker";
@@ -42,7 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
 import type { BedrijfLite } from "@/lib/documentData";
-import type { OfferteLijnInput } from "@/lib/offertes";
+import { formatEuro, lineTotals, type OfferteLijnInput } from "@/lib/offertes";
 import { useAgentChat } from "@/components/dashboard/agent-chat/AgentChatProvider";
 
 type Customer = {
@@ -75,8 +70,6 @@ type Props = {
   onKlantVrijChange: (value: string) => void;
   klantNaam: string;
   klantEmail: string;
-  klantAddress?: string[];
-  klantTaxId?: string;
   projects?: FacturenProjectOption[];
   projectId?: string;
   onProjectIdChange?: (value: string) => void;
@@ -88,21 +81,13 @@ type Props = {
   onRemoveLine: (index: number) => void;
   prijslijstItems?: PrijslijstPickItem[];
   onPickPrijslijst?: (item: PrijslijstPickItem) => void;
-  taxId: string;
-  onTaxIdChange: (taxId: string) => void;
-  discountType: StudioInvoiceDiscountType;
-  onDiscountTypeChange: (type: StudioInvoiceDiscountType) => void;
-  discountValue: number;
-  onDiscountValueChange: (value: number) => void;
   bedrijf: BedrijfLite;
   documentContext: FactuurDocumentContext;
   loading: boolean;
   error: string | null;
-  useStudioDemoFrom?: boolean;
   isDemo?: boolean;
   onSaveDraft: () => void;
   onSend: () => void;
-  viewportFit?: boolean;
 };
 
 function Separator() {
@@ -199,8 +184,6 @@ export default function InvoiceCreateView(props: Props) {
     onKlantVrijChange,
     klantNaam,
     klantEmail,
-    klantAddress,
-    klantTaxId,
     projects = [],
     projectId = "",
     onProjectIdChange,
@@ -212,16 +195,10 @@ export default function InvoiceCreateView(props: Props) {
     onRemoveLine,
     prijslijstItems = [],
     onPickPrijslijst,
-    taxId,
-    onTaxIdChange,
-    discountType,
-    onDiscountTypeChange,
-    discountValue,
-    onDiscountValueChange,
     bedrijf,
+    documentContext,
     loading,
     error,
-    useStudioDemoFrom,
     isDemo,
     onSaveDraft,
     onSend,
@@ -231,21 +208,10 @@ export default function InvoiceCreateView(props: Props) {
   const { activeAgent, isTyping: aiIsTyping, open: openAgentChat, sendMessage } =
     useAgentChat();
 
-  const studioInvoice = buildStudioInvoiceValues({
-    reference,
-    datum,
-    vervaldatum,
-    bedrijf,
-    klantNaam,
-    klantEmail,
-    klantAddress,
-    klantTaxId,
-    taxId,
-    discountType,
-    discountValue,
-    lines,
-    useStudioDemoFrom,
-  });
+  const totals = lineTotals(lines);
+  const bedrijfAdres = [bedrijf.adres, [bedrijf.postcode, bedrijf.stad].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
 
   const selectValue = customerId
     ? customerId
@@ -256,16 +222,15 @@ export default function InvoiceCreateView(props: Props) {
         : "";
 
   const paymentMissing = [
-    !studioInvoice.from.paymentAccountName ? "rekeninghouder" : null,
-    !studioInvoice.from.routingNumber ? "IBAN" : null,
+    !bedrijf.iban?.trim() ? "IBAN" : null,
     !vervaldatum ? "vervaldatum" : null,
   ].filter((item): item is string => Boolean(item));
 
   const businessMissing = [
-    !studioInvoice.from.name ? "bedrijfsnaam" : null,
-    !studioInvoice.from.taxId ? "BTW-nummer" : null,
-    !studioInvoice.from.email ? "e-mailadres" : null,
-    studioInvoice.from.addressLines.length === 0 ? "adres" : null,
+    !bedrijf.naam?.trim() ? "bedrijfsnaam" : null,
+    !bedrijf.btw?.trim() ? "BTW-nummer" : null,
+    !bedrijf.email?.trim() ? "e-mailadres" : null,
+    !bedrijfAdres ? "adres" : null,
   ].filter((item): item is string => Boolean(item));
 
   function handleAskAiForTips() {
@@ -291,7 +256,6 @@ export default function InvoiceCreateView(props: Props) {
         `Vervaldatum: ${vervaldatum || "ontbreekt"}`,
         `Betalingsgegevens ontbreken: ${paymentMissing.join(", ") || "niets"}`,
         `Bedrijfsgegevens ontbreken: ${businessMissing.join(", ") || "niets"}`,
-        `Korting: ${discountValue || 0} (${discountType === "percent" ? "procent" : "vast bedrag"})`,
         `Factuurlijnen:\n${lineSummary || "nog geen ingevulde factuurlijnen"}`,
       ].join("\n"),
     );
@@ -490,28 +454,26 @@ export default function InvoiceCreateView(props: Props) {
         ) : null}
 
         <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain">
-          <div className="hidden items-center gap-2 px-1 text-[11px] font-medium text-zinc-500 md:grid md:grid-cols-[20px_minmax(0,1fr)_56px_96px_88px_28px]">
+          <div className="hidden items-center gap-1.5 px-1 text-[11px] font-medium text-zinc-500 md:grid md:grid-cols-[20px_minmax(0,1fr)_48px_56px_72px_48px_72px_28px]">
             <span />
             <span>Omschrijving</span>
             <span className="px-1">Aantal</span>
+            <span className="px-1">Eenheid</span>
             <span className="px-1">Prijs</span>
+            <span className="px-1 text-right">BTW%</span>
             <span className="text-right">Totaal</span>
             <span />
           </div>
 
           <div className="flex flex-col gap-1.5">
             {lines.map((line, index) => {
-              const item = {
-                id: `line-${index}`,
-                description: line.omschrijving,
-                quantity: Number(line.aantal) || 0,
-                unitPrice: Number(line.prijs_per_eenheid) || 0,
-              };
+              const lineTotal =
+                (Number(line.aantal) || 0) * (Number(line.prijs_per_eenheid) || 0);
 
               return (
                 <div
                   key={index}
-                  className="grid min-w-0 grid-cols-[20px_minmax(0,1fr)_56px_96px_88px_28px] items-center gap-1.5"
+                  className="grid min-w-0 grid-cols-[20px_minmax(0,1fr)_48px_56px_72px_48px_72px_28px] items-center gap-1.5"
                 >
                   <button
                     type="button"
@@ -526,17 +488,26 @@ export default function InvoiceCreateView(props: Props) {
                       onUpdateLine(index, { omschrijving: event.target.value })
                     }
                     aria-label={`Regel ${index + 1} omschrijving`}
+                    placeholder="Werkpost"
                     className="h-8 min-w-0 text-xs"
                   />
                   <Input
                     type="number"
-                    step="1"
+                    step="any"
                     min={0}
                     value={line.aantal}
                     onChange={(event) =>
                       onUpdateLine(index, { aantal: Number(event.target.value) })
                     }
                     aria-label={`Regel ${index + 1} aantal`}
+                    className="h-8 text-xs"
+                  />
+                  <Input
+                    value={line.eenheid}
+                    onChange={(event) =>
+                      onUpdateLine(index, { eenheid: event.target.value })
+                    }
+                    aria-label={`Regel ${index + 1} eenheid`}
                     className="h-8 text-xs"
                   />
                   <Input
@@ -552,8 +523,22 @@ export default function InvoiceCreateView(props: Props) {
                     aria-label={`Regel ${index + 1} eenheidsprijs`}
                     className="h-8 text-xs"
                   />
-                  <div className="min-w-0 text-right text-xs font-medium text-zinc-100">
-                    {formatStudioCurrency(getStudioLineAmount(item))}
+                  <Input
+                    type="number"
+                    step="any"
+                    min={0}
+                    max={100}
+                    value={line.btw_percentage}
+                    onChange={(event) =>
+                      onUpdateLine(index, {
+                        btw_percentage: Number(event.target.value),
+                      })
+                    }
+                    aria-label={`Regel ${index + 1} BTW`}
+                    className="h-8 text-xs text-right"
+                  />
+                  <div className="min-w-0 text-right text-xs font-medium tabular-nums text-zinc-100">
+                    {formatEuro(lineTotal)}
                   </div>
                   <Button
                     type="button"
@@ -575,55 +560,24 @@ export default function InvoiceCreateView(props: Props) {
 
       <Separator />
 
-      <section className="grid shrink-0 gap-2 sm:grid-cols-3">
-        <div className="flex flex-col gap-0.5">
-          <label htmlFor="tax-select" className="text-[11px] text-zinc-500">
-            BTW
-          </label>
-          <Select
-            id="tax-select"
-            value={taxId}
-            onChange={(event) => onTaxIdChange(event.target.value)}
-            className="h-8 text-xs"
-          >
-            {studioInvoiceTaxOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name} {option.rate}%
-              </option>
-            ))}
-          </Select>
+      <section className="shrink-0 rounded-lg border border-white/[0.06] bg-zinc-950/40 px-3 py-2.5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-zinc-500">Subtotaal excl. BTW</span>
+          <span className="font-medium tabular-nums text-zinc-100">
+            {formatEuro(totals.subtotaal)}
+          </span>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <label htmlFor="discount-type" className="text-[11px] text-zinc-500">
-            Kortingstype
-          </label>
-          <Select
-            id="discount-type"
-            value={discountType}
-            onChange={(event) =>
-              onDiscountTypeChange(event.target.value as StudioInvoiceDiscountType)
-            }
-            className="h-8 text-xs"
-          >
-            <option value="fixed">Vast bedrag</option>
-            <option value="percent">Percentage</option>
-          </Select>
+        <div className="mt-1 flex items-center justify-between text-sm">
+          <span className="text-zinc-500">BTW</span>
+          <span className="font-medium tabular-nums text-zinc-300">
+            {formatEuro(totals.btw)}
+          </span>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <label htmlFor="discount-value" className="text-[11px] text-zinc-500">
-            Korting
-          </label>
-          <Input
-            id="discount-value"
-            type="number"
-            min={0}
-            step="0.01"
-            value={discountValue}
-            onChange={(event) =>
-              onDiscountValueChange(Number(event.target.value) || 0)
-            }
-            className="h-8 text-xs"
-          />
+        <div className="mt-1 flex items-center justify-between border-t border-white/[0.06] pt-2 text-sm">
+          <span className="font-medium text-zinc-200">Te betalen incl. BTW</span>
+          <span className="font-semibold tabular-nums text-orange-300">
+            {formatEuro(totals.totaal)}
+          </span>
         </div>
       </section>
 
@@ -727,7 +681,7 @@ export default function InvoiceCreateView(props: Props) {
             Rekeninghouder
           </p>
           <p className="mt-0.5 truncate text-sm text-zinc-200">
-            {studioInvoice.from.paymentAccountName || "Niet ingesteld"}
+            {bedrijf.naam || "Niet ingesteld"}
           </p>
         </div>
         <div className="rounded-lg border border-white/10 bg-zinc-950/40 px-3.5 py-2.5">
@@ -735,7 +689,7 @@ export default function InvoiceCreateView(props: Props) {
             IBAN
           </p>
           <p className="mt-0.5 truncate font-mono text-sm text-zinc-200">
-            {studioInvoice.from.routingNumber || "Niet ingesteld"}
+            {bedrijf.iban || "Niet ingesteld"}
           </p>
         </div>
         <div className="flex flex-col gap-0.5">
@@ -816,15 +770,12 @@ export default function InvoiceCreateView(props: Props) {
       </div>
       <section className="grid gap-3 sm:grid-cols-2">
         {[
-          { label: "Bedrijfsnaam", value: studioInvoice.from.name },
-          { label: "BTW-nummer", value: studioInvoice.from.taxId },
-          { label: "E-mail", value: studioInvoice.from.email },
-          { label: "Telefoon", value: studioInvoice.from.phone },
-          {
-            label: "Adres",
-            value: studioInvoice.from.addressLines.join(", "),
-          },
-          { label: "IBAN", value: studioInvoice.from.routingNumber },
+          { label: "Bedrijfsnaam", value: bedrijf.naam },
+          { label: "BTW-nummer", value: bedrijf.btw },
+          { label: "E-mail", value: bedrijf.email },
+          { label: "Telefoon", value: bedrijf.telefoon },
+          { label: "Adres", value: bedrijfAdres },
+          { label: "IBAN", value: bedrijf.iban },
         ].map((field) => (
           <div
             key={field.label}
@@ -946,7 +897,24 @@ export default function InvoiceCreateView(props: Props) {
           </div>
         </div>
 
-        <StudioInvoicePreview invoice={studioInvoice} />
+        <FactuurInvoicePreview
+          templateId={documentContext.templateId}
+          defaultTemplate={documentContext.defaultTemplate}
+          bedrijf={bedrijf}
+          customers={customers}
+          customerId={customerId}
+          klantVrij={klantVrij}
+          documentType="factuur"
+          datum={datum}
+          vervaldatum={vervaldatum}
+          omschrijving=""
+          notities=""
+          lines={lines}
+          nummer={reference}
+          previewSubtotaal={totals.subtotaal}
+          previewBtw={totals.btw}
+          previewTotaal={totals.totaal}
+        />
       </div>
     </div>
   );
@@ -955,21 +923,21 @@ export default function InvoiceCreateView(props: Props) {
 export function getDemoInvoiceLines(): OfferteLijnInput[] {
   return [
     {
-      omschrijving: "Cloud hosting services",
+      omschrijving: "Plaatsing keuken — arbeid",
       aantal: 1,
       eenheid: "stuks",
       prijs_per_eenheid: 3500,
       btw_percentage: 21,
     },
     {
-      omschrijving: "Data analytics report",
+      omschrijving: "Materialen tegelwerk",
       aantal: 2,
       eenheid: "stuks",
       prijs_per_eenheid: 750,
       btw_percentage: 21,
     },
     {
-      omschrijving: "Technical support retainer",
+      omschrijving: "Afvalverwerking werf",
       aantal: 1,
       eenheid: "stuks",
       prijs_per_eenheid: 400,

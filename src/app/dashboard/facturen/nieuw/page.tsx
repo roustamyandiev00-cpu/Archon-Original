@@ -17,14 +17,13 @@ export default async function NieuweFactuurPage() {
   const useDemo = isDemo && !hasCompany;
 
   return (
-    <div className="facturen-create-shell studio-invoice-shell">
+    <div className="facturen-create-shell">
       <FactuurForm
         customers={customers}
         projects={projects}
         documentContext={documentContext}
         prijslijstItems={prijslijstItems}
         embedded
-        viewportFit
         isDemo={useDemo}
       />
     </div>

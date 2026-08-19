@@ -7,10 +7,7 @@ import { uploadProjectBestanden } from "@/app/dashboard/offertes/projecten/besta
 import InvoiceCreateView, {
   getDemoInvoiceLines,
 } from "@/components/dashboard/facturen/InvoiceCreateView";
-import {
-  customerDisplayName,
-  studioRateFromTaxId,
-} from "@/components/dashboard/facturen/studio/studio-invoice-data";
+import { customerDisplayName } from "@/components/dashboard/facturen/studio/studio-invoice-data";
 import type { PrijslijstPickItem } from "@/components/dashboard/prijslijst/types";
 import type { FacturenProjectOption } from "@/lib/facturen/load-facturen-data";
 import { type OfferteLijnInput } from "@/lib/offertes";
@@ -63,7 +60,6 @@ export default function FactuurForm({
   projects = [],
   documentContext,
   prijslijstItems = [],
-  viewportFit = false,
   isDemo = false,
 }: {
   customers: Customer[];
@@ -71,7 +67,6 @@ export default function FactuurForm({
   documentContext: FactuurDocumentContext;
   prijslijstItems?: PrijslijstPickItem[];
   embedded?: boolean;
-  viewportFit?: boolean;
   isDemo?: boolean;
 }) {
   const router = useRouter();
@@ -95,16 +90,10 @@ export default function FactuurForm({
     if (useDemoDefaults) return getDemoInvoiceLines();
     return [{ ...emptyLine }];
   });
-  const [taxId, setTaxId] = useState("btw-21");
-  const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
-  const [discountValue, setDiscountValue] = useState(() =>
-    useDemoDefaults ? 40 : 0,
-  );
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const taxRate = studioRateFromTaxId(taxId);
   const selectedCustomer = useMemo(
     () => customers.find((c) => String(c.id) === customerId),
     [customers, customerId],
@@ -114,7 +103,6 @@ export default function FactuurForm({
     if (!customerId) return projects;
     const cid = Number(customerId);
     const matched = projects.filter((p) => p.customer_id === cid);
-    // Toon ook projecten zonder customer_id-match op klantnaam
     if (matched.length > 0) return matched;
     const naam = selectedCustomer
       ? customerDisplayName(selectedCustomer).toLowerCase()
@@ -133,16 +121,12 @@ export default function FactuurForm({
   const klantEmail =
     selectedCustomer?.email ||
     (useDemoDefaults ? "finance@aiycap.com" : "Geen e-mail");
-  const klantAddress = selectedCustomer?.address
-    ? [selectedCustomer.address]
-    : undefined;
-  const klantTaxId = selectedCustomer?.btw ?? undefined;
 
   function updateLine(i: number, patch: Partial<OfferteLijnInput>) {
     setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   }
   function addLine() {
-    setLines((ls) => [...ls, { ...emptyLine, btw_percentage: taxRate }]);
+    setLines((ls) => [...ls, { ...emptyLine }]);
   }
   function removeLine(i: number) {
     setLines((ls) => (ls.length === 1 ? ls : ls.filter((_, idx) => idx !== i)));
@@ -166,14 +150,6 @@ export default function FactuurForm({
       }
       return [...ls, next];
     });
-  }
-
-  function handleTaxIdChange(nextTaxId: string) {
-    setTaxId(nextTaxId);
-    const rate = studioRateFromTaxId(nextTaxId);
-    setLines((current) =>
-      current.map((line) => ({ ...line, btw_percentage: rate })),
-    );
   }
 
   function handleCustomerIdChange(value: string) {
@@ -266,8 +242,6 @@ export default function FactuurForm({
       onKlantVrijChange={setKlantVrij}
       klantNaam={klantNaam}
       klantEmail={klantEmail}
-      klantAddress={klantAddress}
-      klantTaxId={klantTaxId}
       projects={filteredProjects}
       projectId={projectId}
       onProjectIdChange={setProjectId}
@@ -279,21 +253,13 @@ export default function FactuurForm({
       onRemoveLine={removeLine}
       prijslijstItems={prijslijstItems}
       onPickPrijslijst={addFromPrijslijst}
-      taxId={taxId}
-      onTaxIdChange={handleTaxIdChange}
-      discountType={discountType}
-      onDiscountTypeChange={setDiscountType}
-      discountValue={discountValue}
-      onDiscountValueChange={setDiscountValue}
       bedrijf={documentContext.bedrijf}
       documentContext={documentContext}
       loading={loading}
       error={error}
-      useStudioDemoFrom={useDemoDefaults}
       isDemo={useDemoDefaults}
       onSaveDraft={() => void handleSubmit("lijst")}
       onSend={() => void handleSubmit("detail")}
-      viewportFit={viewportFit}
     />
   );
 }
