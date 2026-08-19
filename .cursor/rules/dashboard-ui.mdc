@@ -1,0 +1,14 @@
+---
+description: Dashboard UI-patronen, theming en empty states
+globs: src/components/dashboard/**/*.{tsx,css},src/app/dashboard/**/*.tsx
+alwaysApply: false
+---
+
+# Dashboard UI
+
+- Hergebruik `DashboardPanel`, `EmptyState`, `MetricStat`, `PrimaryButton` uit `views/shared.tsx`.
+- Light/dark: zet semantische classes (bv. `dashboard-agenda-*`) en overschrijf in `dashboard-theme.css`. Hardcode geen losse kleuren die light mode breken (`text-zinc-100` op lichte achtergrond).
+- Empty states: message + korte detail + optionele CTA (`actionLabel`/`actionHref`). Gebruik `compact` in dichte grids.
+- Loading / empty / error / success / permission-denied waar relevant; geen demo-data als productie.
+- Geen parallelle dashboardflows of `v2`-componenten. Pas bestaande views aan.
+- Desktop én mobiel checken bij layoutwijzigingen.
