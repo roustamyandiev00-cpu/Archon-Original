@@ -1,3 +1,9 @@
+import {
+  parseOnboardingProfile,
+  parseStoredOnboardingProfile,
+  type OnboardingProfile,
+} from "@/lib/auth/registration";
+
 export const DASHBOARD_TOUR_DONE_KEY = "archonpro-dashboard-tour-done";
 export const NOVA_SPEECH_KEY = "archonpro-nova-speech";
 export const ONBOARDING_PROFILE_KEY = "archonpro-onboarding-profile";
@@ -8,19 +14,13 @@ export const LANDING_TOUR_SPEECH_KEY = NOVA_SPEECH_KEY;
 /** @deprecated Gebruik DASHBOARD_TOUR_DONE_KEY */
 export const LANDING_TOUR_DONE_KEY = DASHBOARD_TOUR_DONE_KEY;
 
-export type OnboardingProfile = {
-  intent?: string;
-  vakgebied?: string;
-  teamSize?: string;
-  uitdaging?: string;
-  doel?: string;
-};
+export type { OnboardingProfile } from "@/lib/auth/registration";
 
 export function getOnboardingProfile(): OnboardingProfile {
   if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(ONBOARDING_PROFILE_KEY);
-    return raw ? (JSON.parse(raw) as OnboardingProfile) : {};
+    return raw ? parseStoredOnboardingProfile(JSON.parse(raw)) : {};
   } catch {
     return {};
   }
@@ -28,8 +28,13 @@ export function getOnboardingProfile(): OnboardingProfile {
 
 export function saveOnboardingProfile(patch: Partial<OnboardingProfile>) {
   if (typeof window === "undefined") return;
-  const next = { ...getOnboardingProfile(), ...patch };
-  localStorage.setItem(ONBOARDING_PROFILE_KEY, JSON.stringify(next));
+  const result = parseOnboardingProfile({ ...getOnboardingProfile(), ...patch });
+  if (!result.success) return;
+  try {
+    localStorage.setItem(ONBOARDING_PROFILE_KEY, JSON.stringify(result.data));
+  } catch {
+    // Opslag kan geblokkeerd of vol zijn; onboarding blijft dan in component-state.
+  }
 }
 
 export function isDashboardTourDone(): boolean {

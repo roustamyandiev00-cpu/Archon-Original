@@ -25,7 +25,11 @@ export default function AdminError({
           De beheerdata kon niet veilig worden geladen. Er worden geen lege of
           geschatte resultaten getoond.
         </p>
-        <Button type="button" className="mt-5" onClick={reset}>
+        <Button
+          type="button"
+          className="mt-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+          onClick={reset}
+        >
           <RotateCcw size={16} aria-hidden="true" />
           Opnieuw proberen
         </Button>
