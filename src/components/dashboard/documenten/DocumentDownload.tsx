@@ -21,6 +21,7 @@ export default function DocumentDownload({
   defaultTemplate,
   values,
   rows,
+  variant = "default",
 }: {
   kind: DocumentKind;
   documentId: number;
@@ -28,6 +29,7 @@ export default function DocumentDownload({
   defaultTemplate?: string;
   values: Record<string, string>;
   rows: DocumentRow[];
+  variant?: "default" | "compact";
 }) {
   const [template, setTemplate] = useState(
     resolveDocumentTemplateId(currentTemplate, defaultTemplate),
@@ -42,14 +44,13 @@ export default function DocumentDownload({
     kind === "quote"
       ? `/dashboard/offertes/${documentId}/pdf`
       : `/dashboard/facturen/${documentId}/pdf`;
+  const compact = variant === "compact";
 
   function downloadPdf() {
     setError(null);
     setDownloading(true);
     const url = `${pdfBase}?template=${encodeURIComponent(template)}`;
-    // De route stuurt Content-Disposition: attachment, dus dit start de download.
     window.location.href = url;
-    // Reset de status kort daarna (de navigatie blijft op dezelfde pagina).
     setTimeout(() => setDownloading(false), 4000);
   }
 
@@ -80,16 +81,32 @@ export default function DocumentDownload({
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-        <FileText size={15} className="text-sky-400" />
-        Sjabloon & download
-      </h2>
-      <p className="mt-0.5 text-xs text-zinc-500">
-        Kies een sjabloon en download deze {label} als PDF.
-      </p>
+    <div
+      className={
+        compact
+          ? "space-y-3"
+          : "rounded-xl border border-white/10 bg-white/[0.02] p-4"
+      }
+    >
+      {!compact && (
+        <>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+            <FileText size={15} className="text-sky-400" />
+            Sjabloon & download
+          </h2>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Kies een sjabloon en download deze {label} als PDF.
+          </p>
+        </>
+      )}
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+      <div
+        className={
+          compact
+            ? "space-y-3"
+            : "mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end"
+        }
+      >
         <div>
           <label className="mb-1.5 block text-xs font-medium text-zinc-300">
             Sjabloon
@@ -110,39 +127,47 @@ export default function DocumentDownload({
           </select>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className={`flex flex-wrap gap-2 ${compact ? "" : ""}`}>
           <button
             type="button"
             onClick={downloadPdf}
             disabled={downloading}
-            className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
+            className={
+              compact
+                ? "inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-sky-500 px-3 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
+                : "inline-flex items-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400 disabled:opacity-60"
+            }
           >
             {downloading ? (
               <>
-                <Loader2 size={15} className="animate-spin" /> PDF maken…
+                <Loader2 size={15} className="animate-spin" /> PDF…
               </>
             ) : (
               <>
-                <Download size={15} /> Download PDF
+                <Download size={15} /> PDF downloaden
               </>
             )}
           </button>
           <button
             type="button"
             onClick={preview}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
+            className={
+              compact
+                ? "inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 px-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
+                : "inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/5"
+            }
           >
             <Eye size={15} /> Voorbeeld
           </button>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className={`${compact ? "" : "mt-3"} flex flex-wrap items-center gap-3`}>
         <button
           type="button"
           onClick={saveTemplate}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-sky-500/40 hover:bg-sky-500/10 disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-sky-500/40 hover:bg-sky-500/10 disabled:opacity-60"
         >
           {pending ? (
             <>
@@ -150,7 +175,7 @@ export default function DocumentDownload({
             </>
           ) : (
             <>
-              <Save size={13} /> Sjabloon opslaan voor deze {label}
+              <Save size={13} /> Als standaard voor deze {label} opslaan
             </>
           )}
         </button>
@@ -159,7 +184,11 @@ export default function DocumentDownload({
             <Check size={13} /> Opgeslagen
           </span>
         )}
-        {error && <span className="text-xs text-rose-400">{error}</span>}
+        {error && (
+          <span className="text-xs text-rose-400" role="alert">
+            {error}
+          </span>
+        )}
       </div>
     </div>
   );

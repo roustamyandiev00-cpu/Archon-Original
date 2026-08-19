@@ -24,7 +24,7 @@ export default function MobileAgentChatNavButton({ mounted }: Props) {
           : `Open chat met ${activeAgent.name}`
       }
       aria-pressed={isOpen}
-      className={`relative z-[1] flex min-w-[4.25rem] shrink-0 snap-center flex-col items-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-medium transition-colors ${
+      className={`relative z-[1] flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition-colors ${
         mounted && isOpen
           ? "text-sky-400"
           : isLive
@@ -55,7 +55,7 @@ export default function MobileAgentChatNavButton({ mounted }: Props) {
           />
         ) : null}
       </span>
-      <span className="max-w-[4.25rem] truncate">{activeAgent.name}</span>
+      <span className="max-w-full truncate">{activeAgent.name}</span>
     </button>
   );
 }

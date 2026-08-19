@@ -1,10 +1,10 @@
-import IntroOverlay from "@/components/IntroOverlay";
 import PrefetchRoutes from "@/components/PrefetchRoutes";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import Realtime from "@/components/Realtime";
 import Genius from "@/components/Genius";
+import HomepageWorkflow from "@/components/HomepageWorkflow";
 import Footer from "@/components/Footer";
 import JsonLd from "@/components/seo/JsonLd";
 import {
@@ -40,10 +40,10 @@ export default function Home() {
         ]}
       />
       <PrefetchRoutes />
-      <IntroOverlay />
-      <Navbar />
-      <main>
+      <Navbar variant="executive" />
+      <main className="bg-[#030914]">
         <Hero />
+        <HomepageWorkflow />
         <Features />
         <Realtime />
         <Genius />

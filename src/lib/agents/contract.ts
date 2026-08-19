@@ -142,7 +142,7 @@ export async function generateSamenwerkingContractDraft(input: {
     }
   }
 
-  const agentName = input.ai.agentNaam.trim() || "Lima";
+  const agentName = input.ai.agentNaam.trim() || "Ela";
   const system = [
     `Je bent ${agentName}, juridisch-bouwkundige AI-assistent voor Belgische bouwbedrijven.`,
     "Schrijf een onderaanneming / samenwerkingsovereenkomst in helder Nederlands (BE).",

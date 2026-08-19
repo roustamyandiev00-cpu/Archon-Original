@@ -87,6 +87,91 @@ export async function saveAgentMemories(
   }
 }
 
+function priceFingerprint(omschrijving: string, prijs: number, eenheid: string) {
+  return `${omschrijving.trim().toLowerCase()}|${prijs}|${eenheid.trim().toLowerCase()}`;
+}
+
+/**
+ * Leert typische unitprijzen uit historische offerte-lijnen naar agentgeheugen.
+ * Max. `limit` unieke lijnen; skip duplicates via metadata.fingerprint.
+ */
+export async function seedPricesFromOffertes(
+  supabase: SupabaseClient,
+  input: {
+    companyId: number;
+    userId?: string | null;
+    limit?: number;
+  },
+): Promise<{ seeded: number; skipped: number }> {
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 100);
+
+  const { data: lines } = await supabase
+    .from("offerte_lijnen")
+    .select("omschrijving, prijs_per_eenheid, eenheid, btw_percentage")
+    .eq("company_id", input.companyId)
+    .gt("prijs_per_eenheid", 0)
+    .not("omschrijving", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit * 3);
+
+  if (!lines?.length) return { seeded: 0, skipped: 0 };
+
+  const { data: existing } = await supabase
+    .from("ai_agent_memory")
+    .select("metadata")
+    .eq("company_id", input.companyId)
+    .eq("memory_type", "fact")
+    .contains("metadata", { source: "offerte_price_seed" })
+    .limit(500);
+
+  const known = new Set<string>();
+  for (const row of existing ?? []) {
+    const meta = (row.metadata ?? {}) as Record<string, unknown>;
+    if (typeof meta.fingerprint === "string") known.add(meta.fingerprint);
+  }
+
+  let seeded = 0;
+  let skipped = 0;
+  const seenBatch = new Set<string>();
+
+  for (const line of lines) {
+    if (seeded >= limit) break;
+    const omschrijving = (line.omschrijving ?? "").trim();
+    const prijs = Number(line.prijs_per_eenheid);
+    const eenheid = (line.eenheid ?? "stuks").trim() || "stuks";
+    if (!omschrijving || !Number.isFinite(prijs) || prijs <= 0) {
+      skipped += 1;
+      continue;
+    }
+
+    const fingerprint = priceFingerprint(omschrijving, prijs, eenheid);
+    if (known.has(fingerprint) || seenBatch.has(fingerprint)) {
+      skipped += 1;
+      continue;
+    }
+    seenBatch.add(fingerprint);
+
+    await saveAgentMemory(supabase, {
+      companyId: input.companyId,
+      userId: input.userId,
+      content: `Prijs (historisch): ${omschrijving} — €${prijs}/${eenheid} (BTW ${Number(line.btw_percentage ?? 21)}%)`,
+      memoryType: "fact",
+      importance: 7,
+      metadata: {
+        source: "offerte_price_seed",
+        fingerprint,
+        omschrijving,
+        prijs,
+        eenheid,
+        btw: Number(line.btw_percentage ?? 21),
+      },
+    });
+    seeded += 1;
+  }
+
+  return { seeded, skipped };
+}
+
 export async function fetchRelevantMemories(
   supabase: SupabaseClient,
   companyId: number,
@@ -157,7 +242,7 @@ export async function fetchRetrievalContext(
   query: string,
   options?: { memoryLimit?: number; knowledgeLimit?: number },
 ): Promise<string> {
-  const [memories, knowledge] = await Promise.all([
+  const [memories, knowledge, priceMemories] = await Promise.all([
     fetchRelevantMemories(
       supabase,
       companyId,
@@ -170,10 +255,19 @@ export async function fetchRetrievalContext(
       query,
       options?.knowledgeLimit ?? 4,
     ),
+    fetchRelevantMemories(
+      supabase,
+      companyId,
+      `prijs uurtarief historisch ${query}`,
+      4,
+    ),
   ]);
 
   const parts: string[] = [];
   if (memories) parts.push(`Geheugen:\n${memories}`);
+  if (priceMemories && priceMemories !== memories) {
+    parts.push(`Geleerde prijzen:\n${priceMemories}`);
+  }
   if (knowledge) parts.push(`Kennisbank:\n${knowledge}`);
   return parts.join("\n\n");
 }
@@ -258,6 +352,27 @@ export function memoriesFromOffertePayload(
       metadata: { klant: payload.klant },
     },
   ];
+
+  if (payload.projectNaam?.trim() || payload.afmetingen?.trim()) {
+    memories.push({
+      content: [
+        `Project ${payload.klant}:`,
+        payload.projectNaam?.trim() || null,
+        payload.afmetingen?.trim()
+          ? `afmetingen ${payload.afmetingen.trim()}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      memoryType: "fact",
+      importance: 7,
+      metadata: {
+        klant: payload.klant,
+        projectNaam: payload.projectNaam ?? null,
+        afmetingen: payload.afmetingen ?? null,
+      },
+    });
+  }
 
   if (payload.notes?.trim()) {
     memories.push({
@@ -349,6 +464,21 @@ export function memoriesFromExecutedAction(input: {
     return memories;
   }
 
+  if (actionType === "propose_create_task" || actionType === "propose_invoice_followup_task") {
+    const taskId = payload.taskId as number | undefined;
+    const title = payload.title as string | undefined;
+    const factuurId = payload.factuurId as number | undefined;
+    memories.push({
+      content: factuurId
+        ? `${agentName} heeft opvolgingstaak aangemaakt voor factuur #${factuurId ?? "?"}: ${title ?? "Onbekend"}.`
+        : `${agentName} heeft taak aangemaakt: ${title ?? "Onbekend"}.`,
+      memoryType: "interaction",
+      importance: 5,
+      metadata: { taskId, title, factuurId: factuurId ?? null },
+    });
+    return memories;
+  }
+
   return memories;
 }
 
@@ -372,7 +502,7 @@ export async function rememberFromExecution(
   const payload = (action.payload_json ?? {}) as Record<string, unknown>;
   const memories = memoriesFromExecutedAction({
     actionType: action.action_type,
-    agentName: action.agent_name || "Lima",
+    agentName: action.agent_name || "Lara",
     payload,
     targetRoute: action.target_route,
   });

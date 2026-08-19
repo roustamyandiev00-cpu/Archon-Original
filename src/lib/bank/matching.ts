@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { untyped } from "@/lib/integraties";
+import type { Database } from "@/types/database.types";
 import { normalizeStructuredCommunication } from "@/lib/peppol/be";
 import { notifyPaymentReceived } from "@/lib/agents/events/payment-received";
+
+type TypedSupabase = SupabaseClient<Database>;
 
 type OpenFactuur = {
   id: number;
@@ -13,10 +15,9 @@ type OpenFactuur = {
 };
 
 export async function matchBankTransactions(
-  supabaseClient: unknown,
+  supabase: TypedSupabase,
   companyId: number,
 ): Promise<{ matched: number; open: number }> {
-  const supabase = untyped(supabaseClient) as SupabaseClient;
 
   const [{ data: transacties }, { data: facturen }] = await Promise.all([
     supabase

@@ -4,29 +4,20 @@ import {
   parseExtras,
 } from "@/app/dashboard/instellingen/settings";
 import type { Database } from "@/types/database.types";
+import {
+  getTeamSizeInstructionLabel,
+  hasOnboardingAnswers,
+  parseOnboardingProfile,
+  type OnboardingProfile,
+} from "@/lib/auth/registration";
 
 type AppSupabase = SupabaseClient<Database>;
 
-type OnboardingMeta = {
-  vakgebied?: string;
-  teamSize?: string;
-  uitdaging?: string;
-  doel?: string;
-  intent?: string;
-};
-
-const TEAM_LABELS: Record<string, string> = {
-  solo: "eenmanszaak",
-  klein: "2–5 medewerkers",
-  middel: "6–15 medewerkers",
-  groot: "16+ medewerkers",
-};
-
-function buildOnboardingInstructions(data: OnboardingMeta): string {
+function buildOnboardingInstructions(data: OnboardingProfile): string {
   const parts: string[] = [];
   if (data.uitdaging) parts.push(`Grootste uitdaging: ${data.uitdaging}.`);
   if (data.teamSize) {
-    parts.push(`Teamgrootte: ${TEAM_LABELS[data.teamSize] ?? data.teamSize}.`);
+    parts.push(`Teamgrootte: ${getTeamSizeInstructionLabel(data.teamSize)}.`);
   }
   if (data.doel || data.intent) {
     parts.push(`Primair doel: ${data.doel ?? data.intent}.`);
@@ -36,15 +27,16 @@ function buildOnboardingInstructions(data: OnboardingMeta): string {
 
 /**
  * Zet onboarding-antwoorden uit user_metadata door naar ai_assistant
- * zodat Lima het bedrijf meteen kent na registratie.
+ * zodat Ela het bedrijf meteen kent na registratie.
  */
 export async function seedOnboardingFromMetadata(
   supabase: AppSupabase,
   companyId: number,
   metadata: Record<string, unknown> | undefined,
 ): Promise<void> {
-  const onboarding = metadata?.onboarding as OnboardingMeta | undefined;
-  if (!onboarding?.vakgebied && !onboarding?.uitdaging) return;
+  const parsed = parseOnboardingProfile(metadata?.onboarding);
+  if (!parsed.success || !hasOnboardingAnswers(parsed.data)) return;
+  const onboarding = parsed.data;
 
   const { data: bedrijf } = await supabase
     .from("bedrijven")

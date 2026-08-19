@@ -2,6 +2,17 @@ export type WerkpostType = "aanbod" | "vraag";
 export type WerkpostStatus = "open" | "in_behandeling" | "gesloten" | "verlopen";
 export type WerkpostUrgentie = "normaal" | "urgent" | "zeer_urgent";
 export type ReactieStatus = "in_afwachting" | "geaccepteerd" | "afgewezen";
+/** Agent-matchflow (§4.6 / §8.4) — naast publicatie-status. */
+export type WerkpostPipelineStatus =
+  | "gevonden"
+  | "interesse_verstuurd"
+  | "reactie_ontvangen"
+  | "info_nodig"
+  | "gesprek_actief"
+  | "offerte_aangevraagd"
+  | "geaccepteerd"
+  | "afgewezen"
+  | "verlopen";
 
 export const TYPE_META: Record<
   WerkpostType,
@@ -75,6 +86,57 @@ export const REACTIE_STATUS_META: Record<
   },
 };
 
+export const PIPELINE_STATUS_META: Record<
+  WerkpostPipelineStatus,
+  { label: string; tone: string; dot: string }
+> = {
+  gevonden: {
+    label: "Gevonden",
+    tone: "bg-sky-500/15 text-sky-300",
+    dot: "bg-sky-400",
+  },
+  interesse_verstuurd: {
+    label: "Interesse verstuurd",
+    tone: "bg-violet-500/15 text-violet-300",
+    dot: "bg-violet-400",
+  },
+  reactie_ontvangen: {
+    label: "Reactie ontvangen",
+    tone: "bg-cyan-500/15 text-cyan-300",
+    dot: "bg-cyan-400",
+  },
+  info_nodig: {
+    label: "Info nodig",
+    tone: "bg-amber-500/15 text-amber-300",
+    dot: "bg-amber-400",
+  },
+  gesprek_actief: {
+    label: "Gesprek actief",
+    tone: "bg-emerald-500/15 text-emerald-300",
+    dot: "bg-emerald-400",
+  },
+  offerte_aangevraagd: {
+    label: "Offerte aangevraagd",
+    tone: "bg-indigo-500/15 text-indigo-300",
+    dot: "bg-indigo-400",
+  },
+  geaccepteerd: {
+    label: "Geaccepteerd",
+    tone: "bg-emerald-500/15 text-emerald-300",
+    dot: "bg-emerald-400",
+  },
+  afgewezen: {
+    label: "Afgewezen",
+    tone: "bg-rose-500/15 text-rose-300",
+    dot: "bg-rose-400",
+  },
+  verlopen: {
+    label: "Verlopen",
+    tone: "bg-zinc-500/15 text-zinc-300",
+    dot: "bg-zinc-400",
+  },
+};
+
 export function typeMeta(type: string | null | undefined) {
   return TYPE_META[(type as WerkpostType) ?? "vraag"] ?? TYPE_META.vraag;
 }
@@ -89,6 +151,11 @@ export function reactieStatusMeta(status: string | null | undefined) {
     REACTIE_STATUS_META[status ?? "in_afwachting"] ??
     REACTIE_STATUS_META.in_afwachting
   );
+}
+
+export function pipelineStatusMeta(status: string | null | undefined) {
+  if (!status) return null;
+  return PIPELINE_STATUS_META[status as WerkpostPipelineStatus] ?? null;
 }
 
 export function formatDate(value: string | null | undefined) {
@@ -137,6 +204,7 @@ export type WerkpostRow = {
   aard_van_werk: string;
   type: string;
   status: string;
+  pipeline_status?: string | null;
   urgentie: string;
   regio: string;
   stad: string | null;

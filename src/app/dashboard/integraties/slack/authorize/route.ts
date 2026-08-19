@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { startAuthorization } from "@vercel/connect";
-import { getCompanyContext } from "@/lib/company";
+import { requireAdminAccess } from "@/components/dashboard/context";
 import { untyped, integratiesSettingsUrl } from "@/lib/integraties";
 import { slackTokenParams } from "@/components/dashboard/integraties/slackConnect";
 import { resolveSlackConnectorForCompany } from "@/components/dashboard/integraties/slackSetup";
@@ -14,10 +14,12 @@ const COOKIE = "pp_slack_connect_company";
 export async function GET(req: NextRequest) {
   const dashboard = integratiesSettingsUrl(req.nextUrl.origin);
 
-  const { supabase, companyId } = await getCompanyContext();
-  if (!companyId) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+  const access = await requireAdminAccess();
+  if ("error" in access) {
+    dashboard.searchParams.set("error", access.error);
+    return NextResponse.redirect(dashboard);
   }
+  const { supabase, companyId } = access;
 
   const { data } = await untyped(supabase)
     .from("integraties")
@@ -37,7 +39,7 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date().toISOString();
-  await untyped(supabase).from("integraties").upsert(
+  const { error: configError } = await untyped(supabase).from("integraties").upsert(
     {
       bedrijf_id: companyId,
       provider: "slack",
@@ -48,6 +50,11 @@ export async function GET(req: NextRequest) {
     },
     { onConflict: "bedrijf_id,provider" },
   );
+
+  if (configError) {
+    dashboard.searchParams.set("error", configError.message);
+    return NextResponse.redirect(dashboard);
+  }
 
   const callbackUrl = new URL(
     "/dashboard/integraties/slack/callback",

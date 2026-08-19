@@ -7,20 +7,20 @@ type FaqItem = { q: string; a: string };
 
 const defaultItems: FaqItem[] = [
   {
-    q: "Moet ik perfect spreken zodat Lima het begrijpt?",
-    a: "Nee. Lima is getraind op bouwjargon: afkortingen, vaktermen en benaderingen. Spreek zoals tegen een collega op de werf — ze begrijpt je zelfs via WhatsApp.",
+    q: "Moet ik perfect spreken zodat Ela het begrijpt?",
+    a: "Nee. Ela is getraind op bouwjargon: afkortingen, vaktermen en benaderingen. Spreek zoals tegen een collega op de werf — ze begrijpt je zelfs via WhatsApp.",
   },
   {
     q: "Kan ik een offerte maken via spraakherkenning?",
-    a: "Ja. Dicteer je werken hardop vanaf je gsm. Lima transcribeert, structureert en genereert een volledige offerte in minder dan een minuut — ook met werfjargon of ruwe schattingen.",
+    a: "Ja. Dicteer je werken hardop vanaf je gsm. Ela transcribeert, structureert en genereert een volledige offerte in minder dan een minuut — ook met werfjargon of ruwe schattingen.",
   },
   {
     q: "Welke formaten kan de AI lezen?",
-    a: "Spraaknotities, vrije tekst, foto's van handgeschreven notities, meetstaten en PDF's. Wat het formaat ook is — Lima analyseert en structureert de inhoud automatisch tot een professionele offerte.",
+    a: "Spraaknotities, vrije tekst, foto's van handgeschreven notities, meetstaten en PDF's. Wat het formaat ook is — Ela analyseert en structureert de inhoud automatisch tot een professionele offerte.",
   },
   {
     q: "Werkt de AI voor alle vakgebieden?",
-    a: "Ja. Elektricien, loodgieter, schilder, metselaar, tegelzetter, dakdekker, schrijnwerker, gipsplaatser, verwarmingstechnicus en alle vakken — Lima kent de terminologie en prestaties van elk beroep.",
+    a: "Ja. Elektricien, loodgieter, schilder, metselaar, tegelzetter, dakdekker, schrijnwerker, gipsplaatser, verwarmingstechnicus en alle vakken — Ela kent de terminologie en prestaties van elk beroep.",
   },
   {
     q: "Kan ik een offerte automatisch omzetten in een factuur?",

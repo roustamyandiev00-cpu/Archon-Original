@@ -191,7 +191,7 @@ export default function OverviewActionsPanel({
           <div className="py-10 text-center">
             <p className="text-sm text-zinc-400">Geen open acties in deze categorie.</p>
             <p className="mt-1 text-xs text-zinc-600">
-              Alles is bij — {isDemo ? "demo" : "Lima"} blijft monitoren.
+              Alles is bij — {isDemo ? "demo" : "Ela"} blijft monitoren.
             </p>
           </div>
         ) : (

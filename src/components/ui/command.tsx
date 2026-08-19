@@ -123,7 +123,6 @@ export function CommandEmpty({ children }: { children: ReactNode }) {
 CommandEmpty.displayName = "CommandEmpty";
 
 export function CommandItem({
-  value,
   onSelect,
   children,
   className,

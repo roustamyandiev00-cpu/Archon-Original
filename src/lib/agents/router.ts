@@ -1,6 +1,7 @@
 import type { DomainEventType } from "@/lib/agents/events/types";
 
-export type AgentId = "Nova" | "Lima";
+/** Backend agent IDs. Lara/Nina are UI aliases of Nova/Lima. */
+export type AgentId = "Nova" | "Lima" | "Lara" | "Nina";
 
 export type EventRoute = {
   primary: AgentId;

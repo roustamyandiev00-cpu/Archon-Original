@@ -45,9 +45,9 @@ export default function AgentChatTopbarButton() {
   }
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative hidden lg:block" ref={menuRef}>
       <div
-        className={`inline-flex items-center rounded-lg border transition-colors ${
+        className={`dashboard-topbar-agent inline-flex items-center rounded-lg border transition-colors ${
           isOpen
             ? "border-sky-400/50 bg-sky-500/20 text-sky-100 ring-1 ring-sky-400/30"
             : isMinimized

@@ -20,8 +20,6 @@ import {
 
 const CONTRACT_BUCKET = "company-private";
 
-export type { SamenwerkingContractRow };
-
 function formatSignedAt(iso: string): string {
   return new Date(iso).toLocaleString("nl-BE", {
     dateStyle: "long",

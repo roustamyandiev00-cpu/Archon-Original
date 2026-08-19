@@ -36,11 +36,11 @@ export default function ReactieActions({ reactieId }: { reactieId: string }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <button
           onClick={accept}
           disabled={busy !== null}
-          className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3.5 py-1.5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/25 disabled:opacity-60"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/25 disabled:opacity-60"
         >
           {busy === "accept" ? (
             <Loader2 size={13} className="animate-spin" />
@@ -52,7 +52,7 @@ export default function ReactieActions({ reactieId }: { reactieId: string }) {
         <button
           onClick={reject}
           disabled={busy !== null}
-          className="inline-flex items-center gap-2 rounded-full bg-rose-500/15 px-3.5 py-1.5 text-xs font-medium text-rose-300 transition-colors hover:bg-rose-500/25 disabled:opacity-60"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-500/25 disabled:opacity-60"
         >
           {busy === "reject" ? (
             <Loader2 size={13} className="animate-spin" />
@@ -64,7 +64,7 @@ export default function ReactieActions({ reactieId }: { reactieId: string }) {
         {channelId && (
           <Link
             href="/dashboard/werkposts/samenwerkingen"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-400 hover:text-sky-300"
+            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-300 hover:bg-sky-500/15 hover:text-sky-200"
           >
             <MessageCircle size={13} /> Ga naar chat
           </Link>

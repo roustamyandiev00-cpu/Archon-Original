@@ -1,8 +1,16 @@
 import { getCompanyContext } from "@/lib/company";
-import { DEMO_FACTUREN } from "@/lib/demo";
+import { isActivePreviewMode } from "@/components/dashboard/context";
+import {
+  DEMO_FACTUUR_CUSTOMERS,
+  DEMO_FACTUREN,
+  DEMO_PRIJSLIJST,
+} from "@/lib/demo";
+import { showDemoData } from "@/lib/demo-mode";
 import type { FactuurListItem } from "@/components/dashboard/facturen/FacturenDataTable";
 import type { FactuurDocumentContext } from "@/components/dashboard/facturen/FactuurForm";
+import type { PrijslijstPickItem } from "@/components/dashboard/prijslijst/types";
 import { DEFAULT_TEMPLATE } from "@/app/dashboard/instellingen/settings";
+import { loadActivePrijslijstItems } from "@/lib/prijslijst";
 
 export type FacturenCustomer = {
   id: number;
@@ -16,12 +24,24 @@ export type FacturenCustomer = {
   btw: string | null;
 };
 
+export type FacturenProjectOption = {
+  id: string;
+  naam: string;
+  klant_naam: string;
+  customer_id: number | null;
+  status: string;
+};
+
 export type FacturenDashboardData = {
   facturen: FactuurListItem[];
+  facturenError: string | null;
   customers: FacturenCustomer[];
+  projects: FacturenProjectOption[];
   documentContext: FactuurDocumentContext;
+  prijslijstItems: PrijslijstPickItem[];
   isDemo: boolean;
   hasCompany: boolean;
+  accessIssue: FacturenAccessIssue;
   stats: {
     maandOmzet: number;
     verzonden: number;
@@ -30,8 +50,28 @@ export type FacturenDashboardData = {
   };
 };
 
+export type FacturenAccessIssue =
+  | "unauthenticated"
+  | "missing-company"
+  | null;
+
+export function resolveFacturenAccessIssue({
+  hasUser,
+  hasCompany,
+  isPreview,
+}: {
+  hasUser: boolean;
+  hasCompany: boolean;
+  isPreview: boolean;
+}): FacturenAccessIssue {
+  if (isPreview) return null;
+  if (!hasUser) return "unauthenticated";
+  if (!hasCompany) return "missing-company";
+  return null;
+}
+
 export async function loadFacturenDashboardData(): Promise<FacturenDashboardData> {
-  const { supabase, companyId } = await getCompanyContext();
+  const { supabase, companyId, user } = await getCompanyContext();
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -40,6 +80,9 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
 
   let facturen: FactuurListItem[] = [];
   let customers: FacturenCustomer[] = [];
+  let projects: FacturenProjectOption[] = [];
+  let prijslijstItems: PrijslijstPickItem[] = [];
+  let facturenError: string | null = null;
 
   let documentContext: FactuurDocumentContext = {
     defaultTemplate: DEFAULT_TEMPLATE,
@@ -58,7 +101,13 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
   };
 
   if (companyId) {
-    const [{ data }, { data: klanten }, { data: bedrijf }] = await Promise.all([
+    const [
+      facturenResult,
+      { data: klanten },
+      { data: bedrijf },
+      prijslijst,
+      { data: projectRows },
+    ] = await Promise.all([
       supabase
         .from("facturen")
         .select(
@@ -81,10 +130,30 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
         )
         .eq("id", companyId)
         .maybeSingle(),
+      loadActivePrijslijstItems(supabase, companyId),
+      supabase
+        .from("projecten")
+        .select("id, naam, klant_naam, customer_id, status")
+        .eq("bedrijf_id", companyId)
+        .in("status", ["gepland", "actief", "gepauzeerd"])
+        .order("created_at", { ascending: false })
+        .limit(100),
     ]);
 
-    const rows = data ?? [];
+    if (facturenResult.error) {
+      console.error("[facturen] Ophalen facturen mislukt", {
+        companyId,
+        code: facturenResult.error.code,
+        message: facturenResult.error.message,
+      });
+      facturenError =
+        "Je facturen konden niet worden opgehaald. Probeer het opnieuw.";
+    }
+
+    const rows = facturenResult.data ?? [];
     customers = klanten ?? [];
+    projects = (projectRows ?? []) as FacturenProjectOption[];
+    prijslijstItems = prijslijst;
     documentContext = {
       defaultTemplate: bedrijf?.default_invoice_template || DEFAULT_TEMPLATE,
       bedrijf: bedrijf ?? documentContext.bedrijf,
@@ -105,6 +174,7 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
       const { data: contactRows } = await supabase
         .from("customers")
         .select("id, email, phone")
+        .eq("company_id", companyId)
         .in("id", customerIds);
       for (const k of contactRows ?? []) {
         contactMap.set(k.id, { email: k.email, phone: k.phone });
@@ -129,8 +199,28 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
     });
   }
 
-  const isDemo = facturen.length === 0;
-  if (isDemo) facturen = DEMO_FACTUREN;
+  const preview = await isActivePreviewMode();
+  const accessIssue = resolveFacturenAccessIssue({
+    hasUser: Boolean(user),
+    hasCompany: Boolean(companyId),
+    isPreview: preview,
+  });
+  const isDemo =
+    !facturenError && showDemoData(preview, facturen.length === 0);
+  if (isDemo) {
+    facturen = DEMO_FACTUREN;
+    if (customers.length === 0) customers = DEMO_FACTUUR_CUSTOMERS;
+    if (prijslijstItems.length === 0) {
+      prijslijstItems = DEMO_PRIJSLIJST.filter((p) => p.isActive).map((p) => ({
+        id: p.id,
+        omschrijving: p.omschrijving,
+        eenheid: p.eenheid,
+        prijs: p.prijs,
+        btwPercentage: p.btwPercentage,
+        categorie: p.categorie,
+      }));
+    }
+  }
 
   const maandOmzet = facturen
     .filter((f) => f.document_type === "factuur" && (f.datum ?? "") >= monthStart)
@@ -149,10 +239,14 @@ export async function loadFacturenDashboardData(): Promise<FacturenDashboardData
 
   return {
     facturen,
+    facturenError,
     customers,
+    projects,
     documentContext,
+    prijslijstItems,
     isDemo,
     hasCompany: Boolean(companyId),
+    accessIssue,
     stats: { maandOmzet, verzonden, betaald, openstaand },
   };
 }

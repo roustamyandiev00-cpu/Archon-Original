@@ -4,12 +4,22 @@ import {
   NOVA_TTS_MODEL,
   NOVA_VOICE_ID,
 } from "@/lib/speech/constants";
+import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 const MAX_CHARS = 1200;
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
     return Response.json(

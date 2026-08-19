@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { untyped } from "@/lib/integraties";
 import {
   isTokenExpired,
   refreshTokens,
@@ -11,6 +9,7 @@ export async function getIntegrationConfig(
   companyId: number,
   provider: string,
 ) {
+  const { untyped } = await import("@/lib/integraties");
   const { data } = await untyped(supabase)
     .from("integraties")
     .select("status, config")
@@ -31,6 +30,7 @@ export async function saveIntegrationConfig(
   const existing = await getIntegrationConfig(supabase, companyId, provider);
   if (!existing) return false;
 
+  const { untyped } = await import("@/lib/integraties");
   const { error } = await untyped(supabase)
     .from("integraties")
     .update({
@@ -91,7 +91,8 @@ export async function markFactuurExported(
   exportId: string,
 ) {
   const now = new Date().toISOString();
-  await untyped(supabase as SupabaseClient)
+  const { untyped } = await import("@/lib/integraties");
+  await untyped(supabase)
     .from("facturen")
     .update({
       accounting_export_provider: provider,
@@ -111,7 +112,8 @@ export async function markFactuurExportError(
   error: string,
 ) {
   const now = new Date().toISOString();
-  await untyped(supabase as SupabaseClient)
+  const { untyped } = await import("@/lib/integraties");
+  await untyped(supabase)
     .from("facturen")
     .update({
       accounting_export_error: error.slice(0, 500),

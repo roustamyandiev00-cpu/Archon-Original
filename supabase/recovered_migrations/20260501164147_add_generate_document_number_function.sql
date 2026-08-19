@@ -1,0 +1,46 @@
+-- RECOVERED PRODUCTION MIGRATION HISTORY
+-- Read-only archive; do not apply directly or add to the active migration chain.
+-- Production version: 20260501164147
+-- Production name: add_generate_document_number_function
+
+-- Atomic function: get next number and increment in one step
+-- Uses existing document_sequences table (company_id, document_type, year, current_value, prefix)
+CREATE OR REPLACE FUNCTION generate_document_number(
+  p_company_id     BIGINT,
+  p_document_type  TEXT
+) RETURNS TEXT AS $$
+DECLARE
+  v_prefix  TEXT;
+  v_next    INTEGER;
+  v_year    INTEGER;
+BEGIN
+  v_year := EXTRACT(YEAR FROM NOW())::INTEGER;
+
+  -- Default prefix per type
+  v_prefix := CASE p_document_type
+    WHEN 'offerte'     THEN 'OFF'
+    WHEN 'factuur'     THEN 'FAC'
+    WHEN 'credit_nota' THEN 'CN'
+    WHEN 'proforma'    THEN 'PRO'
+    ELSE UPPER(LEFT(p_document_type, 3))
+  END;
+
+  -- Upsert: create row for this company/type/year if none exists
+  INSERT INTO document_sequences (company_id, document_type, year, current_value, prefix)
+  VALUES (p_company_id, p_document_type, v_year, 0, v_prefix)
+  ON CONFLICT (company_id, document_type, year) DO NOTHING;
+
+  -- Atomically increment and return (row lock prevents duplicates)
+  UPDATE document_sequences
+  SET current_value = current_value + 1,
+      updated_at    = NOW()
+  WHERE company_id    = p_company_id
+    AND document_type = p_document_type
+    AND year          = v_year
+  RETURNING prefix, current_value
+  INTO v_prefix, v_next;
+
+  RETURN v_prefix || '-' || v_year::text || '-' || lpad(v_next::text, 4, '0');
+END;
+$$ LANGUAGE plpgsql;
+

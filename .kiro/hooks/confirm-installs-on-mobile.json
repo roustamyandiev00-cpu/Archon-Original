@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Bevestig package installs (mobiel data)",
+      "trigger": "PreToolUse",
+      "description": "Vraagt bevestiging vóór elk package install commando om onverwacht mobiel dataverbruik te voorkomen.",
+      "matcher": "execute_bash",
+      "action": {
+        "type": "command",
+        "command": "python3 -c \"\nimport sys, json, re\n\ndata = json.load(sys.stdin)\ncmd = data.get('tool_input', {}).get('command', '')\n\npatterns = [\n    r'pnpm\\s+(install|add|i\\b)',\n    r'npm\\s+(install|i\\b|ci\\b)',\n    r'yarn\\s+(install|add)',\n    r'brew\\s+install',\n    r'pip\\s+install',\n    r'npx\\s+create-',\n]\n\nfor p in patterns:\n    if re.search(p, cmd):\n        result = {\n            'hookSpecificOutput': {\n                'permissionDecision': 'ask',\n                'permissionDecisionReason': f'Dit commando downloadt packages en verbruikt mobiel data:\\n\\n  {cmd}\\n\\nWil je doorgaan? (doe dit bij voorkeur op wifi)'\n            }\n        }\n        print(json.dumps(result))\n        sys.exit(0)\n\nsys.exit(0)\n\"\n"
+      }
+    }
+  ]
+}

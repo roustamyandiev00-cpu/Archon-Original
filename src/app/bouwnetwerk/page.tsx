@@ -16,6 +16,7 @@ import {
 import ReactieForm from "@/components/werkposts/ReactieForm";
 import WerkpostForm from "@/components/werkposts/WerkpostForm";
 import LikeButton from "@/components/werkposts/LikeButton";
+import RapporteerButton from "@/components/bouwnetwerk/RapporteerButton";
 import CompanySetupCard from "@/components/werkposts/CompanySetupCard";
 import CompanyReviewsTrigger from "@/components/werkposts/CompanyReviewsTrigger";
 import DraggablePhoneVisual from "@/components/werkposts/DraggablePhoneVisual";
@@ -339,6 +340,13 @@ export default async function BouwnetwerkPage({
                             initialCount={likeCountByPost.get(post.id) ?? 0}
                             isLoggedIn={Boolean(user)}
                           />
+                          {user && (
+                            <RapporteerButton
+                              targetType="werkpost"
+                              targetId={post.id}
+                              compact
+                            />
+                          )}
                           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500">
                             <MessageSquare size={14} />
                             {post.aantal_reacties ?? 0} { (post.aantal_reacties ?? 0) === 1 ? "reactie" : "reacties" }

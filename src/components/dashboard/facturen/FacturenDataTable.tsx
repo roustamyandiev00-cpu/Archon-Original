@@ -3,16 +3,24 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
+  Download,
+  Eye,
   Receipt,
   RotateCcw,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
 import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
-import MarkFactuurPaidButton from "@/components/dashboard/facturen/MarkFactuurPaidButton";
+import {
+  DashboardMobileCard,
+  DashboardMobileEmpty,
+} from "@/components/dashboard/DashboardMobileCard";
+import TableRowActionMenu from "@/components/dashboard/TableRowActionMenu";
+import { tableColumnClass } from "@/components/dashboard/table-columns";
+import { markFactuurAsPaid } from "@/app/dashboard/facturen/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +35,8 @@ import {
 } from "@/components/ui/table";
 import { documentTypeMeta, factuurStatusMeta } from "@/lib/facturen";
 import { formatDate, formatEuro } from "@/lib/offertes";
+import { useRouter } from "next/navigation";
+import type { TableRowMenuItem } from "@/components/dashboard/TableRowActionMenu";
 
 export type FactuurListItem = {
   id: number;
@@ -42,10 +52,28 @@ export type FactuurListItem = {
   phone: string | null;
 };
 
-const pageSize = 5;
+const PAGE_SIZE_OPTIONS = [5, 10, 20] as const;
+
+export type FactuurColumnKey = "date" | "dueDate" | "send";
+
+export type FactuurColumnVisibility = Record<FactuurColumnKey, boolean>;
+
+export const FACTUUR_COLUMN_OPTIONS = [
+  { id: "date", label: "Factuurdatum" },
+  { id: "dueDate", label: "Vervaldatum" },
+  { id: "send", label: "Versturen" },
+] as const;
+
+export const defaultFactuurColumnVisibility: FactuurColumnVisibility = {
+  date: true,
+  dueDate: true,
+  send: true,
+};
+
+const stickyActionsClass =
+  "text-right sticky right-0 z-10 bg-zinc-950/95 shadow-[-8px_0_16px_rgba(9,9,11,0.35)] group-hover:bg-zinc-900/90";
 
 type StatusFilter = "all" | "concept" | "verzonden" | "betaald" | "vervallen";
-type TypeFilter = "all" | "factuur" | "proforma";
 
 const statusBadgeVariant = (
   status: string | null,
@@ -61,14 +89,16 @@ export default function FacturenDataTable({
   facturen,
   isDemo = false,
   showFilters = true,
+  columnVisibility = defaultFactuurColumnVisibility,
 }: {
   facturen: FactuurListItem[];
   isDemo?: boolean;
   showFilters?: boolean;
+  columnVisibility?: FactuurColumnVisibility;
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [pageSize, setPageSize] = useState<number>(10);
   const [page, setPage] = useState(1);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
@@ -87,30 +117,27 @@ export default function FacturenDataTable({
       const matchesStatus =
         statusFilter === "all" || f.status === statusFilter;
 
-      const matchesType =
-        typeFilter === "all" || f.document_type === typeFilter;
-
-      return matchesQuery && matchesStatus && matchesType;
+      return matchesQuery && matchesStatus;
     });
-  }, [facturen, query, statusFilter, typeFilter]);
+  }, [facturen, query, statusFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pageStart = (currentPage - 1) * pageSize;
   const pageEnd = Math.min(pageStart + pageSize, filtered.length);
   const visible = filtered.slice(pageStart, pageEnd);
+  const hasActiveFilters = query.trim().length > 0 || statusFilter !== "all";
 
   function resetFilters() {
     setQuery("");
     setStatusFilter("all");
-    setTypeFilter("all");
     setPage(1);
   }
 
   return (
     <div className="dashboard-table-scroll flex min-h-0 flex-1 flex-col gap-2 lg:gap-1.5">
       {showFilters && (
-        <div className="grid shrink-0 gap-2 lg:grid-cols-[minmax(12rem,1fr)_9rem_9rem_auto]">
+        <div className="grid shrink-0 gap-2 lg:grid-cols-[minmax(12rem,1fr)_10rem_auto]">
           <label className="relative block">
             <span className="sr-only">Zoek facturen</span>
             <Search
@@ -145,25 +172,11 @@ export default function FacturenDataTable({
             </Select>
           </label>
 
-          <label>
-            <span className="sr-only">Filter op type</span>
-            <Select
-              value={typeFilter}
-              onChange={(event) => {
-                setTypeFilter(event.target.value as TypeFilter);
-                setPage(1);
-              }}
-            >
-              <option value="all">Alle types</option>
-              <option value="factuur">Facturen</option>
-              <option value="proforma">Proforma&apos;s</option>
-            </Select>
-          </label>
-
           <Button
             type="button"
             variant="ghost"
             onClick={resetFilters}
+            disabled={!hasActiveFilters}
             className="justify-center"
           >
             <RotateCcw size={15} />
@@ -172,63 +185,205 @@ export default function FacturenDataTable({
         </div>
       )}
 
-      <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-500">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs text-zinc-500">
         <SlidersHorizontal size={14} />
         <span>
           {filtered.length.toLocaleString("nl-BE")} van{" "}
-          {facturen.length.toLocaleString("nl-BE")} documenten
+          {facturen.length.toLocaleString("nl-BE")} facturen
         </span>
       </div>
 
         <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
-          <Table className="w-full table-fixed">
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="min-w-0">Nummer</TableHead>
-                <TableHead className="hidden min-w-0 lg:table-cell">Type</TableHead>
-                <TableHead className="min-w-0">Klant</TableHead>
-                <TableHead className="hidden min-w-0 xl:table-cell">Datum</TableHead>
-                <TableHead className="hidden min-w-0 2xl:table-cell">Vervaldatum</TableHead>
-                <TableHead className="text-right">Bedrag</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden text-right 2xl:table-cell">Versturen</TableHead>
-                <TableHead className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-900 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+          <div className="flex h-full flex-col gap-2 overflow-y-auto p-2 lg:hidden">
+            {visible.length > 0 ? (
+              visible.map((f) => {
+                const meta = factuurStatusMeta(f.status);
+                const typeMeta = documentTypeMeta(f.document_type);
+
+                return (
+                  <DashboardMobileCard key={f.id}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        {isDemo ? (
+                          <p className="truncate font-mono text-sm font-medium text-zinc-100">
+                            {f.nummer ?? `#${f.id}`}
+                          </p>
+                        ) : (
+                          <Link
+                            href={`/dashboard/facturen/${f.id}`}
+                            className="truncate font-mono text-sm font-medium text-sky-400"
+                          >
+                            {f.nummer ?? `#${f.id}`}
+                          </Link>
+                        )}
+                        <p className="mt-0.5 truncate text-xs text-zinc-400">{f.klant}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <Badge variant="default">{typeMeta.label}</Badge>
+                        <Badge variant={statusBadgeVariant(f.status)}>
+                          {meta.label}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="mt-2 font-mono text-sm font-semibold text-zinc-100">
+                      {formatEuro(f.totaal_bedrag)}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-zinc-500">
+                      {formatDate(f.datum)}
+                      {f.vervaldatum ? ` · verval ${formatDate(f.vervaldatum)}` : ""}
+                    </p>
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2">
+                      <DocumentContactActions
+                        soort={
+                          f.document_type === "proforma" ? "proforma" : "factuur"
+                        }
+                        nummer={f.nummer ?? `#${f.id}`}
+                        klant={f.klant ?? "klant"}
+                        bedrag={f.totaal_bedrag}
+                        email={f.email}
+                        phone={f.phone}
+                        detailPath={
+                          isDemo ? undefined : `/dashboard/facturen/${f.id}`
+                        }
+                        pdfPath={
+                          isDemo ? undefined : `/dashboard/facturen/${f.id}/pdf`
+                        }
+                      />
+                      <FactuurRowMenu
+                        id={f.id}
+                        nummer={f.nummer ?? `#${f.id}`}
+                        isPaid={Boolean(f.paid_at) || f.status === "betaald"}
+                        canMarkPaid={
+                          !Boolean(f.paid_at) &&
+                          f.status !== "betaald" &&
+                          f.document_type !== "proforma" &&
+                          ["verzonden", "herinnerd", "vervallen", "deels_betaald"].includes(
+                            f.status ?? "",
+                          )
+                        }
+                        isDemo={isDemo}
+                        open={openMenuId === f.id}
+                        onOpenChange={(open) => setOpenMenuId(open ? f.id : null)}
+                      />
+                    </div>
+                  </DashboardMobileCard>
+                );
+              })
+            ) : (
+              <div className="space-y-3">
+                <DashboardMobileEmpty
+                  icon={<Receipt size={22} />}
+                  title={
+                    facturen.length === 0
+                      ? "Nog geen facturen"
+                      : "Geen zoekresultaten"
+                  }
+                  description={
+                    facturen.length === 0
+                      ? "Maak een factuur of proforma aan en volg betalingen vanuit één overzicht."
+                      : "Pas je zoekopdracht of statusfilter aan."
+                  }
+                />
+                {facturen.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={resetFilters}
+                    className="mx-auto flex"
+                  >
+                    <RotateCcw size={15} />
+                    Filters wissen
+                  </Button>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          <div className="hidden h-full overflow-auto lg:block">
+            <Table className="w-full table-fixed">
+              <TableHeader>
+                <TableRow className="group border-b border-white/[0.08] bg-zinc-900/70 hover:bg-zinc-900/70">
+                <TableHead className="min-w-0 text-zinc-400">Nummer</TableHead>
+                <TableHead className="min-w-0 text-zinc-400">Klant</TableHead>
+                <TableHead
+                  className={tableColumnClass(
+                    columnVisibility.date,
+                    "xl",
+                    "text-zinc-400",
+                  )}
+                >
+                  Factuurdatum
+                </TableHead>
+                <TableHead
+                  className={tableColumnClass(
+                    columnVisibility.dueDate,
+                    "2xl",
+                    "text-zinc-400",
+                  )}
+                >
+                  Vervaldatum
+                </TableHead>
+                <TableHead className="text-right text-zinc-400">Bedrag</TableHead>
+                <TableHead className="text-zinc-400">Status</TableHead>
+                <TableHead
+                  className={tableColumnClass(
+                    columnVisibility.send,
+                    "2xl",
+                    "text-right text-zinc-400",
+                  )}
+                >
+                  Versturen
+                </TableHead>
+                <TableHead
+                  className={`${stickyActionsClass} bg-zinc-900/95 group-hover:bg-zinc-900/95`}
+                >
                   <span className="sr-only">Acties</span>
                 </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
               {visible.length > 0 ? (
                 visible.map((f) => {
                   const meta = factuurStatusMeta(f.status);
-                  const typeMeta = documentTypeMeta(f.document_type);
 
                   return (
-                    <TableRow key={f.id}>
+                    <TableRow
+                      key={f.id}
+                      className="group border-b border-white/[0.06] hover:bg-white/[0.03]"
+                    >
                       <TableCell className="min-w-0">
                         {isDemo ? (
-                          <span className="truncate font-mono text-zinc-300">
+                          <span className="truncate font-mono text-zinc-200">
                             {f.nummer ?? `#${f.id}`}
                           </span>
                         ) : (
                           <Link
                             href={`/dashboard/facturen/${f.id}`}
-                            className="truncate font-mono text-sky-400 hover:text-sky-300"
+                            className="truncate font-mono font-medium text-sky-400 hover:text-sky-300"
                           >
                             {f.nummer ?? `#${f.id}`}
                           </Link>
                         )}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 lg:table-cell">
-                        <Badge variant="default">{typeMeta.label}</Badge>
-                      </TableCell>
                       <TableCell className="min-w-0 truncate text-zinc-200">
                         {f.klant}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-500 xl:table-cell">
+                      <TableCell
+                        className={tableColumnClass(
+                          columnVisibility.date,
+                          "xl",
+                          "min-w-0 font-mono text-xs text-zinc-500",
+                        )}
+                      >
                         {formatDate(f.datum)}
                       </TableCell>
-                      <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-500 2xl:table-cell">
+                      <TableCell
+                        className={tableColumnClass(
+                          columnVisibility.dueDate,
+                          "2xl",
+                          "min-w-0 font-mono text-xs text-zinc-500",
+                        )}
+                      >
                         {formatDate(f.vervaldatum)}
                       </TableCell>
                       <TableCell className="text-right font-mono font-semibold text-zinc-100">
@@ -239,7 +394,13 @@ export default function FacturenDataTable({
                           {meta.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden text-right 2xl:table-cell">
+                      <TableCell
+                        className={tableColumnClass(
+                          columnVisibility.send,
+                          "2xl",
+                          "text-right",
+                        )}
+                      >
                         <DocumentContactActions
                           soort={
                             f.document_type === "proforma"
@@ -254,13 +415,29 @@ export default function FacturenDataTable({
                           detailPath={
                             isDemo ? undefined : `/dashboard/facturen/${f.id}`
                           }
+                          pdfPath={
+                            isDemo
+                              ? undefined
+                              : `/dashboard/facturen/${f.id}/pdf`
+                          }
                         />
                       </TableCell>
-                      <TableCell className="text-right lg:sticky lg:right-0 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                      <TableCell className={stickyActionsClass}>
                         <FactuurRowMenu
                           id={f.id}
                           nummer={f.nummer ?? `#${f.id}`}
                           isPaid={Boolean(f.paid_at) || f.status === "betaald"}
+                          canMarkPaid={
+                            !Boolean(f.paid_at) &&
+                            f.status !== "betaald" &&
+                            f.document_type !== "proforma" &&
+                            [
+                              "verzonden",
+                              "herinnerd",
+                              "vervallen",
+                              "deels_betaald",
+                            ].includes(f.status ?? "")
+                          }
                           isDemo={isDemo}
                           open={openMenuId === f.id}
                           onOpenChange={(open) =>
@@ -272,72 +449,102 @@ export default function FacturenDataTable({
                   );
                 })
               ) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-16 text-center">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={8} className="py-8 text-center">
                     <div className="mx-auto flex max-w-sm flex-col items-center">
-                      <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/5 text-zinc-500">
+                      <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/[0.08] bg-zinc-900 text-sky-400">
                         <Receipt size={22} />
                       </span>
-                      <p className="mt-3 text-sm font-medium text-zinc-200">
+                      <p className="mt-3 text-sm font-medium text-zinc-100">
                         {facturen.length === 0
                           ? "Nog geen facturen"
-                          : "Geen resultaten"}
+                          : "Geen zoekresultaten"}
                       </p>
-                      <p className="mt-1 text-xs text-zinc-500">
+                      <p className="mt-1 text-xs text-zinc-400">
                         {facturen.length === 0
-                          ? "Maak je eerste factuur via Nieuwe factuur."
-                          : "Pas je zoekopdracht of filters aan."}
+                          ? "Maak een factuur of proforma aan en volg betalingen vanuit één overzicht."
+                          : "Pas je zoekopdracht of statusfilter aan."}
                       </p>
+                      {facturen.length > 0 ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={resetFilters}
+                          className="mt-3"
+                        >
+                          <RotateCcw size={15} />
+                          Filters wissen
+                        </Button>
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>
               )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-zinc-500">
-            Rijen per pagina{" "}
-            <span className="font-mono text-zinc-300">{pageSize}</span>
-            {" · "}
-            Toont{" "}
-            <span className="font-mono text-zinc-300">
-              {filtered.length === 0 ? 0 : pageStart + 1}
-            </span>{" "}
-            tot{" "}
-            <span className="font-mono text-zinc-300">{pageEnd}</span> van{" "}
-            <span className="font-mono text-zinc-300">
-              {filtered.length.toLocaleString("nl-BE")}
-            </span>
-          </p>
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              aria-label="Vorige pagina"
-            >
-              <ChevronLeft size={16} />
-            </Button>
-            <span className="min-w-24 text-center font-mono text-xs text-zinc-400">
-              Pagina {currentPage} / {pageCount}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
-              disabled={currentPage === pageCount}
-              aria-label="Volgende pagina"
-            >
-              <ChevronRight size={16} />
-            </Button>
+              </TableBody>
+            </Table>
           </div>
         </div>
+
+        {filtered.length > 0 ? (
+          <div className="flex shrink-0 flex-col gap-2 border-t border-white/[0.08] pt-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+              <label htmlFor="facturen-page-size">Rijen per pagina</label>
+              <select
+                id="facturen-page-size"
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+                className="h-8 rounded-lg border border-white/10 bg-zinc-950 px-2 text-xs text-zinc-300 outline-none focus:border-sky-500/50"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <span aria-hidden>·</span>
+              <span>
+                Toont{" "}
+                <span className="font-mono text-zinc-300">
+                  {pageStart + 1}
+                </span>{" "}
+                tot <span className="font-mono text-zinc-300">{pageEnd}</span>{" "}
+                van{" "}
+                <span className="font-mono text-zinc-300">
+                  {filtered.length.toLocaleString("nl-BE")}
+                </span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                aria-label="Vorige pagina"
+              >
+                <ChevronLeft size={16} />
+              </Button>
+              <span className="min-w-24 text-center font-mono text-xs text-zinc-400">
+                Pagina {currentPage} / {pageCount}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
+                disabled={currentPage === pageCount}
+                aria-label="Volgende pagina"
+              >
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          </div>
+        ) : null}
     </div>
   );
 }
@@ -346,6 +553,7 @@ function FactuurRowMenu({
   id,
   nummer,
   isPaid,
+  canMarkPaid = false,
   isDemo,
   open,
   onOpenChange,
@@ -353,59 +561,74 @@ function FactuurRowMenu({
   id: number;
   nummer: string;
   isPaid: boolean;
+  canMarkPaid?: boolean;
   isDemo: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  return (
-    <div className="relative inline-flex justify-end">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenChange(!open);
-        }}
-        aria-label={`Acties voor ${nummer}`}
-      >
-        <MoreHorizontal size={16} />
-      </Button>
+  const router = useRouter();
+  const [actionError, setActionError] = useState<string | null>(null);
 
-      {open && (
-        <div className="absolute right-0 top-9 z-30 w-44 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 py-1 shadow-2xl">
-          {isDemo ? (
-            <span className="block px-3 py-2 text-sm text-zinc-500">
-              Demo-factuur
-            </span>
-          ) : (
-            <>
-          <Link
-            href={`/dashboard/facturen/${id}`}
-            className="block px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
-            onClick={() => onOpenChange(false)}
-          >
-            Open factuur
-          </Link>
-          <Link
-            href={`/dashboard/facturen/${id}/pdf`}
-            className="block px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
-            onClick={() => onOpenChange(false)}
-          >
-            Download PDF
-          </Link>
-          {!isPaid && (
-            <MarkFactuurPaidButton
-              factuurId={id}
-              nummer={nummer}
-              variant="menu"
-              onDone={() => onOpenChange(false)}
-            />
-          )}
-            </>
-          )}
-        </div>
-      )}
+  const items: TableRowMenuItem[] = isDemo
+    ? [
+        {
+          label: "Demo-factuur",
+          onClick: () => undefined,
+        },
+      ]
+    : [
+        {
+          label: "Open factuur",
+          icon: <Eye size={14} />,
+          onClick: () => {
+            router.push(`/dashboard/facturen/${id}`);
+          },
+        },
+        {
+          label: "Download PDF",
+          icon: <Download size={14} />,
+          onClick: () => {
+            router.push(`/dashboard/facturen/${id}/pdf`);
+          },
+        },
+        ...(canMarkPaid && !isPaid
+          ? [
+              {
+                label: "Markeer als betaald",
+                icon: <CheckCircle2 size={14} />,
+                onClick: () => {
+                  void (async () => {
+                    setActionError(null);
+                    const confirmed = window.confirm(
+                      `Betaling registreren voor ${nummer}?`,
+                    );
+                    if (!confirmed) return;
+                    const result = await markFactuurAsPaid(id);
+                    if ("error" in result && result.error) {
+                      setActionError(result.error);
+                      return;
+                    }
+                    router.refresh();
+                  })();
+                },
+              } satisfies TableRowMenuItem,
+            ]
+          : []),
+      ];
+
+  return (
+    <div>
+      <TableRowActionMenu
+        label={`Acties voor ${nummer}`}
+        open={open}
+        onOpenChange={onOpenChange}
+        items={items}
+      />
+      {actionError ? (
+        <p className="mt-1 max-w-48 text-xs text-rose-400" role="alert">
+          {actionError}
+        </p>
+      ) : null}
     </div>
   );
 }

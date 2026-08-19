@@ -85,7 +85,25 @@ type WriteAccessOk = {
   user: NonNullable<Awaited<ReturnType<typeof getCompanyContext>>["user"]>;
   companyId: number;
   trial: TrialStatus;
+  isAdmin: boolean;
+  role: string | null;
 };
+
+async function loadMembershipRole(
+  supabase: Awaited<ReturnType<typeof getCompanyContext>>["supabase"],
+  companyId: number,
+): Promise<{ role: string | null; isAdmin: boolean }> {
+  const { data: isAdmin } = await supabase.rpc("is_company_admin", {
+    p_company_id: companyId,
+  });
+  const { data: role } = await supabase.rpc("get_user_role_in_company", {
+    p_company_id: companyId,
+  });
+  return {
+    role: typeof role === "string" ? role : null,
+    isAdmin: Boolean(isAdmin),
+  };
+}
 
 export async function requireWriteAccess(): Promise<WriteAccessError | WriteAccessOk> {
   const ctx = await getCompanyContext();
@@ -115,5 +133,28 @@ export async function requireWriteAccess(): Promise<WriteAccessError | WriteAcce
     };
   }
 
-  return { supabase: ctx.supabase, user: ctx.user, companyId: ctx.companyId, trial };
+  const membership = await loadMembershipRole(ctx.supabase, ctx.companyId);
+
+  return {
+    supabase: ctx.supabase,
+    user: ctx.user,
+    companyId: ctx.companyId,
+    trial,
+    isAdmin: membership.isAdmin,
+    role: membership.role,
+  };
+}
+
+/** Voor gevoelige acties: SMTP, API-keys, teambeheer. */
+export async function requireAdminAccess(): Promise<WriteAccessError | WriteAccessOk> {
+  const access = await requireWriteAccess();
+  if ("error" in access) return access;
+
+  if (!access.isAdmin) {
+    return {
+      error: "Alleen beheerders kunnen deze actie uitvoeren.",
+    };
+  }
+
+  return access;
 }

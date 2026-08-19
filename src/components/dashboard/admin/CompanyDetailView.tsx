@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   Ban,
@@ -8,8 +9,6 @@ import {
   Building2,
   CalendarClock,
   CreditCard,
-  Database,
-  Edit3,
   ExternalLink,
   FileText,
   FolderKanban,
@@ -21,12 +20,17 @@ import {
   Zap,
 } from "lucide-react";
 import CompanyAiUsageChart from "@/components/dashboard/admin/CompanyAiUsageChart";
-import { actAsCompanyAction } from "@/app/dashboard/admin/impersonation-actions";
+import { actAsCompanyAction } from "@/app/admin/impersonation-actions";
+import {
+  createStripeBillingPortalAction,
+  sendPlatformInvoiceAction,
+  syncPlatformInvoicesAction,
+  updateCompanyStatusAction,
+} from "@/app/admin/actions";
 import {
   formatCurrency,
   formatDate,
   formatDateTime,
-  formatStorage,
   formatTokens,
   planLabels,
   statusLabels,
@@ -41,7 +45,6 @@ import type {
   CompanyProject,
   CompanyQuote,
   CompanyUser,
-  FeatureFlag,
   PaymentRecord,
   SecurityEvent,
   SystemNote,
@@ -78,16 +81,16 @@ type TabId =
   | "settings";
 
 const tabs: Array<{ id: TabId; label: string; icon: ReactNode }> = [
-  { id: "overview", label: "Overview", icon: <Building2 size={14} /> },
-  { id: "users", label: "Users", icon: <Users size={14} /> },
-  { id: "projects", label: "Projects", icon: <FolderKanban size={14} /> },
-  { id: "quotes", label: "Quotes", icon: <FileText size={14} /> },
-  { id: "invoices", label: "Invoices", icon: <Receipt size={14} /> },
-  { id: "ai", label: "AI Usage", icon: <Bot size={14} /> },
-  { id: "billing", label: "Billing", icon: <CreditCard size={14} /> },
-  { id: "activity", label: "Activity", icon: <Activity size={14} /> },
-  { id: "security", label: "Security", icon: <ShieldCheck size={14} /> },
-  { id: "settings", label: "Settings", icon: <KeyRound size={14} /> },
+  { id: "overview", label: "Overzicht", icon: <Building2 size={14} /> },
+  { id: "users", label: "Gebruikers", icon: <Users size={14} /> },
+  { id: "projects", label: "Projecten", icon: <FolderKanban size={14} /> },
+  { id: "quotes", label: "Offertes", icon: <FileText size={14} /> },
+  { id: "invoices", label: "Facturen", icon: <Receipt size={14} /> },
+  { id: "ai", label: "AI-gebruik", icon: <Bot size={14} /> },
+  { id: "billing", label: "Abonnement", icon: <CreditCard size={14} /> },
+  { id: "activity", label: "Activiteit", icon: <Activity size={14} /> },
+  { id: "security", label: "Beveiliging", icon: <ShieldCheck size={14} /> },
+  { id: "settings", label: "Instellingen", icon: <KeyRound size={14} /> },
 ];
 
 const logoToneClasses: Record<CompanyLogoTone, string> = {
@@ -111,6 +114,13 @@ const statusBadgeVariants: Record<CompanyStatus, BadgeVariant> = {
   suspended: "danger",
 };
 
+const subscriptionStatusLabels: Record<CompanyDetail["subscriptionStatus"], string> = {
+  active: "Actief",
+  trialing: "Proefperiode",
+  past_due: "Betaling achterstallig",
+  paused: "Gepauzeerd",
+};
+
 const tableStatusVariants = {
   active: "success",
   invited: "warning",
@@ -127,6 +137,8 @@ const tableStatusVariants = {
   overdue: "danger",
   scheduled: "info",
   failed: "danger",
+  uncollectible: "danger",
+  void: "default",
 } satisfies Record<string, BadgeVariant>;
 
 export default function CompanyDetailView({
@@ -134,9 +146,15 @@ export default function CompanyDetailView({
 }: {
   detail: CompanyDetail;
 }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [viewAsError, setViewAsError] = useState<string | null>(null);
   const [viewAsPending, setViewAsPending] = useState(false);
+  const [statusPending, setStatusPending] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{
+    tone: "success" | "error" | "warning";
+    text: string;
+  } | null>(null);
   const { company } = detail;
 
   async function handleViewAsCompany() {
@@ -154,35 +172,70 @@ export default function CompanyDetailView({
     }
   }
 
+  async function handleCompanyStatus() {
+    const nextStatus = company.status === "suspended" ? "active" : "suspended";
+    const verb = nextStatus === "suspended" ? "opschorten" : "activeren";
+    const confirmed = window.confirm(
+      nextStatus === "suspended"
+        ? `Bedrijf ${company.name} opschorten? Gebruikers verliezen toegang, maar het Stripe-abonnement wordt niet automatisch stopgezet.`
+        : `Bedrijf ${company.name} opnieuw activeren?`,
+    );
+    if (!confirmed) return;
+
+    setStatusMessage(null);
+    setStatusPending(true);
+    try {
+      const result = await updateCompanyStatusAction({
+        companyId: Number(company.id),
+        status: nextStatus,
+      });
+
+      if (!result.ok) {
+        setStatusMessage({ tone: "error", text: result.error });
+        return;
+      }
+
+      setStatusMessage({
+        tone: result.warning ? "warning" : "success",
+        text:
+          result.warning ??
+          `Bedrijf is ${verb === "opschorten" ? "opgeschort" : "geactiveerd"}.`,
+      });
+      router.refresh();
+    } catch {
+      setStatusMessage({
+        tone: "error",
+        text: "De accountstatus kon niet worden gewijzigd.",
+      });
+    } finally {
+      setStatusPending(false);
+    }
+  }
+
   const headerMetrics = useMemo(
     () => [
       {
-        label: "Monthly revenue",
+        label: "Pakketwaarde per maand",
         value: formatCurrency(company.monthlyRevenue),
         icon: <CreditCard size={15} />,
       },
       {
-        label: "Active users",
+        label: "Actieve gebruikers",
         value: company.activeUsers.toLocaleString("nl-BE"),
         icon: <Users size={15} />,
       },
       {
-        label: "AI tokens this month",
+        label: "AI-tokens gebruikt",
         value: formatTokens(company.aiTokensUsed),
         icon: <Bot size={15} />,
       },
       {
-        label: "Storage used",
-        value: formatStorage(company.storageUsedGb),
-        icon: <Database size={15} />,
-      },
-      {
-        label: "Last login",
+        label: "Laatste activiteit",
         value: formatDateTime(company.lastLogin),
         icon: <CalendarClock size={15} />,
       },
       {
-        label: "Created date",
+        label: "Aangemaakt op",
         value: formatDate(company.createdAt),
         icon: <Building2 size={15} />,
       },
@@ -207,7 +260,7 @@ export default function CompanyDetailView({
               </span>
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                  CEO Dashboard / Company Profile
+                  CEO Dashboard / Bedrijfsdossier
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
@@ -218,6 +271,16 @@ export default function CompanyDetailView({
                   </Badge>
                   <Badge variant={statusBadgeVariants[company.status]}>
                     {statusLabels[company.status]}
+                  </Badge>
+                  <Badge
+                    variant={
+                      detail.risicoStatus === "normaal" ? "default" : "warning"
+                    }
+                  >
+                    Risico: {detail.risicoStatus.replaceAll("_", " ")}
+                  </Badge>
+                  <Badge variant="info">
+                    Verificatie: {detail.verificatieStatus.replaceAll("_", " ")}
                   </Badge>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
@@ -239,19 +302,24 @@ export default function CompanyDetailView({
               </ActionButton>
               <ActionButton onClick={() => setActiveTab("billing")}>
                 <CreditCard size={15} />
-                View Billing
+                Bekijk abonnement
               </ActionButton>
               <ActionButton onClick={() => setActiveTab("ai")}>
                 <Bot size={15} />
-                View AI Usage
+                Bekijk AI-gebruik
               </ActionButton>
-              <Button type="button" variant="danger">
+              <Button
+                type="button"
+                variant={company.status === "suspended" ? "default" : "danger"}
+                disabled={statusPending}
+                onClick={() => void handleCompanyStatus()}
+              >
                 <Ban size={15} />
-                Suspend Company
-              </Button>
-              <Button type="button" variant="secondary">
-                <Edit3 size={15} />
-                Edit Company
+                {statusPending
+                  ? "Bezig..."
+                  : company.status === "suspended"
+                    ? "Bedrijf activeren"
+                    : "Bedrijf opschorten"}
               </Button>
             </div>
           </div>
@@ -260,9 +328,24 @@ export default function CompanyDetailView({
               {viewAsError}
             </p>
           )}
+          {statusMessage && (
+            <p
+              role="status"
+              className={cn(
+                "mt-3 rounded-lg border px-3 py-2 text-sm",
+                statusMessage.tone === "success"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                  : statusMessage.tone === "warning"
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+                    : "border-rose-500/30 bg-rose-500/10 text-rose-300",
+              )}
+            >
+              {statusMessage.text}
+            </p>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 divide-y divide-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-1 divide-y divide-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3 xl:grid-cols-5">
           {headerMetrics.map((metric) => (
             <div key={metric.label} className="px-5 py-4">
               <div className="flex items-center gap-2 text-xs text-zinc-500">
@@ -278,7 +361,7 @@ export default function CompanyDetailView({
       </header>
 
       <div className="overflow-x-auto rounded-2xl border border-white/10 bg-zinc-900/50 p-1">
-        <div role="tablist" aria-label="Company detail sections" className="flex min-w-max gap-1">
+        <div role="tablist" aria-label="Onderdelen bedrijfsdossier" className="flex min-w-max gap-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -320,40 +403,40 @@ function OverviewTab({ detail }: { detail: CompanyDetail }) {
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Revenue"
+          label="Pakketwaarde"
           value={formatCurrency(company.monthlyRevenue)}
-          detail={`${detail.subscriptionStatus.replace("_", " ")} subscription`}
+          detail={`Pakketstatus: ${subscriptionStatusLabels[detail.subscriptionStatus]}`}
           icon={<CreditCard size={18} />}
         />
         <MetricCard
-          label="AI Usage"
+          label="AI-tokens gebruikt"
           value={formatTokens(company.aiTokensUsed)}
-          detail={`${formatCurrency(company.aiCost)} this month`}
+          detail={`${formatCurrency(company.aiCost)} geregistreerde kosten`}
           icon={<Bot size={18} />}
         />
         <MetricCard
-          label="Active Users"
+          label="Actieve gebruikers"
           value={company.activeUsers.toLocaleString("nl-BE")}
-          detail={`${detail.activeSessions} active sessions`}
+          detail="Actieve bedrijfslidmaatschappen"
           icon={<Users size={18} />}
         />
         <MetricCard
-          label="Projects"
-          value={detail.projectsTotal.toLocaleString("nl-BE")}
-          detail={`${detail.projects.filter((project) => project.status === "active").length} active in table`}
+          label="Projecten"
+          value="—"
+          detail="Projectbron nog niet gekoppeld"
           icon={<FolderKanban size={18} />}
         />
       </section>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <div className="space-y-6 xl:col-span-7">
-          <TimelineCard title="Recent activity timeline" events={detail.activity.slice(0, 5)} />
-          <DataCard title="Recent invoices" description="Latest company invoice activity">
+          <TimelineCard title="Recente activiteit" events={detail.activity.slice(0, 5)} />
+          <DataCard title="Recente facturen" description="Laatste factuuractiviteit van dit bedrijf">
             <InvoicesTable invoices={detail.invoices.slice(0, 4)} compact />
           </DataCard>
         </div>
         <div className="space-y-6 xl:col-span-5">
-          <DataCard title="Recent quotes" description="Latest commercial documents">
+          <DataCard title="Recente offertes" description="Laatste commerciële documenten">
             <QuotesTable quotes={detail.quotes.slice(0, 4)} compact />
           </DataCard>
           <SystemNotes notes={detail.systemNotes} />
@@ -365,18 +448,18 @@ function OverviewTab({ detail }: { detail: CompanyDetail }) {
 
 function UsersTab({ users }: { users: CompanyUser[] }) {
   return (
-    <DataCard title="Users" description="All users attached to this company workspace">
+    <DataCard title="Gebruikers" description="Alle gebruikers van deze bedrijfsomgeving">
       <Table className="min-w-[920px]">
         <TableHeader>
           <TableRow>
-            <TableHead>User</TableHead>
-            <TableHead>Role</TableHead>
+            <TableHead>Gebruiker</TableHead>
+            <TableHead>Rol</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Last login</TableHead>
+            <TableHead>Laatste login</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">AI usage</TableHead>
-            <TableHead>Created date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="text-right">AI-gebruik</TableHead>
+            <TableHead>Aangemaakt op</TableHead>
+            <TableHead className="text-right">Acties</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -398,7 +481,7 @@ function UsersTab({ users }: { users: CompanyUser[] }) {
                 {formatDate(user.createdAt)}
               </TableCell>
               <TableCell className="text-right">
-                <Button type="button" variant="ghost" size="sm">Manage</Button>
+                <Button type="button" variant="ghost" size="sm">Beheren</Button>
               </TableCell>
             </TableRow>
           ))}
@@ -410,7 +493,7 @@ function UsersTab({ users }: { users: CompanyUser[] }) {
 
 function ProjectsTab({ projects }: { projects: CompanyProject[] }) {
   return (
-    <DataCard title="Projects" description="Project portfolio visible to the platform admin">
+    <DataCard title="Projecten" description="Projectoverzicht voor de platformbeheerder">
       <ProjectsTable projects={projects} />
     </DataCard>
   );
@@ -418,7 +501,7 @@ function ProjectsTab({ projects }: { projects: CompanyProject[] }) {
 
 function QuotesTab({ quotes }: { quotes: CompanyQuote[] }) {
   return (
-    <DataCard title="Quotes" description="Quote pipeline and document statuses">
+    <DataCard title="Offertes" description="Offertepijplijn en documentstatussen">
       <QuotesTable quotes={quotes} />
     </DataCard>
   );
@@ -426,7 +509,7 @@ function QuotesTab({ quotes }: { quotes: CompanyQuote[] }) {
 
 function InvoicesTab({ invoices }: { invoices: CompanyInvoice[] }) {
   return (
-    <DataCard title="Invoices" description="Invoice status, due dates and payments">
+    <DataCard title="Facturen" description="Factuurstatussen, vervaldagen en betalingen">
       <InvoicesTable invoices={invoices} />
     </DataCard>
   );
@@ -437,29 +520,29 @@ function AiUsageTab({ detail }: { detail: CompanyDetail }) {
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Tokens used this month" value={formatTokens(company.aiTokensUsed)} detail="Across all AI agents" icon={<Bot size={18} />} />
-        <MetricCard label="AI cost this month" value={formatCurrency(company.aiCost)} detail="Provider blended cost" icon={<CreditCard size={18} />} />
-        <MetricCard label="Requests today" value={detail.requestsToday.toLocaleString("nl-BE")} detail="Realtime request volume" icon={<Zap size={18} />} />
-        <MetricCard label="Failed requests" value={detail.failedRequests.toLocaleString("nl-BE")} detail="Needs review if elevated" icon={<Activity size={18} />} />
+        <MetricCard label="Tokens gebruikt" value={formatTokens(company.aiTokensUsed)} detail="Volgens de creditregistratie" icon={<Bot size={18} />} />
+        <MetricCard label="Geregistreerde AI-kosten" value={formatCurrency(company.aiCost)} detail="Volgens de creditregistratie" icon={<CreditCard size={18} />} />
+        <MetricCard label="Recente AI-logregels" value={detail.requestsToday.toLocaleString("nl-BE")} detail="Maximaal 12 recente gebeurtenissen" icon={<Zap size={18} />} />
+        <MetricCard label="Fouten in recente logs" value={detail.failedRequests.toLocaleString("nl-BE")} detail="Binnen de geladen AI-gebeurtenissen" icon={<Activity size={18} />} />
       </section>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <Card className="xl:col-span-8">
           <CardHeader>
-            <CardTitle>Usage chart</CardTitle>
-            <CardDescription>Tokens and cost trend for the current month</CardDescription>
+            <CardTitle>Gebruiksgrafiek</CardTitle>
+            <CardDescription>Ontwikkeling van tokens en kosten deze maand</CardDescription>
           </CardHeader>
           <CardContent>
             <CompanyAiUsageChart data={detail.aiUsageChart} />
           </CardContent>
         </Card>
-        <DataCard title="Provider breakdown" description="OpenAI, Claude and Gemini usage" className="xl:col-span-4">
+        <DataCard title="Verdeling per provider" description="Gebruik van OpenAI, Claude en Gemini" className="xl:col-span-4">
           <div className="space-y-3">
             {detail.providerBreakdown.map((provider) => (
               <div key={provider.provider} className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-zinc-100">{provider.provider}</p>
-                  <Badge variant="info">{provider.successRate}% success</Badge>
+                  <Badge variant="info">{provider.successRate}% geslaagd</Badge>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
                   <div>
@@ -467,7 +550,7 @@ function AiUsageTab({ detail }: { detail: CompanyDetail }) {
                     <p className="mt-1 font-mono text-zinc-200">{formatTokens(provider.tokens)}</p>
                   </div>
                   <div>
-                    <p className="text-zinc-500">Cost</p>
+                    <p className="text-zinc-500">Kosten</p>
                     <p className="mt-1 font-mono text-zinc-200">{formatCurrency(provider.cost)}</p>
                   </div>
                 </div>
@@ -482,23 +565,228 @@ function AiUsageTab({ detail }: { detail: CompanyDetail }) {
 
 function BillingTab({ detail }: { detail: CompanyDetail }) {
   const { company } = detail;
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
+  const [syncPending, setSyncPending] = useState(false);
+  const [portalPending, setPortalPending] = useState(false);
+  const [sendMessage, setSendMessage] = useState<{
+    tone: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  async function handleSendInvoice(stripeInvoiceId: string, recipient: string) {
+    const confirmed = window.confirm(
+      `Factuurkopie via Stripe versturen naar ${recipient}?`,
+    );
+    if (!confirmed) return;
+
+    setSendMessage(null);
+    setSendingInvoiceId(stripeInvoiceId);
+    const result = await sendPlatformInvoiceAction({
+      companyId: Number(company.id),
+      stripeInvoiceId,
+    });
+    setSendingInvoiceId(null);
+
+    if (!result.ok) {
+      setSendMessage({ tone: "error", text: result.error });
+      return;
+    }
+    setSendMessage({
+      tone: "success",
+      text: result.testMode
+        ? "Testmodus: Stripe registreerde de verzending, maar verstuurde geen echte e-mail."
+        : `Factuurkopie verstuurd naar ${result.recipient}.`,
+    });
+  }
+
+  async function handleSyncInvoices() {
+    setSendMessage(null);
+    setSyncPending(true);
+    const result = await syncPlatformInvoicesAction({
+      companyId: Number(company.id),
+    });
+    setSyncPending(false);
+
+    setSendMessage(
+      result.ok
+        ? {
+            tone: "success",
+            text: `${result.synced} Stripe-facturen gesynchroniseerd.`,
+          }
+        : { tone: "error", text: result.error },
+    );
+  }
+
+  async function handleOpenBillingPortal() {
+    const confirmed = window.confirm(
+      `Stripe-abonnementsbeheer openen voor ${company.name}? Wijzigingen in Stripe kunnen onmiddellijk financiële gevolgen hebben.`,
+    );
+    if (!confirmed) return;
+
+    setSendMessage(null);
+    setPortalPending(true);
+    try {
+      const result = await createStripeBillingPortalAction({
+        companyId: Number(company.id),
+      });
+      if (!result.ok) {
+        setSendMessage({ tone: "error", text: result.error });
+        return;
+      }
+      window.location.assign(result.url);
+    } catch {
+      setSendMessage({
+        tone: "error",
+        text: "Stripe-abonnementsbeheer kon niet worden geopend.",
+      });
+    } finally {
+      setPortalPending(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Current plan" value={planLabels[company.plan]} detail="Configured subscription plan" icon={<CreditCard size={18} />} />
-        <MetricCard label="Subscription status" value={detail.subscriptionStatus.replace("_", " ")} detail="Stripe subscription state" icon={<ShieldCheck size={18} />} />
-        <MetricCard label="MRR" value={formatCurrency(company.monthlyRevenue)} detail="Monthly recurring revenue" icon={<Activity size={18} />} />
-        <MetricCard label="Next invoice date" value={formatDate(detail.nextInvoiceDate)} detail={detail.stripeCustomerId} icon={<CalendarClock size={18} />} />
+        <MetricCard label="Huidig pakket" value={planLabels[company.plan]} detail="Ingesteld abonnementspakket" icon={<CreditCard size={18} />} />
+        <MetricCard label="Abonnementsstatus" value={subscriptionStatusLabels[detail.subscriptionStatus]} detail="Status volgens Stripe" icon={<ShieldCheck size={18} />} />
+        <MetricCard label="Pakketwaarde per maand" value={formatCurrency(company.monthlyRevenue)} detail="Berekend op basis van het pakket" icon={<Activity size={18} />} />
+        <MetricCard label="Volgende factuurdatum" value="—" detail="Nog niet gekoppeld aan Stripe planning" icon={<CalendarClock size={18} />} />
       </section>
+      <DataCard
+        title="Platformfacturen"
+        description="Stripe-facturen voor abonnementen en AI-tokenbetalingen"
+      >
+        <div className="mx-5 mb-4 flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="default"
+            disabled={
+              portalPending || syncPending || sendingInvoiceId !== null
+            }
+            onClick={() => void handleOpenBillingPortal()}
+          >
+            <ExternalLink size={14} />
+            {portalPending ? "Stripe openen..." : "Beheer abonnement in Stripe"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={
+              portalPending || syncPending || sendingInvoiceId !== null
+            }
+            onClick={() => void handleSyncInvoices()}
+          >
+            {syncPending ? "Synchroniseren..." : "Synchroniseer met Stripe"}
+          </Button>
+        </div>
+        <p className="mx-5 mb-4 text-xs leading-relaxed text-zinc-500">
+          Pakketwissels, proratie en betaalmethoden worden uitsluitend in de
+          beveiligde Stripe-omgeving beheerd. ArchonPro registreert wie deze
+          omgeving opent.
+        </p>
+        {sendMessage && (
+          <p
+            role="status"
+            className={cn(
+              "mx-5 mb-4 rounded-lg border px-3 py-2 text-sm",
+              sendMessage.tone === "success"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                : "border-rose-500/30 bg-rose-500/10 text-rose-200",
+            )}
+          >
+            {sendMessage.text}
+          </p>
+        )}
+        {detail.platformInvoices.length > 0 ? (
+          <Table className="min-w-[980px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Factuur</TableHead>
+                <TableHead>Datum</TableHead>
+                <TableHead className="text-right">Bedrag</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>E-mail</TableHead>
+                <TableHead className="text-right">Acties</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {detail.platformInvoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell className="font-mono text-xs text-zinc-200">
+                    {invoice.number ?? invoice.stripeInvoiceId}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-zinc-500">
+                    {formatDate(invoice.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {new Intl.NumberFormat("nl-BE", {
+                      style: "currency",
+                      currency: invoice.currency.toUpperCase(),
+                    }).format(invoice.amountDue / 100)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={tableStatusVariants[invoice.status]}>
+                      {invoice.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-56 truncate text-xs text-zinc-400">
+                    {invoice.customerEmail ?? "Geen e-mailadres"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      {(invoice.invoicePdfUrl || invoice.hostedInvoiceUrl) && (
+                        <a
+                          href={invoice.invoicePdfUrl ?? invoice.hostedInvoiceUrl ?? "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-zinc-100 transition-colors hover:bg-white/[0.09]"
+                        >
+                          <FileText size={14} /> Open
+                        </a>
+                      )}
+                      <Button
+                        type="button"
+                        variant="default"
+                        disabled={
+                          invoice.status === "draft" ||
+                          !invoice.customerEmail ||
+                          sendingInvoiceId !== null
+                        }
+                        onClick={() =>
+                          void handleSendInvoice(
+                            invoice.stripeInvoiceId,
+                            invoice.customerEmail ?? "",
+                          )
+                        }
+                      >
+                        {sendingInvoiceId === invoice.stripeInvoiceId
+                          ? "Bezig..."
+                          : "Factuur versturen"}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="px-5 pb-5">
+            <EmptyState
+              title="Nog geen Stripe-facturen"
+              detail="Nieuwe tokenbetalingen worden automatisch gefactureerd. Abonnementsfacturen verschijnen zodra Stripe ze via de webhook aanlevert."
+            />
+          </div>
+        )}
+      </DataCard>
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <DataCard title="Payment history" description="Recent subscription payments" className="xl:col-span-8">
+        <DataCard title="Betalingshistoriek" description="Recente abonnementsbetalingen" className="xl:col-span-8">
           <PaymentsTable payments={detail.paymentHistory} />
         </DataCard>
-        <DataCard title="Failed payments" description="Payment failures requiring review" className="xl:col-span-4">
+        <DataCard title="Mislukte betalingen" description="Betalingen die controle vereisen" className="xl:col-span-4">
           {detail.failedPayments.length > 0 ? (
             <PaymentsTable payments={detail.failedPayments} compact />
           ) : (
-            <EmptyState title="No failed payments" detail="Billing is clean for this account." />
+            <EmptyState title="Geen mislukte betalingen" detail="Er zijn geen betalingsproblemen voor dit account." />
           )}
         </DataCard>
       </div>
@@ -507,19 +795,19 @@ function BillingTab({ detail }: { detail: CompanyDetail }) {
 }
 
 function ActivityTab({ events }: { events: ActivityEvent[] }) {
-  return <TimelineCard title="Activity log" events={events} />;
+  return <TimelineCard title="Activiteitenlogboek" events={events} />;
 }
 
 function SecurityTab({ detail }: { detail: CompanyDetail }) {
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Active sessions" value={detail.activeSessions.toLocaleString("nl-BE")} detail="Currently valid sessions" icon={<Activity size={18} />} />
-        <MetricCard label="Failed logins" value={detail.failedLogins.toLocaleString("nl-BE")} detail="Last 30 days" icon={<Lock size={18} />} />
-        <MetricCard label="2FA status" value={detail.twoFactorStatus} detail="Workspace security policy" icon={<ShieldCheck size={18} />} />
-        <MetricCard label="Permission changes" value="3" detail="Recent role and access changes" icon={<KeyRound size={18} />} />
+        <MetricCard label="Actieve sessies" value="—" detail="Sessiedata nog niet gekoppeld" icon={<Activity size={18} />} />
+        <MetricCard label="Mislukte logins" value="—" detail="Auth-logboeken nog niet gekoppeld" icon={<Lock size={18} />} />
+        <MetricCard label="2FA-status" value="—" detail="MFA-bron nog niet gekoppeld" icon={<ShieldCheck size={18} />} />
+        <MetricCard label="Auditregels" value={detail.auditLog.length.toLocaleString("nl-BE")} detail="Geladen voor dit bedrijf" icon={<KeyRound size={18} />} />
       </section>
-      <DataCard title="Audit log" description="Security and permission events">
+      <DataCard title="Auditlogboek" description="Beveiligings- en rechtengebeurtenissen">
         <SecurityTable events={detail.auditLog} />
       </DataCard>
     </div>
@@ -527,34 +815,31 @@ function SecurityTab({ detail }: { detail: CompanyDetail }) {
 }
 
 function SettingsTab({ detail }: { detail: CompanyDetail }) {
-  const { company, planLimits } = detail;
+  const { company } = detail;
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-      <DataCard title="Company profile" description="Core company identity" className="xl:col-span-5">
+      <DataCard title="Bedrijfsprofiel" description="Belangrijkste bedrijfsgegevens" className="xl:col-span-5">
         <KeyValueList
           items={[
-            ["Company name", company.name],
-            ["Owner", company.owner],
-            ["Owner email", company.ownerEmail],
+            ["Bedrijfsnaam", company.name],
+            ["Eigenaar", company.owner],
+            ["E-mail eigenaar", company.ownerEmail],
             ["Domain", company.domain],
             ["Status", statusLabels[company.status]],
           ]}
         />
       </DataCard>
-      <DataCard title="Plan limits" description="Usage limits for the current plan" className="xl:col-span-7">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <LimitItem label="Users" value={`${company.activeUsers}/${planLimits.users}`} />
-          <LimitItem label="Projects" value={`${detail.projectsTotal}/${planLimits.projects}`} />
-          <LimitItem label="AI limits" value={`${formatTokens(company.aiTokensUsed)}/${formatTokens(planLimits.monthlyTokens)}`} />
-          <LimitItem label="Storage limits" value={`${formatStorage(company.storageUsedGb)}/${formatStorage(planLimits.storageGb)}`} />
-        </div>
+      <DataCard title="Pakketlimieten" description="Gebruikslimieten van het huidige pakket" className="xl:col-span-7">
+        <EmptyState
+          title="Pakketlimieten nog niet gekoppeld"
+          detail="Toon hier pas limieten zodra het centrale pakketbeheer de bron van waarheid is."
+        />
       </DataCard>
-      <DataCard title="Feature flags" description="Enabled SaaS capabilities" className="xl:col-span-12">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {detail.featureFlags.map((flag) => (
-            <FeatureFlagItem key={flag.key} flag={flag} />
-          ))}
-        </div>
+      <DataCard title="Functies" description="Beschikbare SaaS-mogelijkheden" className="xl:col-span-12">
+        <EmptyState
+          title="Functiebeheer nog niet gekoppeld"
+          detail="Hardcoded featureflags worden niet als actuele instellingen getoond."
+        />
       </DataCard>
     </div>
   );
@@ -566,12 +851,12 @@ function ProjectsTable({ projects }: { projects: CompanyProject[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>Project</TableHead>
-          <TableHead>Customer</TableHead>
+          <TableHead>Klant</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead className="text-right">Value</TableHead>
-          <TableHead>Start date</TableHead>
+          <TableHead className="text-right">Waarde</TableHead>
+          <TableHead>Startdatum</TableHead>
           <TableHead>Deadline</TableHead>
-          <TableHead>Owner</TableHead>
+          <TableHead>Verantwoordelijke</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -598,12 +883,12 @@ function QuotesTable({ quotes, compact = false }: { quotes: CompanyQuote[]; comp
     <Table className={compact ? "min-w-[720px]" : "min-w-[860px]"}>
       <TableHeader>
         <TableRow>
-          <TableHead>Quote number</TableHead>
-          <TableHead>Customer</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
+          <TableHead>Offertenummer</TableHead>
+          <TableHead>Klant</TableHead>
+          <TableHead className="text-right">Bedrag</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Created date</TableHead>
-          <TableHead>Valid until</TableHead>
+          <TableHead>Aangemaakt op</TableHead>
+          <TableHead>Geldig tot</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -629,12 +914,12 @@ function InvoicesTable({ invoices, compact = false }: { invoices: CompanyInvoice
     <Table className={compact ? "min-w-[760px]" : "min-w-[900px]"}>
       <TableHeader>
         <TableRow>
-          <TableHead>Invoice number</TableHead>
-          <TableHead>Customer</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
+          <TableHead>Factuurnummer</TableHead>
+          <TableHead>Klant</TableHead>
+          <TableHead className="text-right">Bedrag</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Due date</TableHead>
-          <TableHead>Paid date</TableHead>
+          <TableHead>Vervaldatum</TableHead>
+          <TableHead>Betaaldatum</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -648,7 +933,7 @@ function InvoicesTable({ invoices, compact = false }: { invoices: CompanyInvoice
             </TableCell>
             <TableCell className="font-mono text-xs text-zinc-500">{formatDate(invoice.dueDate)}</TableCell>
             <TableCell className="font-mono text-xs text-zinc-500">
-              {invoice.paidDate ? formatDate(invoice.paidDate) : "Not paid"}
+              {invoice.paidDate ? formatDate(invoice.paidDate) : "Niet betaald"}
             </TableCell>
           </TableRow>
         ))}
@@ -662,11 +947,11 @@ function PaymentsTable({ payments, compact = false }: { payments: PaymentRecord[
     <Table className={compact ? "min-w-[520px]" : "min-w-[760px]"}>
       <TableHeader>
         <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
+          <TableHead>Datum</TableHead>
+          <TableHead className="text-right">Bedrag</TableHead>
           <TableHead>Status</TableHead>
-          {!compact && <TableHead>Method</TableHead>}
-          <TableHead>Reference</TableHead>
+          {!compact && <TableHead>Methode</TableHead>}
+          <TableHead>Referentie</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -691,33 +976,41 @@ function SecurityTable({ events }: { events: SecurityEvent[] }) {
     <Table className="min-w-[760px]">
       <TableHeader>
         <TableRow>
-          <TableHead>Category</TableHead>
+          <TableHead>Categorie</TableHead>
           <TableHead>Detail</TableHead>
-          <TableHead>Severity</TableHead>
-          <TableHead>Time</TableHead>
+          <TableHead>Ernst</TableHead>
+          <TableHead>Tijdstip</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {events.map((event) => (
-          <TableRow key={event.id}>
-            <TableCell className="font-medium text-zinc-100">{event.category}</TableCell>
-            <TableCell>{event.detail}</TableCell>
-            <TableCell>
-              <Badge
-                variant={
-                  event.severity === "critical"
-                    ? "danger"
-                    : event.severity === "warning"
-                      ? "warning"
-                      : "info"
-                }
-              >
-                {event.severity}
-              </Badge>
+        {events.length > 0 ? (
+          events.map((event) => (
+            <TableRow key={event.id}>
+              <TableCell className="font-medium text-zinc-100">{event.category}</TableCell>
+              <TableCell>{event.detail}</TableCell>
+              <TableCell>
+                <Badge
+                  variant={
+                    event.severity === "critical"
+                      ? "danger"
+                      : event.severity === "warning"
+                        ? "warning"
+                        : "info"
+                  }
+                >
+                  {event.severity}
+                </Badge>
+              </TableCell>
+              <TableCell className="font-mono text-xs text-zinc-500">{formatDateTime(event.time)}</TableCell>
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={4} className="py-10 text-center text-sm text-zinc-500">
+              Nog geen auditregels voor dit bedrijf.
             </TableCell>
-            <TableCell className="font-mono text-xs text-zinc-500">{formatDateTime(event.time)}</TableCell>
           </TableRow>
-        ))}
+        )}
       </TableBody>
     </Table>
   );
@@ -734,7 +1027,7 @@ function TimelineCard({
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
-        <CardDescription>Platform, user, AI, billing and security events</CardDescription>
+        <CardDescription>Platform-, gebruikers-, AI-, facturatie- en beveiligingsgebeurtenissen</CardDescription>
       </CardHeader>
       <CardContent>
         <ol className="space-y-4">
@@ -765,8 +1058,8 @@ function SystemNotes({ notes }: { notes: SystemNote[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>System notes</CardTitle>
-        <CardDescription>Internal account guidance for admins</CardDescription>
+        <CardTitle>Systeemnotities</CardTitle>
+        <CardDescription>Interne accountrichtlijnen voor beheerders</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {notes.map((note) => (
@@ -858,26 +1151,6 @@ function KeyValueList({ items }: { items: Array<[string, string]> }) {
         </div>
       ))}
     </dl>
-  );
-}
-
-function LimitItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
-      <p className="text-xs uppercase tracking-wider text-zinc-500">{label}</p>
-      <p className="mt-2 font-mono text-sm font-semibold text-zinc-100">{value}</p>
-    </div>
-  );
-}
-
-function FeatureFlagItem({ flag }: { flag: FeatureFlag }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4">
-      <p className="text-sm font-medium text-zinc-100">{flag.label}</p>
-      <Badge variant={flag.enabled ? "success" : "default"}>
-        {flag.enabled ? "Enabled" : "Off"}
-      </Badge>
-    </div>
   );
 }
 

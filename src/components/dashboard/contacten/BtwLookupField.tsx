@@ -11,6 +11,137 @@ import {
 const inputCls =
   "w-full rounded-xl border border-white/[0.08] bg-zinc-950/70 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-[border-color,box-shadow] focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/15";
 
+type LookupUi =
+  | { kind: "idle" }
+  | { kind: "loading"; key: string }
+  | { kind: "found"; key: string; name: string }
+  | { kind: "error"; key: string; message: string };
+
+function digitsKey(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+/**
+ * BTW-waarde blijft controlled via props.
+ * Lookup-UI (loading/found/error) is lokale feedback, zichtbaar alleen als key
+ * overeenkomt met de huidige value — zo geen setState-sync in effects nodig.
+ */
+function useBtwLookup(value: string, onResolved: (data: CompanyLookupResult) => void) {
+  const [ui, setUi] = useState<LookupUi>({ kind: "idle" });
+  const requestGenRef = useRef(0);
+  const lastSuccessKeyRef = useRef("");
+  const onResolvedRef = useRef(onResolved);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    onResolvedRef.current = onResolved;
+  }, [onResolved]);
+
+  const key = digitsKey(value);
+
+  const loading = ui.kind === "loading" && ui.key === key;
+  const foundName = ui.kind === "found" && ui.key === key ? ui.name : null;
+  const error = ui.kind === "error" && ui.key === key ? ui.message : null;
+
+  function cancelScheduledLookup() {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+  }
+
+  /** Annuleer debounce en maak in-flight resultaten ongeldig — zonder setState. */
+  function invalidatePendingLookups() {
+    cancelScheduledLookup();
+    requestGenRef.current += 1;
+  }
+
+  useEffect(() => {
+    const gen = ++requestGenRef.current;
+
+    if (!shouldLookupCompany(value)) {
+      return () => {
+        if (debounceRef.current) {
+          clearTimeout(debounceRef.current);
+          debounceRef.current = null;
+        }
+        requestGenRef.current += 1;
+      };
+    }
+
+    const handle = setTimeout(() => {
+      void (async () => {
+        if (key === lastSuccessKeyRef.current) return;
+        if (gen !== requestGenRef.current) return;
+
+        setUi({ kind: "loading", key });
+        const result = await lookupBelgianCompany(value);
+        if (gen !== requestGenRef.current) return;
+
+        if ("error" in result) {
+          setUi({ kind: "error", key, message: result.error });
+          return;
+        }
+
+        lastSuccessKeyRef.current = key;
+        setUi({ kind: "found", key, name: result.data.name });
+        onResolvedRef.current(result.data);
+      })();
+    }, 700);
+
+    debounceRef.current = handle;
+
+    return () => {
+      clearTimeout(handle);
+      if (debounceRef.current === handle) debounceRef.current = null;
+      // Unmount of value-change: geplande debounce weg + lopende resultaten ongeldig.
+      requestGenRef.current += 1;
+    };
+  }, [value, key]);
+
+  async function lookupNow() {
+    // Voorkom dat de geplande auto-lookup nog vertrekt; invalideer in-flight auto.
+    invalidatePendingLookups();
+    const gen = requestGenRef.current;
+
+    if (!shouldLookupCompany(value)) {
+      setUi({
+        kind: "error",
+        key,
+        message: "Vul een volledig Belgisch BTW- of KBO-nummer in.",
+      });
+      return;
+    }
+
+    setUi({ kind: "loading", key });
+    const result = await lookupBelgianCompany(value);
+    if (gen !== requestGenRef.current) return;
+
+    if ("error" in result) {
+      setUi({ kind: "error", key, message: result.error });
+      return;
+    }
+
+    lastSuccessKeyRef.current = key;
+    setUi({ kind: "found", key, name: result.data.name });
+    onResolvedRef.current(result.data);
+  }
+
+  function resetUiFeedback() {
+    // Typen: annuleer geplande debounce + stale in-flight vóór parent-onChange.
+    invalidatePendingLookups();
+    setUi({ kind: "idle" });
+  }
+
+  return {
+    loading,
+    foundName,
+    error,
+    lookupNow,
+    resetUiFeedback,
+  };
+}
+
 export function BtwLookupField({
   value,
   onChange,
@@ -28,71 +159,15 @@ export function BtwLookupField({
   accent?: "orange" | "sky";
   className?: string;
 }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [foundName, setFoundName] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastLookupRef = useRef("");
-  const onResolvedRef = useRef(onResolved);
-  onResolvedRef.current = onResolved;
+  const { loading, foundName, error, lookupNow, resetUiFeedback } = useBtwLookup(
+    value,
+    onResolved,
+  );
 
   const focusRing =
     accent === "sky"
       ? "focus:border-sky-500/60 focus:ring-sky-500/15"
       : "focus:border-orange-500/50 focus:ring-orange-500/15";
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (!shouldLookupCompany(value)) {
-      setError(null);
-      setFoundName(null);
-      return;
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      const key = value.replace(/\D/g, "");
-      if (key === lastLookupRef.current) return;
-
-      setLoading(true);
-      setError(null);
-      const result = await lookupBelgianCompany(value);
-      setLoading(false);
-
-      if ("error" in result) {
-        setFoundName(null);
-        setError(result.error);
-        return;
-      }
-
-      lastLookupRef.current = key;
-      setFoundName(result.data.name);
-      onResolvedRef.current(result.data);
-    }, 700);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [value]);
-
-  async function lookupNow() {
-    if (!shouldLookupCompany(value)) {
-      setError("Vul een volledig Belgisch BTW- of KBO-nummer in.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    const result = await lookupBelgianCompany(value);
-    setLoading(false);
-    if ("error" in result) {
-      setFoundName(null);
-      setError(result.error);
-      return;
-    }
-    lastLookupRef.current = value.replace(/\D/g, "");
-    setFoundName(result.data.name);
-    onResolvedRef.current(result.data);
-  }
 
   return (
     <label className={`block ${className ?? ""}`}>
@@ -106,8 +181,7 @@ export function BtwLookupField({
           name="btw"
           value={value}
           onChange={(e) => {
-            setFoundName(null);
-            setError(null);
+            resetUiFeedback();
             onChange(e.target.value);
           }}
           placeholder="BE0123456789"
@@ -156,46 +230,13 @@ export function BtwLookupFieldSky({
   label?: string;
   hint?: string;
 }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [foundName, setFoundName] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastLookupRef = useRef("");
-  const onResolvedRef = useRef(onResolved);
-  onResolvedRef.current = onResolved;
+  const { loading, foundName, error, resetUiFeedback } = useBtwLookup(
+    value,
+    onResolved,
+  );
 
   const skyInputCls =
     "w-full rounded-lg border border-white/10 bg-zinc-950/60 px-3 py-2.5 pr-10 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition-colors focus:border-sky-500/60";
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!shouldLookupCompany(value)) {
-      setError(null);
-      setFoundName(null);
-      return;
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      const key = value.replace(/\D/g, "");
-      if (key === lastLookupRef.current) return;
-      setLoading(true);
-      setError(null);
-      const result = await lookupBelgianCompany(value);
-      setLoading(false);
-      if ("error" in result) {
-        setFoundName(null);
-        setError(result.error);
-        return;
-      }
-      lastLookupRef.current = key;
-      setFoundName(result.data.name);
-      onResolvedRef.current(result.data);
-    }, 700);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [value]);
 
   return (
     <label className="block">
@@ -206,8 +247,7 @@ export function BtwLookupFieldSky({
         <input
           value={value}
           onChange={(e) => {
-            setFoundName(null);
-            setError(null);
+            resetUiFeedback();
             onChange(e.target.value);
           }}
           placeholder="BE0123456789"

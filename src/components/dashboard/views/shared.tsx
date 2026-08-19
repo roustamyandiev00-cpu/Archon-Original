@@ -20,7 +20,7 @@ export function DashboardPanel({
 } & HTMLAttributes<HTMLElement>) {
   return (
     <section
-      className={`rounded-2xl border border-white/[0.08] bg-zinc-900/80 ${className}`}
+      className={`dashboard-panel rounded-2xl border border-white/[0.08] bg-zinc-900/80 ${className}`}
       {...rest}
     >
       <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-3.5">
@@ -46,15 +46,29 @@ export function EmptyState({
   icon: Icon,
   actionLabel,
   actionHref,
+  actionVariant = "primary",
+  compact = false,
 }: {
   message: string;
   detail?: string;
   icon?: LucideIcon;
   actionLabel?: string;
   actionHref?: string;
+  actionVariant?: "primary" | "secondary";
+  compact?: boolean;
 }) {
+  const actionMargin = compact ? "mt-3" : "mt-4";
+  const actionClass =
+    actionVariant === "secondary"
+      ? `${actionMargin} inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-transparent px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-white/25 hover:bg-white/[0.04]`
+      : `${actionMargin} inline-flex items-center gap-1.5 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400`;
+
   return (
-    <div className="flex flex-col items-center justify-center py-8 text-center">
+    <div
+      className={`flex flex-col items-center justify-center text-center ${
+        compact ? "py-4" : "py-8"
+      }`}
+    >
       {Icon && (
         <span className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-zinc-800/80 text-zinc-500">
           <Icon size={20} />
@@ -62,15 +76,12 @@ export function EmptyState({
       )}
       <p className="text-sm text-zinc-400">{message}</p>
       {detail && (
-        <p className="mt-1 max-w-[220px] text-xs leading-relaxed text-zinc-600">
+        <p className="mt-1 max-w-[240px] text-xs leading-relaxed text-zinc-600">
           {detail}
         </p>
       )}
       {actionLabel && actionHref && (
-        <Link
-          href={actionHref}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400"
-        >
+        <Link href={actionHref} className={actionClass}>
           {actionLabel}
           <ArrowRight size={14} />
         </Link>
@@ -162,7 +173,26 @@ export function PrimaryButton({
   return (
     <Link
       href={href}
-      className={`inline-flex w-full items-center justify-center rounded-full bg-orange-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400 ${className}`}
+      className={`inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400 ${className.includes("w-") ? "" : "w-full"} ${className}`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+export function SecondaryButton({
+  href,
+  children,
+  className = "",
+}: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center justify-center rounded-full border border-white/15 bg-transparent px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-white/25 hover:bg-white/[0.04] ${className.includes("w-") ? "" : "w-full"} ${className}`}
     >
       {children}
     </Link>

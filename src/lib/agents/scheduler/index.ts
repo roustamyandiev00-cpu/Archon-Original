@@ -7,10 +7,17 @@ import {
   scheduleInvoiceOverdueEvents,
   scheduleInvoiceOverdueForAllTenants,
 } from "@/lib/agents/scheduler/invoice-overdue";
+import {
+  scheduleWerkpostMatches,
+  scheduleWerkpostMatchesForAllTenants,
+} from "@/lib/agents/scheduler/werkpost-matching";
+import { schedulePrijsHerchecks } from "@/lib/agents/scheduler/prijs-hercheck";
 
 export type AgentSchedulerResult = {
   quoteFollowup: Awaited<ReturnType<typeof scheduleQuoteFollowupEvents>>;
   invoiceOverdue: Awaited<ReturnType<typeof scheduleInvoiceOverdueEvents>>;
+  werkpostMatches: Awaited<ReturnType<typeof scheduleWerkpostMatches>>;
+  prijsHercheck: Awaited<ReturnType<typeof schedulePrijsHerchecks>>;
 };
 
 export async function runAllSchedulersForTenant(
@@ -18,12 +25,15 @@ export async function runAllSchedulersForTenant(
   tenantId: number,
   opts?: { autoExecuteUserId?: string | null },
 ): Promise<AgentSchedulerResult> {
-  const [quoteFollowup, invoiceOverdue] = await Promise.all([
-    scheduleQuoteFollowupEvents(supabase, tenantId),
-    scheduleInvoiceOverdueEvents(supabase, tenantId, opts),
-  ]);
+  const [quoteFollowup, invoiceOverdue, werkpostMatches, prijsHercheck] =
+    await Promise.all([
+      scheduleQuoteFollowupEvents(supabase, tenantId),
+      scheduleInvoiceOverdueEvents(supabase, tenantId, opts),
+      scheduleWerkpostMatches(supabase, tenantId),
+      schedulePrijsHerchecks(supabase, tenantId),
+    ]);
 
-  return { quoteFollowup, invoiceOverdue };
+  return { quoteFollowup, invoiceOverdue, werkpostMatches, prijsHercheck };
 }
 
 export async function runAllSchedulersForAllTenants(
@@ -32,6 +42,8 @@ export async function runAllSchedulersForAllTenants(
   tenants: number;
   quoteFollowupEmitted: number;
   invoiceOverdueEmitted: number;
+  werkpostMatchesEmitted: number;
+  prijsHercheckEmitted: number;
   errors: string[];
 }> {
   const { data: companies } = await supabase
@@ -41,15 +53,21 @@ export async function runAllSchedulersForAllTenants(
 
   let quoteFollowupEmitted = 0;
   let invoiceOverdueEmitted = 0;
+  let werkpostMatchesEmitted = 0;
+  let prijsHercheckEmitted = 0;
   const errors: string[] = [];
 
   for (const company of companies ?? []) {
     const result = await runAllSchedulersForTenant(supabase, company.id);
     quoteFollowupEmitted += result.quoteFollowup.emitted;
     invoiceOverdueEmitted += result.invoiceOverdue.emitted;
+    werkpostMatchesEmitted += result.werkpostMatches.emitted;
+    prijsHercheckEmitted += result.prijsHercheck.emitted;
     errors.push(
       ...result.quoteFollowup.errors,
       ...result.invoiceOverdue.errors,
+      ...result.werkpostMatches.errors,
+      ...result.prijsHercheck.errors,
     );
   }
 
@@ -57,6 +75,8 @@ export async function runAllSchedulersForAllTenants(
     tenants: companies?.length ?? 0,
     quoteFollowupEmitted,
     invoiceOverdueEmitted,
+    werkpostMatchesEmitted,
+    prijsHercheckEmitted,
     errors,
   };
 }
@@ -64,4 +84,5 @@ export async function runAllSchedulersForAllTenants(
 export {
   scheduleQuoteFollowupForAllTenants,
   scheduleInvoiceOverdueForAllTenants,
+  scheduleWerkpostMatchesForAllTenants,
 };

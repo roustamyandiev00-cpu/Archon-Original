@@ -7,7 +7,14 @@ import {
   Receipt,
   ScrollText,
 } from "lucide-react";
+import { isActivePreviewMode } from "@/components/dashboard/context";
 import { getCompanyContext } from "@/lib/company";
+import {
+  DEMO_MERCURIUS_FACTUREN,
+  DEMO_PEPPOL_FACTUREN,
+  DEMO_PEPPOL_INBOX,
+} from "@/lib/demo";
+import { showDemoData } from "@/lib/demo-mode";
 import { formatEuro, formatDate } from "@/lib/offertes";
 import { getPeppolConfig } from "@/lib/peppol/build";
 import { untyped } from "@/lib/integraties";
@@ -26,6 +33,7 @@ import {
 import PeppolInboxPanel from "@/components/dashboard/finance/PeppolInboxPanel";
 import MercuriusPanel from "@/components/dashboard/finance/MercuriusPanel";
 import CompanySetupCard from "@/components/werkposts/CompanySetupCard";
+import { DemoBadge } from "@/components/dashboard/mission";
 
 export const metadata = { title: "E-Facturen — ArchonPro" };
 
@@ -46,6 +54,7 @@ function peppolLabel(status: string | null) {
 }
 
 export default async function EFacturenPage() {
+  const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
 
   let peppolConnected = false;
@@ -125,6 +134,27 @@ export default async function EFacturenPage() {
     };
   }
 
+  const isDemo = showDemoData(preview, facturen.length === 0);
+  if (isDemo) {
+    facturen = DEMO_PEPPOL_FACTUREN;
+    inboxItems = DEMO_PEPPOL_INBOX;
+    mercuriusFacturen = DEMO_MERCURIUS_FACTUREN;
+    peppolConnected = true;
+    canSyncInbox = false;
+    stats = {
+      totaal: facturen.length,
+      verzonden: facturen.filter((f) => f.peppol_status === "verzonden").length,
+      fout: facturen.filter((f) => f.peppol_status === "fout").length,
+      open: facturen.filter(
+        (f) =>
+          !f.peppol_status ||
+          f.peppol_status === "concept" ||
+          f.peppol_status === "niet_verzonden",
+      ).length,
+      ontvangen: inboxItems.filter((i) => i.status !== "verwerkt").length,
+    };
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <FinancePageHeader
@@ -133,14 +163,17 @@ export default async function EFacturenPage() {
         description="Verstuur en ontvang facturen via PEPPOL conform Belgische wetgeving. UBL BIS Billing 3.0 (EN16931)."
         icon={<ScrollText size={20} />}
         badge={
-          <StatusPill
-            label={peppolConnected ? "Peppol verbonden" : "Peppol niet gekoppeld"}
-            tone={peppolConnected ? "ok" : "warn"}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {isDemo && <DemoBadge />}
+            <StatusPill
+              label={peppolConnected ? "Peppol verbonden" : "Peppol niet gekoppeld"}
+              tone={peppolConnected ? "ok" : "warn"}
+            />
+          </div>
         }
       />
 
-      {!companyId && <CompanySetupCard />}
+      {!companyId && !preview && <CompanySetupCard />}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <FinanceMetric

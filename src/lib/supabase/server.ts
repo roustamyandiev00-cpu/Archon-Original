@@ -33,3 +33,11 @@ async function createClientImpl() {
 
 /** Eén Supabase-client per request (layout + pagina delen dezelfde instantie). */
 export const createClient = cache(createClientImpl);
+
+/**
+ * Niet-gecachte client voor auth-mutaties (login/logout).
+ * Vermijdt stale cookie-state door React cache().
+ */
+export async function createMutableServerClient() {
+  return createClientImpl();
+}

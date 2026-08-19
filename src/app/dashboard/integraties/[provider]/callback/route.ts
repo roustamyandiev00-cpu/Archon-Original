@@ -1,8 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import { getCompanyContext } from "@/lib/company";
-import { untyped, integratiesSettingsUrl } from "@/lib/integraties";
-import { exchangeCodeForTokens, oauthConfig, oauthRedirectUri } from "@/lib/oauth";
+import { requireAdminAccess } from "@/components/dashboard/context";
+import {
+  isPlatformOAuthProvider,
+  untyped,
+  integratiesSettingsUrl,
+} from "@/lib/integraties";
+import {
+  exchangeCodeForTokens,
+  fetchAccountName,
+  oauthConfig,
+  oauthRedirectUri,
+} from "@/lib/oauth";
+import { getPlatformOAuthCredentials } from "@/components/dashboard/integraties/platformOAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,10 +47,12 @@ export async function GET(
     return NextResponse.redirect(dashboard);
   }
 
-  const { supabase, companyId } = await getCompanyContext();
-  if (!companyId) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+  const access = await requireAdminAccess();
+  if ("error" in access) {
+    dashboard.searchParams.set("error", access.error);
+    return NextResponse.redirect(dashboard);
   }
+  const { supabase, companyId } = access;
 
   const { data } = await untyped(supabase)
     .from("integraties")
@@ -49,15 +61,26 @@ export async function GET(
     .eq("provider", provider)
     .maybeSingle();
   const config = (data?.config ?? {}) as Record<string, string>;
-  if (!config.clientId || !config.clientSecret) {
+
+  let clientId = config.clientId;
+  let clientSecret = config.clientSecret;
+  if (isPlatformOAuthProvider(provider)) {
+    const platform = getPlatformOAuthCredentials(provider);
+    if (platform) {
+      clientId = platform.clientId;
+      clientSecret = platform.clientSecret;
+    }
+  }
+
+  if (!clientId || !clientSecret) {
     dashboard.searchParams.set("error", "Client-gegevens ontbreken.");
     return NextResponse.redirect(dashboard);
   }
 
   const result = await exchangeCodeForTokens(provider, {
     code,
-    clientId: config.clientId,
-    clientSecret: config.clientSecret,
+    clientId,
+    clientSecret,
     redirectUri: oauthRedirectUri(req.nextUrl.origin, provider),
   });
 
@@ -67,7 +90,27 @@ export async function GET(
   }
 
   const now = new Date().toISOString();
-  let extraConfig: Record<string, unknown> = { tokens: result.tokens };
+  const extraConfig: Record<string, unknown> = { tokens: result.tokens };
+
+  if (isPlatformOAuthProvider(provider)) {
+    extraConfig.authMode = "platform";
+    const identity = await fetchAccountName(
+      provider,
+      result.tokens.access_token,
+    );
+    if (identity.ok && identity.account) {
+      extraConfig.accountEmail = identity.account;
+    }
+  } else {
+    extraConfig.clientId = clientId;
+    extraConfig.clientSecret = clientSecret;
+  }
+
+  if (provider === "quickbooks") {
+    const realmId = req.nextUrl.searchParams.get("realmId");
+    if (realmId) extraConfig.realmId = realmId;
+  }
+
   if (provider === "exact-online") {
     try {
       const meRes = await fetch(
@@ -103,6 +146,12 @@ export async function GET(
   if (error) {
     dashboard.searchParams.set("error", error.message);
     return NextResponse.redirect(dashboard);
+  }
+
+  if (provider === "google-calendar") {
+    const agenda = new URL("/dashboard/agenda", req.nextUrl.origin);
+    agenda.searchParams.set("connected", provider);
+    return NextResponse.redirect(agenda);
   }
 
   dashboard.searchParams.set("connected", provider);

@@ -34,7 +34,7 @@ const ALLOWED_ROUTES = [
   "/dashboard/automatisaties",
   "/dashboard/geheugen",
   "/dashboard/command-center?view=crew",
-  "/dashboard/projecten",
+  "/dashboard/offertes/projecten",
   "/dashboard/instellingen",
 ];
 
@@ -50,7 +50,7 @@ async function loadCrmSnapshot(
   companyId: number,
 ): Promise<string> {
   const today = new Date().toISOString().slice(0, 10);
-  const [pendingRes, openFacturenRes, followUpRes, dealsRes] = await Promise.all([
+  const [pendingRes, openFacturenRes, followUpRes, dealsRes, tasksRes] = await Promise.all([
     supabase
       .from("agent_actions")
       .select("title, agent_name")
@@ -78,6 +78,15 @@ async function loadCrmSnapshot(
       .eq("bedrijf_id", companyId)
       .eq("stadium", "Nieuw")
       .limit(3),
+    supabase
+      .from("tasks")
+      .select("title, priority, due_at, status")
+      .eq("company_id", companyId)
+      .is("deleted_at", null)
+      .is("completed_at", null)
+      .in("status", ["todo", "in_progress"])
+      .order("due_at", { ascending: true, nullsFirst: false })
+      .limit(5),
   ]);
 
   const lines: string[] = [];
@@ -95,6 +104,16 @@ async function loadCrmSnapshot(
   }
   for (const d of dealsRes.data ?? []) {
     lines.push(`- Nieuwe lead: ${d.titel}`);
+  }
+  for (const t of tasksRes.data ?? []) {
+    const isOverdue = t.due_at && t.due_at < today;
+    const dueLabel = t.due_at
+      ? ` (deadline: ${t.due_at.slice(0, 10)}${isOverdue ? " VERVALLEN" : ""})`
+      : "";
+    const priorityLabel = t.priority === "urgent" || t.priority === "high"
+      ? ` [${t.priority}]`
+      : "";
+    lines.push(`- Taak: ${t.title}${priorityLabel}${dueLabel}`);
   }
 
   return lines.length ? lines.join("\n") : "Geen urgente openstaande zaken.";
@@ -187,19 +206,21 @@ export async function generateAgentChatReply(input: {
     `Taken: ${capabilityRoutes(input.agent)}`,
     input.ai.vakgebied ? `Vakgebied: ${input.ai.vakgebied}` : "",
     input.ai.instructies ? `Bedrijfsinstructies: ${input.ai.instructies}` : "",
-    `Toestemmingsniveau: ${input.agent.toestemming}. Bij "voorstellen" zet je acties klaar ter goedkeuring; bij "versturen" mag je directer handelen.`,
+    `Toestemmingsniveau: ${input.ai.toestemming}. Bij "voorstellen" zet je acties klaar ter goedkeuring; bij "versturen" mogen herinneringen, facturen en offertes automatisch uitgevoerd worden (deurwaarder blijft manueel).`,
     retrievalContext
-      ? `Relevante context over dit bedrijf:\n${retrievalContext}`
-      : "Nog weinig geheugen — leer voorkeuren en prijzen wanneer de gebruiker die deelt.",
-    `Live CRM-snapshot:\n${crmSnapshot}`,
+      ? `Relevante context over dit bedrijf (inclusief geleerde prijzen):\n${retrievalContext}`
+      : "Nog weinig geheugen — leer voorkeuren en prijzen via Geheugen → «Leer prijzen uit offertes», of wanneer de gebruiker die deelt.",
+    `Live CRM-snapshot (agent-voorstellen, facturen, offertes, leads, openstaande taken):\n${crmSnapshot}`,
     "Antwoord ALLEEN met geldig JSON (geen markdown).",
     `Schema: {"text":"antwoord in het Nederlands","options":["max 4 korte suggesties"],"navigateTo":"route of null","openControlCenter":true/false,"remember":"voorkeur om op te slaan of null"}`,
     `Toegestane navigateTo routes: ${ALLOWED_ROUTES.join(", ")} of null.`,
     "Gebruik navigateTo wanneer de gebruiker expliciet een pagina wil openen of jij ze daar naartoe moet brengen.",
     "Zet openControlCenter op true wanneer de gebruiker agent-status, het logboek, recente AI-acties of het AI Control Center wil zien — of wanneer jij net een agent hebt aangemaakt, een actie hebt uitgevoerd of iets belangrijks in het logboek staat dat ze moeten zien.",
-    "Het AI Control Center is het zijpaneel rechts op het dashboard met live agent-status (Lima, Schatter, Facturatie, Opvolger) en het recente logboek van uitgevoerde acties.",
+    "Het AI Control Center is het zijpaneel rechts op het dashboard met live agent-status (Ela, Schatter, Facturatie, Opvolger) en het recente logboek van uitgevoerde acties.",
     "Zet remember alleen als de gebruiker een voorkeur, prijs of werkwijze deelt die je moet onthouden.",
-    "Wees concreet, kort en actiegericht. Verwijs naar Automatisaties voor goedkeuringen.",
+    "Gebruik geleerde historische prijzen uit geheugen wanneer je over offertes of tarieven praat.",
+    "Wees concreet, kort en actiegericht. Verwijs naar Automatisaties voor goedkeuringen (tenzij modus «versturen» al auto-uitvoert).",
+    "Je kunt taken voorstellen (propose_create_task) voor eenmalige acties, en opvolgingstaken (propose_invoice_followup_task) bij vervallen facturen. Taken met hoge prioriteit of vervaldatum staan in de snapshot; attendeer de gebruiker daarop als ze relevant zijn.",
   ]
     .filter(Boolean)
     .join("\n");

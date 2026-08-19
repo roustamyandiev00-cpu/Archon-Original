@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Share, X } from "lucide-react";
 import { LogoMark } from "@/components/BrandLogo";
 import {
@@ -15,6 +15,9 @@ type AddToHomeScreenPromptProps = {
   /** Compacte variant voor onderaan het dashboard. */
   variant?: "banner" | "card";
 };
+
+const subscribeToClient = () => () => {};
+const serverPromptSnapshot = () => false;
 
 function InstallSteps() {
   return (
@@ -63,19 +66,24 @@ function InstallSteps() {
 export default function AddToHomeScreenPrompt({
   variant = "banner",
 }: AddToHomeScreenPromptProps) {
-  const [visible, setVisible] = useState(false);
-  const [needsSafari, setNeedsSafari] = useState(false);
-
-  useEffect(() => {
-    setVisible(canShowAddToHomeScreenPrompt());
-    setNeedsSafari(!isIosSafari() && !isStandaloneDisplay());
-  }, []);
+  const canShow = useSyncExternalStore(
+    subscribeToClient,
+    canShowAddToHomeScreenPrompt,
+    serverPromptSnapshot,
+  );
+  const needsSafari = useSyncExternalStore(
+    subscribeToClient,
+    () => !isIosSafari() && !isStandaloneDisplay(),
+    serverPromptSnapshot,
+  );
+  const [dismissed, setDismissed] = useState(false);
+  const visible = canShow && !dismissed;
 
   if (!visible) return null;
 
   function handleDismiss() {
     dismissAddToHomeScreenPrompt();
-    setVisible(false);
+    setDismissed(true);
   }
 
   const iconPreview = (

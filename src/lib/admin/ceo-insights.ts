@@ -85,7 +85,7 @@ export async function fetchCeoInsights(
       actionLabel: "Bekijk bedrijf",
       actionHref:
         invoice.bedrijf_id != null
-          ? `/dashboard/admin/companies/${invoice.bedrijf_id}`
+          ? `/admin/companies/${invoice.bedrijf_id}`
           : undefined,
       metric: invoice.vervaldatum ?? undefined,
     });
@@ -101,7 +101,7 @@ export async function fetchCeoInsights(
       companyId: action.company_id,
       companyName: companyNameById.get(action.company_id),
       actionLabel: "Open bedrijf",
-      actionHref: `/dashboard/admin/companies/${action.company_id}`,
+      actionHref: `/admin/companies/${action.company_id}`,
     });
   }
 
@@ -115,7 +115,7 @@ export async function fetchCeoInsights(
       companyId: credit.company_id,
       companyName: companyNameById.get(credit.company_id),
       actionLabel: "Credits bekijken",
-      actionHref: `/dashboard/admin/companies/${credit.company_id}`,
+      actionHref: `/admin/companies/${credit.company_id}`,
       metric: String(credit.credits_remaining),
     });
   }
@@ -130,7 +130,7 @@ export async function fetchCeoInsights(
       companyId: company.id,
       companyName: company.naam,
       actionLabel: "Contact opnemen",
-      actionHref: `/dashboard/admin/companies/${company.id}`,
+      actionHref: `/admin/companies/${company.id}`,
     });
   }
 
@@ -144,7 +144,7 @@ export async function fetchCeoInsights(
       companyId: failure.company_id,
       companyName: companyNameById.get(failure.company_id),
       actionLabel: "Onderzoeken",
-      actionHref: `/dashboard/admin/ai-agents`,
+      actionHref: `/admin/ai-agents`,
     });
   }
 
@@ -163,7 +163,7 @@ export async function fetchCeoInsights(
       companyId: signup.id,
       companyName: signup.naam,
       actionLabel: "Onboarding check",
-      actionHref: `/dashboard/admin/companies/${signup.id}`,
+      actionHref: `/admin/companies/${signup.id}`,
     });
   }
 

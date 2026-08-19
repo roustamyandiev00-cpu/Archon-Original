@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { rootMetadata } from "@/lib/seo";
+import AppearanceProvider from "@/lib/appearance/AppearanceProvider";
+import ChunkLoadRecovery from "@/components/ChunkLoadRecovery";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -53,7 +55,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full antialiased" suppressHydrationWarning>
-        {children}
+        <ChunkLoadRecovery />
+        <AppearanceProvider>
+          {children}
+        </AppearanceProvider>
       </body>
     </html>
   );

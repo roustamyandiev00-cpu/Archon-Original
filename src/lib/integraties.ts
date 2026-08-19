@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Manier waarop een provider gekoppeld wordt. */
-export type IntegrationAuth = "oauth" | "apikey" | "peppol" | "connect";
+export type IntegrationAuth = "oauth" | "apikey" | "peppol" | "connect" | "webhook";
+
+/** live = echte flow; partner = partner-API vereist (geen nep-sync). */
+export type IntegrationAvailability = "live" | "partner";
 
 export type ProviderMeta = {
   id: string;
@@ -9,6 +12,7 @@ export type ProviderMeta = {
   category: string;
   auth: IntegrationAuth;
   description: string;
+  availability?: IntegrationAvailability;
 };
 
 /** Eén koppeling tussen een bedrijf en een provider. */
@@ -57,70 +61,80 @@ export const INTEGRATION_PROVIDERS: ProviderMeta[] = [
     name: "Octopus",
     category: "Boekhouding",
     auth: "apikey",
-    description: "Boekhoudsoftware voor kmo's.",
+    availability: "partner",
+    description: "Boekhoudsoftware — partner-API vereist (binnenkort).",
   },
   {
     id: "winbooks",
     name: "WinBooks",
     category: "Boekhouding",
     auth: "apikey",
-    description: "Boekhoudpakket — koppel via API-sleutel.",
+    availability: "partner",
+    description: "Boekhoudpakket — partner-API vereist (binnenkort).",
   },
   {
     id: "silverfin",
     name: "Silverfin",
     category: "Boekhouding",
     auth: "oauth",
-    description: "Cloudboekhouding — koppel via OAuth.",
+    availability: "partner",
+    description: "Cloudboekhouding — partner-OAuth vereist (binnenkort).",
   },
   {
     id: "codabox",
     name: "CodaBox",
     category: "Boekhouding & Peppol",
     auth: "apikey",
-    description: "CODA/SODA en e-facturatie.",
+    availability: "partner",
+    description: "CODA/SODA — partner-API vereist (binnenkort).",
   },
   {
     id: "horus",
     name: "Horus",
     category: "Boekhouding",
     auth: "apikey",
-    description: "Boekhoudsoftware — koppel via API-sleutel.",
+    availability: "partner",
+    description: "Boekhoudsoftware — partner-API vereist (binnenkort).",
   },
   {
     id: "sage-bob-50",
     name: "Sage BOB 50",
     category: "Boekhouding",
     auth: "apikey",
-    description: "Boekhoudpakket — koppel via API-sleutel.",
+    availability: "partner",
+    description: "Boekhoudpakket — koppeling via Sage-partner-API (binnenkort).",
   },
   {
     id: "clearfacts",
     name: "Clearfacts",
     category: "Boekhouding",
     auth: "apikey",
-    description: "Documentverwerking en boekhouding.",
+    availability: "partner",
+    description: "Documentverwerking — partner-API vereist (binnenkort).",
   },
   {
     id: "bouwsoft",
     name: "Bouwsoft",
     category: "Bouwsoftware",
     auth: "apikey",
-    description: "Bouwbeheer en werforganisatie.",
+    availability: "partner",
+    description: "Bouwbeheer — partner-API vereist (binnenkort).",
   },
   {
     id: "vertuoza",
     name: "Vertuoza",
     category: "Bouwsoftware",
     auth: "apikey",
-    description: "Beheer voor bouwbedrijven.",
+    availability: "partner",
+    description: "Beheer voor bouwbedrijven — partner-API vereist (binnenkort).",
   },
   {
     id: "isabel-6",
     name: "Isabel 6",
     category: "Banking & Peppol",
     auth: "oauth",
-    description: "Multibankieren en e-facturatie.",
+    availability: "partner",
+    description: "Multibankieren — Isabel-partnertoegang vereist (binnenkort).",
   },
   {
     id: "peppol",
@@ -183,41 +197,87 @@ export const APP_INTEGRATION_PROVIDERS: ProviderMeta[] = [
     id: "google-calendar",
     name: "Google Calendar",
     category: "Planning",
-    auth: "apikey",
-    description: "Synchroniseer afspraken en herinneringen.",
+    auth: "oauth",
+    description: "Synchroniseer afspraken met je Google-account.",
   },
   {
     id: "microsoft-teams",
     name: "Microsoft Teams",
     category: "Samenwerking",
-    auth: "apikey",
-    description: "Plan vergaderingen en deel updates.",
+    auth: "oauth",
+    description: "Koppel je Microsoft-account voor Teams-meldingen.",
   },
   {
     id: "dropbox",
     name: "Dropbox",
     category: "Opslag",
-    auth: "apikey",
-    description: "Koppel documenten en offertes aan cloudopslag.",
+    auth: "oauth",
+    description: "Koppel je Dropbox-account voor documenten.",
   },
   {
     id: "zapier",
     name: "Zapier",
     category: "Automatisering",
-    auth: "apikey",
-    description: "Automatiseer terugkerende processen.",
+    auth: "webhook",
+    description: "Ontvang ArchonPro-events in Zapier via een webhook-URL.",
   },
   {
     id: "quickbooks",
     name: "QuickBooks",
     category: "Boekhouding",
-    auth: "apikey",
-    description: "Gebruik boekhoudkoppelingen voor export en afstemming.",
+    auth: "oauth",
+    description: "Koppel QuickBooks Online via OAuth.",
   },
 ];
 
+export function isPartnerOnlyProvider(provider: ProviderMeta): boolean {
+  return provider.availability === "partner";
+}
+
+export function isPlatformOAuthProvider(id: string): boolean {
+  return (
+    id === "google-calendar" ||
+    id === "microsoft-teams" ||
+    id === "dropbox" ||
+    id === "quickbooks"
+  );
+}
+
 export function providerMeta(id: string): ProviderMeta | undefined {
-  return INTEGRATION_PROVIDERS.find((p) => p.id === id);
+  return allSettingsIntegrationProviders().find((p) => p.id === id);
+}
+
+const CLIENT_SAFE_CONFIG_KEYS = new Set([
+  "accessPoint",
+  "accountEmail",
+  "administrationId",
+  "authMode",
+  "division",
+  "legalEntityId",
+  "notificationChannel",
+  "participantId",
+  "partyId",
+  "realmId",
+  "sandbox",
+  "testSentAt",
+  "workspaceName",
+]);
+
+/** Geeft alleen niet-gevoelige integratiemetadata door aan clientcomponenten. */
+export function integrationConfigForClient(
+  config: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  if (!config) return {};
+
+  const safe = Object.fromEntries(
+    Object.entries(config).filter(([key]) => CLIENT_SAFE_CONFIG_KEYS.has(key)),
+  );
+
+  if (typeof config.installationId === "string" && config.installationId) {
+    safe.installationId = "configured";
+  }
+
+  return safe;
 }
 
 /** Access points waarmee je op het Peppol-netwerk kunt aansluiten. */

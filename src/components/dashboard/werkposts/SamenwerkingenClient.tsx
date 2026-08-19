@@ -53,6 +53,8 @@ import {
   type SamenwerkingContractRow,
 } from "@/lib/werkposts/contracts";
 import SamenwerkingContractPanel from "@/components/dashboard/werkposts/SamenwerkingContractPanel";
+import ChatTermsModal from "@/components/bouwnetwerk/ChatTermsModal";
+import RapporteerButton from "@/components/bouwnetwerk/RapporteerButton";
 
 type Attachment = {
   url: string;
@@ -314,6 +316,7 @@ export default function SamenwerkingenClient({
   initialChannelId,
   contractsByChannel: initialContractsByChannel = {},
   companyNames = {},
+  chatTermsAccepted: initialChatTermsAccepted = false,
 }: {
   samenwerkingen: Samenwerking[];
   afspraken: AfspraakRow[];
@@ -324,8 +327,12 @@ export default function SamenwerkingenClient({
   initialChannelId?: string | null;
   contractsByChannel?: Record<string, SamenwerkingContractRow>;
   companyNames?: Record<number, string>;
+  chatTermsAccepted?: boolean;
 }) {
   const router = useRouter();
+  const [chatTermsAccepted, setChatTermsAccepted] = useState(
+    initialChatTermsAccepted,
+  );
   const resolvedInitial =
     initialChannelId &&
     samenwerkingen.some((s) => s.channelId === initialChannelId)
@@ -338,7 +345,9 @@ export default function SamenwerkingenClient({
   );
   const [contractModalOpen, setContractModalOpen] = useState(false);
 
-  useEffect(() => {
+  const [prevInitialChannelId, setPrevInitialChannelId] = useState(initialChannelId);
+  if (prevInitialChannelId !== initialChannelId) {
+    setPrevInitialChannelId(initialChannelId);
     if (
       initialChannelId &&
       samenwerkingen.some((s) => s.channelId === initialChannelId)
@@ -346,7 +355,7 @@ export default function SamenwerkingenClient({
       setSelectedId(initialChannelId);
       setMobileChatOpen(true);
     }
-  }, [initialChannelId, samenwerkingen]);
+  }
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("alle");
   const [profileTab, setProfileTab] = useState<ProfileTab>("details");
   const [composerMode, setComposerMode] = useState<ComposerMode>("reply");
@@ -423,12 +432,20 @@ export default function SamenwerkingenClient({
     e.preventDefault();
     if (!selected || !selected.counterpartId) return;
     setReviewError(null);
-    
+
+    if (!selectedContract || selectedContract.status !== "signed") {
+      setReviewError(
+        "Beoordelen kan alleen na een ondertekend samenwerkingscontract.",
+      );
+      return;
+    }
+
     startReviewTransition(async () => {
       const res = await submitCompanyReview(
         selected.counterpartId!,
         reviewRating,
-        reviewComment
+        reviewComment,
+        selectedContract.id,
       );
       if ("error" in res && res.error) {
         setReviewError(res.error);
@@ -579,6 +596,9 @@ export default function SamenwerkingenClient({
       setSendError(res.error);
       return;
     }
+    if ("warning" in res && res.warning) {
+      setSendError(res.warning);
+    }
     setText("");
     setReplyTo(null);
     router.refresh();
@@ -630,6 +650,10 @@ export default function SamenwerkingenClient({
 
   return (
     <div className="samenwerkingen-chat relative grid h-[min(820px,calc(100dvh-8.5rem))] min-h-[520px] overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950 shadow-2xl shadow-black/40 lg:grid-cols-[auto_minmax(0,320px)_minmax(0,1fr)] xl:grid-cols-[auto_minmax(0,320px)_minmax(0,1fr)_280px]">
+      <ChatTermsModal
+        open={!chatTermsAccepted}
+        onAccepted={() => setChatTermsAccepted(true)}
+      />
       {/* 1. Inbox-sidebar (shadcn-stijl) */}
       <aside
         className={`relative hidden shrink-0 flex-col border-r border-zinc-800/80 bg-zinc-900/60 lg:flex ${
@@ -1581,6 +1605,15 @@ function ChatPanel({
                       <span className="text-[10px] text-zinc-500">
                         {formatRelativeTime(m.created_at)}
                       </span>
+                      {!isMine && (
+                        <span className="opacity-0 transition-opacity group-hover:opacity-100">
+                          <RapporteerButton
+                            targetType="chat_bericht"
+                            targetId={m.id}
+                            compact
+                          />
+                        </span>
+                      )}
                     </div>
                     <div
                       className={`rounded-lg border px-3 py-2.5 text-sm ${
@@ -2148,6 +2181,7 @@ function ProfileField({
 // DOCUMENTS PANEL
 // ---------------------------------------------------------
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function DocumentsPanel({
   loading,
   documents,

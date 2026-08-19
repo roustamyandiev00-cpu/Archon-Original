@@ -1,5 +1,42 @@
 export type ProjectStatus = "gepland" | "actief" | "afgerond" | "gepauzeerd";
 
+/** Waarden die `projecten_status_check` op de database toelaat. */
+export type ProjectStatusDb =
+  | "opstart"
+  | "in_uitvoering"
+  | "wachten_op_klant"
+  | "afgerond"
+  | "geannuleerd";
+
+const UI_TO_DB: Record<ProjectStatus, ProjectStatusDb> = {
+  gepland: "opstart",
+  actief: "in_uitvoering",
+  gepauzeerd: "wachten_op_klant",
+  afgerond: "afgerond",
+};
+
+const DB_TO_UI: Record<string, ProjectStatus> = {
+  opstart: "gepland",
+  in_uitvoering: "actief",
+  wachten_op_klant: "gepauzeerd",
+  afgerond: "afgerond",
+  geannuleerd: "gepauzeerd",
+  // UI-waarden (demo / reeds genormaliseerd)
+  gepland: "gepland",
+  actief: "actief",
+  gepauzeerd: "gepauzeerd",
+};
+
+export function toDbProjectStatus(status: ProjectStatus): ProjectStatusDb {
+  return UI_TO_DB[status];
+}
+
+export function toUiProjectStatus(
+  status: string | null | undefined,
+): ProjectStatus {
+  return DB_TO_UI[status ?? ""] ?? "gepland";
+}
+
 export const PROJECT_STATUS_META: Record<
   ProjectStatus,
   { label: string; tone: string; dot: string }
@@ -27,8 +64,8 @@ export const PROJECT_STATUS_META: Record<
 };
 
 export function projectStatusMeta(status: string | null | undefined) {
-  const key = (status ?? "gepland") as ProjectStatus;
-  return PROJECT_STATUS_META[key] ?? PROJECT_STATUS_META.gepland;
+  const key = toUiProjectStatus(status);
+  return PROJECT_STATUS_META[key];
 }
 
 export type ProjectRow = {

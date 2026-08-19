@@ -77,7 +77,7 @@ export default async function BoekhoudingPage() {
         .from("integraties")
         .select("*")
         .eq("bedrijf_id", companyId),
-      untyped(supabase)
+      supabase
         .from("facturen")
         .select(
           "id, nummer, klant, totaal_bedrag, datum, status, paid_at, accounting_export_id, accounting_exported_at, accounting_export_provider",
@@ -86,12 +86,12 @@ export default async function BoekhoudingPage() {
         .order("created_at", { ascending: false })
         .limit(30),
       listConnectedAccountingProviders(supabase, companyId),
-      untyped(supabase)
+      supabase
         .from("bank_rekeningen")
         .select("id, iban, alias")
         .eq("bedrijf_id", companyId)
         .order("created_at", { ascending: true }),
-      untyped(supabase)
+      supabase
         .from("bank_transacties")
         .select(
           "id, transactie_datum, bedrag, tegenpartij, omschrijving, gestructureerde_mededeling, match_status, factuur_id",

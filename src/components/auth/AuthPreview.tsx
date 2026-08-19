@@ -16,7 +16,7 @@ export default function AuthPreview({ embedded = false }: { embedded?: boolean }
       <div className="relative z-10 flex min-h-0 flex-1 flex-col p-6 xl:p-8">
         <BrandLockup markSize={40} wordmarkSize="sm" className="shrink-0" />
 
-        <div className="flex min-h-0 w-full flex-1 items-center justify-center py-4">
+        <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden py-2">
           <AuthVideo
             src="/ArchonPro_CRM_logo_intro_202607080214.mp4"
             aspect="portrait"

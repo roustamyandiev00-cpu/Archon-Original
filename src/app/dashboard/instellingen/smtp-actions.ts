@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireWriteAccess } from "@/components/dashboard/context";
+import { requireAdminAccess } from "@/components/dashboard/context";
 import {
   GMAIL_SMTP,
   loadCompanySmtpSettings,
@@ -10,6 +10,11 @@ import {
   verifyCompanySmtp,
   type CompanySmtpSettings,
 } from "@/components/dashboard/email/smtp";
+import { decryptSecret, encryptSecret } from "@/lib/crypto/secrets";
+import {
+  parseExtras,
+  type EmailDeliveryMode,
+} from "@/app/dashboard/instellingen/settings";
 
 export type SmtpSettingsInput = {
   preset: "gmail" | "custom";
@@ -19,6 +24,7 @@ export type SmtpSettingsInput = {
   smtp_pass: string;
   from_email: string;
   from_name: string;
+  deliveryMode: EmailDeliveryMode;
 };
 
 export type SmtpSettingsView = {
@@ -29,6 +35,7 @@ export type SmtpSettingsView = {
   from_email: string;
   from_name: string;
   hasPassword: boolean;
+  deliveryMode: EmailDeliveryMode;
 };
 
 function resolveHostPort(input: SmtpSettingsInput) {
@@ -55,7 +62,12 @@ async function resolvePassword(
     .eq("bedrijf_id", companyId)
     .maybeSingle();
 
-  return data?.smtp_pass ?? null;
+  if (!data?.smtp_pass) return null;
+  try {
+    return decryptSecret(data.smtp_pass);
+  } catch {
+    return null;
+  }
 }
 
 function toSettings(
@@ -76,65 +88,102 @@ function toSettings(
 export async function saveSmtpSettings(
   input: SmtpSettingsInput,
 ): Promise<{ ok: true } | { error: string }> {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
-
-  if (!input.smtp_user.trim()) {
-    return { error: "SMTP-gebruikersnaam is verplicht." };
-  }
-  if (!input.from_email.trim()) {
-    return { error: "Afzender-e-mailadres is verplicht." };
-  }
-
-  const password = await resolvePassword(supabase, companyId, input.smtp_pass);
-  if (!password) {
-    return {
-      error:
-        "App-wachtwoord is verplicht. Voor Gmail: maak een app-wachtwoord aan in je Google-account.",
-    };
-  }
-
-  const { smtp_host, smtp_port } = resolveHostPort(input);
   const now = new Date().toISOString();
+  const deliveryMode: EmailDeliveryMode =
+    input.deliveryMode === "smtp" ? "smtp" : "mailto";
 
-  const { data: existing } = await supabase
-    .from("bedrijf_smtp_instellingen")
-    .select("bedrijf_id")
-    .eq("bedrijf_id", companyId)
+  if (deliveryMode === "smtp") {
+    if (!input.smtp_user.trim()) {
+      return { error: "SMTP-gebruikersnaam is verplicht." };
+    }
+    if (!input.from_email.trim()) {
+      return { error: "Afzender-e-mailadres is verplicht." };
+    }
+
+    const password = await resolvePassword(supabase, companyId, input.smtp_pass);
+    if (!password) {
+      return {
+        error:
+          "App-wachtwoord is verplicht. Voor Gmail: maak een app-wachtwoord aan in je Google-account.",
+      };
+    }
+
+    const { smtp_host, smtp_port } = resolveHostPort(input);
+
+    const { data: existing } = await supabase
+      .from("bedrijf_smtp_instellingen")
+      .select("bedrijf_id")
+      .eq("bedrijf_id", companyId)
+      .maybeSingle();
+
+    const row = {
+      smtp_host,
+      smtp_port,
+      smtp_user: input.smtp_user.trim(),
+      smtp_pass: encryptSecret(password),
+      from_email: input.from_email.trim(),
+      from_name: input.from_name.trim() || input.from_email.trim(),
+      updated_at: now,
+    };
+
+    const { error } = existing
+      ? await supabase
+          .from("bedrijf_smtp_instellingen")
+          .update(row)
+          .eq("bedrijf_id", companyId)
+      : await supabase.from("bedrijf_smtp_instellingen").insert({
+          bedrijf_id: companyId,
+          ...row,
+        });
+
+    if (error) return { error: error.message };
+  }
+
+  const { data: bedrijf } = await supabase
+    .from("bedrijven")
+    .select("ai_assistant")
+    .eq("id", companyId)
     .maybeSingle();
+  const extras = parseExtras(bedrijf?.ai_assistant ?? null);
 
-  const row = {
-    smtp_host,
-    smtp_port,
-    smtp_user: input.smtp_user.trim(),
-    smtp_pass: password,
-    from_email: input.from_email.trim(),
-    from_name: input.from_name.trim() || input.from_email.trim(),
-    updated_at: now,
-  };
+  const { error: extrasError } = await supabase
+    .from("bedrijven")
+    .update({
+      ai_assistant: JSON.stringify({
+        ...extras,
+        email: { deliveryMode },
+      }),
+      updated_at: now,
+    })
+    .eq("id", companyId);
 
-  const { error } = existing
-    ? await supabase
-        .from("bedrijf_smtp_instellingen")
-        .update(row)
-        .eq("bedrijf_id", companyId)
-    : await supabase.from("bedrijf_smtp_instellingen").insert({
-        bedrijf_id: companyId,
-        ...row,
-      });
-
-  if (error) return { error: error.message };
+  if (extrasError) return { error: extrasError.message };
 
   revalidatePath("/dashboard/instellingen");
+  revalidatePath("/dashboard/offertes");
   return { ok: true };
+}
+
+export async function loadEmailDeliveryPreference(
+  supabase: SupabaseClient,
+  companyId: number,
+): Promise<EmailDeliveryMode> {
+  const { data } = await supabase
+    .from("bedrijven")
+    .select("ai_assistant")
+    .eq("id", companyId)
+    .maybeSingle();
+  return parseExtras(data?.ai_assistant ?? null).email?.deliveryMode ?? "mailto";
 }
 
 export async function testSmtpSettings(
   input: SmtpSettingsInput,
   testRecipient?: string,
 ): Promise<{ ok: true } | { error: string }> {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
 

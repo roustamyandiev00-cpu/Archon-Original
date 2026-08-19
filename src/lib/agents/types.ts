@@ -8,7 +8,73 @@ export type AgentActionType =
   | "create_invoice_from_offerte"
   | "send_payment_reminder"
   | "send_formal_notice"
-  | "forward_to_bailiff";
+  | "forward_to_bailiff"
+  | "propose_chat_sanction"
+  | "propose_werkpost_match"
+  | "propose_materiaal_zoek"
+  | "propose_geschil_samenvatting"
+  | "propose_create_task"
+  | "propose_invoice_followup_task";
+
+export type ProposeMateriaalvoorraadPayload = {
+  query: string;
+  regio?: string | null;
+  hits: Array<{
+    prijsId: string;
+    winkelNaam: string;
+    productnaam: string;
+    prijs: number;
+    eenheid: string;
+    gecontroleerdOp: string;
+    btwStatus: string;
+    isStale: boolean;
+  }>;
+};
+
+export type ProposeGeschilSamenvattingPayload = {
+  geschilId: string;
+  samenvatting: string;
+};
+
+export type ProposeCreateTaskPayload = {
+  title: string;
+  description?: string | null;
+  priority?: "low" | "medium" | "high" | "urgent";
+  dueAt?: string | null;
+  assignedToUserId?: string | null;
+  contactId?: number | null;
+  offerteId?: number | null;
+  factuurId?: number | null;
+  projectId?: number | null;
+  relatedEntityType?: string | null;
+  relatedEntityId?: number | null;
+};
+
+export type ProposeInvoiceFollowupTaskPayload = {
+  factuurId: number;
+  title: string;
+  description?: string | null;
+  dueAt?: string | null;
+  assignedToUserId?: string | null;
+};
+
+export type ProposeChatSanctionPayload = {
+  bedrijfId: number;
+  sanctionType: "waarschuwing" | "schorsing_tijdelijk" | "schorsing_lang" | "blokkade";
+  reden: string;
+  channelId: string;
+  messageId?: string | null;
+  findings?: Array<{ category: string; severity: string; detail: string }>;
+};
+
+export type ProposeWerkpostMatchPayload = {
+  companyId: number;
+  werkpostId: string;
+  werkpostTitel: string;
+  regio: string;
+  aardVanWerk: string;
+  draftMessage: string;
+};
 
 export type SendQuoteFollowupPayload = {
   offerteId: number;

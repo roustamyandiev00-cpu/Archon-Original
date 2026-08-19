@@ -21,9 +21,12 @@ export type ManagedCompany = {
   aiTokensUsed: number;
   aiCost: number;
   monthlyRevenue: number;
-  storageUsedGb: number;
+  storageUsedGb: number | null;
   lastLogin: string;
   status: CompanyStatus;
+  /** Intern risicoveld (§4.4 / §8.1) — alleen admin. */
+  risicoStatus: string;
+  verificatieStatus: string;
   createdAt: string;
   logoInitials: string;
   logoTone: CompanyLogoTone;
@@ -55,9 +58,9 @@ export const planLabels: Record<CompanyPlan, string> = {
 };
 
 export const statusLabels: Record<CompanyStatus, string> = {
-  active: "Active",
-  trial: "Trial",
-  suspended: "Suspended",
+  active: "Actief",
+  trial: "Proefperiode",
+  suspended: "Opgeschort",
 };
 
 const companies: ManagedCompany[] = [
@@ -75,6 +78,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 842,
     lastLogin: "2026-07-10T08:42:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2025-11-14T09:20:00Z",
     logoInitials: "AP",
     logoTone: "sky",
@@ -93,6 +98,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 1280,
     lastLogin: "2026-07-10T07:58:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2025-08-22T10:40:00Z",
     logoInitials: "DV",
     logoTone: "emerald",
@@ -111,6 +118,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 416,
     lastLogin: "2026-07-10T07:15:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-01-07T13:05:00Z",
     logoInitials: "RP",
     logoTone: "violet",
@@ -129,6 +138,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 934,
     lastLogin: "2026-07-09T16:30:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2025-12-03T08:30:00Z",
     logoInitials: "CP",
     logoTone: "cyan",
@@ -147,6 +158,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 78,
     lastLogin: "2026-07-09T11:08:00Z",
     status: "trial",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-06-27T12:15:00Z",
     logoInitials: "DJ",
     logoTone: "amber",
@@ -165,6 +178,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 1540,
     lastLogin: "2026-07-10T09:01:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2025-09-18T14:45:00Z",
     logoInitials: "GA",
     logoTone: "rose",
@@ -183,6 +198,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 233,
     lastLogin: "2026-07-08T14:22:00Z",
     status: "suspended",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-02-11T16:10:00Z",
     logoInitials: "SM",
     logoTone: "emerald",
@@ -201,6 +218,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 2110,
     lastLogin: "2026-07-10T06:55:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2025-07-04T09:00:00Z",
     logoInitials: "WL",
     logoTone: "sky",
@@ -219,6 +238,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 44,
     lastLogin: "2026-07-07T09:40:00Z",
     status: "suspended",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-05-19T10:25:00Z",
     logoInitials: "EB",
     logoTone: "cyan",
@@ -237,6 +258,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 361,
     lastLogin: "2026-07-10T09:24:00Z",
     status: "trial",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-07-02T09:30:00Z",
     logoInitials: "TV",
     logoTone: "violet",
@@ -255,6 +278,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 96,
     lastLogin: "2026-07-10T07:50:00Z",
     status: "trial",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-07-01T15:05:00Z",
     logoInitials: "IG",
     logoTone: "amber",
@@ -273,6 +298,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 1174,
     lastLogin: "2026-07-09T21:15:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2025-10-29T11:35:00Z",
     logoInitials: "BH",
     logoTone: "rose",
@@ -291,6 +318,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 310,
     lastLogin: "2026-07-08T18:12:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-03-15T08:50:00Z",
     logoInitials: "IM",
     logoTone: "emerald",
@@ -309,6 +338,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 68,
     lastLogin: "2026-07-06T12:05:00Z",
     status: "suspended",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-04-18T10:00:00Z",
     logoInitials: "HN",
     logoTone: "sky",
@@ -327,6 +358,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 1028,
     lastLogin: "2026-07-10T05:33:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2025-11-30T14:15:00Z",
     logoInitials: "TP",
     logoTone: "cyan",
@@ -345,6 +378,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 181,
     lastLogin: "2026-07-09T10:18:00Z",
     status: "trial",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-06-12T09:45:00Z",
     logoInitials: "VL",
     logoTone: "violet",
@@ -363,6 +398,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 1762,
     lastLogin: "2026-07-10T04:42:00Z",
     status: "active",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2025-06-09T12:40:00Z",
     logoInitials: "IW",
     logoTone: "amber",
@@ -381,6 +418,8 @@ const companies: ManagedCompany[] = [
     storageUsedGb: 52,
     lastLogin: "2026-07-05T15:20:00Z",
     status: "trial",
+    risicoStatus: "normaal",
+    verificatieStatus: "onbevestigd",
     createdAt: "2026-07-04T08:10:00Z",
     logoInitials: "GK",
     logoTone: "emerald",
@@ -410,32 +449,32 @@ export function getCompaniesStats(companyList: ManagedCompany[]): CompaniesStat[
   return [
     {
       id: "total",
-      label: "Total Companies",
+      label: "Totaal bedrijven",
       value: companyList.length.toLocaleString("nl-BE"),
-      detail: `${formatCurrency(totalMrr)} active MRR under management`,
+      detail: `${formatCurrency(totalMrr)} geschatte actieve pakketwaarde`,
     },
     {
       id: "active",
-      label: "Active Companies",
+      label: "Actieve bedrijven",
       value: active.length.toLocaleString("nl-BE"),
       detail: `${formatTokens(
         active.reduce((sum, company) => sum + company.aiTokensUsed, 0),
-      )} tokens this month`,
+      )} tokens deze maand`,
     },
     {
       id: "trial",
-      label: "Trial Companies",
+      label: "Bedrijven in proefperiode",
       value: trial.length.toLocaleString("nl-BE"),
-      detail: `${formatCurrency(trialPotential)} conversion pipeline`,
+      detail: `${formatCurrency(trialPotential)} geschatte pakketwaarde`,
     },
     {
       id: "suspended",
-      label: "Suspended Companies",
+      label: "Opgeschorte bedrijven",
       value: suspended.length.toLocaleString("nl-BE"),
       detail: `${suspended.reduce(
         (sum, company) => sum + company.activeUsers,
         0,
-      )} users currently locked`,
+      )} gebruikers momenteel geblokkeerd`,
     },
   ];
 }
@@ -455,7 +494,9 @@ export function formatTokens(tokens: number) {
   }).format(tokens);
 }
 
-export function formatStorage(gigabytes: number) {
+export function formatStorage(gigabytes: number | null) {
+  // Niet gemeten opslag tonen we als leeg, niet als 0 GB.
+  if (gigabytes === null) return "—";
   if (gigabytes >= 1024) {
     return `${(gigabytes / 1024).toLocaleString("nl-BE", {
       maximumFractionDigits: 1,

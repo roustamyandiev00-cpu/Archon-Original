@@ -11,10 +11,13 @@ import {
   isInvoiceEligibleForReminder,
 } from "@/lib/agents/context/invoice-overdue";
 import { proposeAgentAction } from "@/lib/agents/propose";
-import { executeAgentAction } from "@/lib/agents/executor";
 import { writeAuditEntry, writeAgentActivity } from "@/lib/agents/audit";
 import { createAgentRun, updateAgentRun } from "@/lib/agents/events/store";
 import { loadMergedAiConfig } from "@/lib/agents/companyAi";
+import {
+  autoExecuteIfAllowed,
+  canAutoExecuteAction,
+} from "@/lib/agents/auto-execute";
 
 const AGENT_ID = "Lima";
 
@@ -149,6 +152,7 @@ export async function handleInvoiceOverdue(
 
     let requiresApproval =
       ctx.stage === "deurwaarder" || policy.requiresApproval;
+    let toestemming: "voorstellen" | "versturen" = "voorstellen";
 
     if (opts?.autoExecuteUserId) {
       const ai = await loadMergedAiConfig(
@@ -156,7 +160,8 @@ export async function handleInvoiceOverdue(
         event.tenantId,
         opts.autoExecuteUserId,
       );
-      if (ai.toestemming === "versturen" && ctx.stage !== "deurwaarder") {
+      toestemming = ai.toestemming;
+      if (canAutoExecuteAction(actionType, ai.toestemming)) {
         requiresApproval = false;
       }
     }
@@ -212,25 +217,17 @@ export async function handleInvoiceOverdue(
       metadata: { policy, eventId: event.eventId },
     });
 
-    if (!requiresApproval && opts?.autoExecuteUserId) {
-      const now = new Date().toISOString();
-      await supabase
-        .from("agent_actions")
-        .update({
-          status: "approved",
-          approved_at: now,
-          approved_by: opts.autoExecuteUserId,
-          updated_at: now,
-        })
-        .eq("id", proposed.id)
-        .eq("status", "pending");
-
-      await executeAgentAction({
+    let autoExecuted = false;
+    if (!requiresApproval && opts?.autoExecuteUserId && proposed.id) {
+      const auto = await autoExecuteIfAllowed({
         supabase,
         companyId: event.tenantId,
         userId: opts.autoExecuteUserId,
         actionId: proposed.id,
+        actionType,
+        toestemming,
       });
+      autoExecuted = auto.autoExecuted;
     }
 
     await writeAgentActivity(supabase, {
@@ -238,13 +235,15 @@ export async function handleInvoiceOverdue(
       userId: opts?.autoExecuteUserId,
       agentName: AGENT_ID,
       actionType,
-      message: `Incassovoorstel: ${title}`,
-      outputJson: { actionId: proposed.id, stage: ctx.stage },
+      message: autoExecuted
+        ? `Incasso automatisch uitgevoerd: ${title}`
+        : `Incassovoorstel: ${title}`,
+      outputJson: { actionId: proposed.id, stage: ctx.stage, autoExecuted },
     });
 
     await updateAgentRun(supabase, runId, {
       status: requiresApproval ? "proposed" : "completed",
-      outputRef: { actionId: proposed.id, autoExecuted: !requiresApproval },
+      outputRef: { actionId: proposed.id, autoExecuted },
       completed: true,
     });
 

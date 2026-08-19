@@ -11,15 +11,20 @@ type WebhookBody = {
 
 /**
  * Webhook voor betaling → AI-tegoed (Stripe/Mollie later).
- * Beveilig met AI_CREDITS_WEBHOOK_SECRET in de Authorization header.
+ * Vereist AI_CREDITS_WEBHOOK_SECRET in de Authorization: Bearer … header.
  */
 export async function POST(request: Request) {
   const secret = process.env.AI_CREDITS_WEBHOOK_SECRET?.trim();
-  if (secret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json(
+      { error: "Webhook secret is niet geconfigureerd." },
+      { status: 503 },
+    );
+  }
+
+  const auth = request.headers.get("authorization");
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: WebhookBody;

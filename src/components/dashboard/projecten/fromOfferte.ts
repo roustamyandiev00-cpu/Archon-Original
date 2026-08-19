@@ -5,7 +5,10 @@ export function projectNameFromOfferte(input: {
   notes: string;
   lines: OfferteLijnInput[];
   nummer?: string;
+  projectNaam?: string | null;
 }) {
+  if (input.projectNaam?.trim()) return input.projectNaam.trim();
+
   const fromNotes = input.notes.match(/(?:\[)?Project:\s*([^\n\]]+)/i);
   if (fromNotes?.[1]?.trim()) return fromNotes[1].trim();
 

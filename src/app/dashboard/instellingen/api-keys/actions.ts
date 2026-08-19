@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireWriteAccess } from "@/components/dashboard/context";
+import { requireAdminAccess } from "@/components/dashboard/context";
 import { generateApiKey } from "@/lib/apiKeys";
 import { sanitizeScopes } from "@/lib/apiResources";
 
@@ -9,7 +9,7 @@ export async function createApiKey(
   name: string,
   scopes: string[] = [],
 ): Promise<{ error: string } | { id: string; rawKey: string; keyPrefix: string }> {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, user, companyId } = access;
 
@@ -39,7 +39,7 @@ export async function createApiKey(
 export async function revokeApiKey(
   id: string,
 ): Promise<{ error: string } | { success: true }> {
-  const access = await requireWriteAccess();
+  const access = await requireAdminAccess();
   if ("error" in access) return { error: access.error };
   const { supabase, companyId } = access;
   const { error } = await supabase

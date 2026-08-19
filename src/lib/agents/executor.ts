@@ -7,16 +7,24 @@ import {
   type CreateOfferteInput,
 } from "@/app/dashboard/offertes/actions";
 import { convertOfferteToFactuur } from "@/app/dashboard/offertes/convert-actions";
-import { markOfferteSent } from "@/app/dashboard/offertes/send-actions";
+import { markOfferteSent, sendOfferteByEmail } from "@/app/dashboard/offertes/send-actions";
+import { loadEmailDeliveryPreference } from "@/app/dashboard/instellingen/smtp-actions";
+import { loadCompanySmtpSettings } from "@/components/dashboard/email/smtp";
 import type {
   CreateInvoiceFromOffertePayload,
   CreateOffertePayload,
+  ProposeChatSanctionPayload,
+  ProposeWerkpostMatchPayload,
+  ProposeGeschilSamenvattingPayload,
+  ProposeCreateTaskPayload,
+  ProposeInvoiceFollowupTaskPayload,
   SendOffertePayload,
   SendPaymentReminderPayload,
   SendQuoteFollowupPayload,
 } from "@/lib/agents/types";
 import { executeIncassoStep } from "@/app/dashboard/facturen/incasso-actions";
 import { executeQuoteFollowup } from "@/lib/agents/followup-actions";
+import { refreshBetrouwbaarheidsscore } from "@/lib/bouwnetwerk/betrouwbaarheid";
 
 async function logActivity(
   supabase: SupabaseClient,
@@ -70,7 +78,7 @@ export async function executeAgentAction(input: {
     return { ok: true, route: action.target_route ?? undefined };
   }
 
-  const agentName = action.agent_name || "Lima";
+  const agentName = action.agent_name || "Lara";
   const payload = (action.payload_json ?? {}) as Record<string, unknown>;
 
   try {
@@ -83,6 +91,8 @@ export async function executeAgentAction(input: {
         geldigTot: p.geldigTot,
         notes: p.notes,
         lines: p.lines,
+        projectNaam: p.projectNaam ?? null,
+        afmetingen: p.afmetingen ?? null,
       };
       const result = await createOfferte(createInput);
       if ("error" in result && result.error) {
@@ -119,6 +129,62 @@ export async function executeAgentAction(input: {
 
     if (action.action_type === "send_offerte") {
       const p = payload as unknown as SendOffertePayload;
+      if (!p.offerteId || typeof p.offerteId !== "number") {
+        throw new Error(
+          "Dit verstuur-voorstel mist een offerte-ID. Maak het opnieuw aan via Automatisaties of de offertepagina.",
+        );
+      }
+
+      const deliveryMode = await loadEmailDeliveryPreference(
+        supabase,
+        companyId,
+      );
+      const smtpConfigured = Boolean(
+        await loadCompanySmtpSettings(supabase, companyId),
+      );
+
+      if (deliveryMode === "smtp" && smtpConfigured) {
+        const send = await sendOfferteByEmail(
+          p.offerteId,
+          p.recipientEmail ?? undefined,
+        );
+        if ("error" in send && send.error) {
+          throw new Error(send.error);
+        }
+
+        await supabase
+          .from("agent_actions")
+          .update({
+            executed_at: new Date().toISOString(),
+            target_route: `/dashboard/offertes/${p.offerteId}`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", actionId);
+
+        await logActivity(supabase, {
+          companyId,
+          userId,
+          agentName,
+          actionType: action.action_type,
+          message: `Offerte #${p.offerteId} verstuurd via SMTP`,
+          outputJson: {
+            offerteId: p.offerteId,
+            recipientEmail:
+              "recipientEmail" in send ? send.recipientEmail : undefined,
+            channel: "smtp",
+          },
+        });
+
+        revalidatePath("/dashboard/offertes");
+        revalidatePath(`/dashboard/offertes/${p.offerteId}`);
+        return {
+          ok: true,
+          offerteId: p.offerteId,
+          route: `/dashboard/offertes/${p.offerteId}`,
+          emailSent: true,
+        };
+      }
+
       const send = await markOfferteSent(p.offerteId, {
         recipientEmail: p.recipientEmail ?? null,
         channel: "agent",
@@ -142,12 +208,16 @@ export async function executeAgentAction(input: {
         agentName,
         actionType: action.action_type,
         message: `Offerte #${p.offerteId} gemarkeerd als verzonden`,
-        outputJson: { offerteId: p.offerteId },
+        outputJson: { offerteId: p.offerteId, channel: "agent" },
       });
 
       revalidatePath("/dashboard/offertes");
       revalidatePath(`/dashboard/offertes/${p.offerteId}`);
-      return { ok: true, offerteId: p.offerteId, route: `/dashboard/offertes/${p.offerteId}` };
+      return {
+        ok: true,
+        offerteId: p.offerteId,
+        route: `/dashboard/offertes/${p.offerteId}`,
+      };
     }
 
     if (action.action_type === "create_invoice_from_offerte") {
@@ -317,6 +387,335 @@ export async function executeAgentAction(input: {
         bailiffMailto:
           "bailiffMailto" in result ? result.bailiffMailto : undefined,
       };
+    }
+
+    if (action.action_type === "propose_chat_sanction") {
+      const p = payload as unknown as ProposeChatSanctionPayload;
+      const isWarning = p.sanctionType === "waarschuwing";
+      const sanctieStatus = isWarning ? "bevestigd" : "voorgesteld";
+
+      const { data: sanctie, error: sanctieError } = await supabase
+        .from("bedrijf_sancties")
+        .insert({
+          bedrijf_id: p.bedrijfId,
+          type: p.sanctionType,
+          reden: p.reden,
+          bewijs_agent_action_id: actionId,
+          bevestigd_door: isWarning ? userId : null,
+          status: sanctieStatus,
+          channel_id: p.channelId || null,
+          message_id: p.messageId || null,
+          ingaat_op: isWarning ? new Date().toISOString() : null,
+          verloopt_op: isWarning
+            ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+            : null,
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (sanctieError) throw new Error(sanctieError.message);
+
+      if (isWarning) {
+        await supabase
+          .from("bedrijven")
+          .update({
+            risicostatus: "gewaarschuwd",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", p.bedrijfId)
+          .eq("risicostatus", "normaal");
+      }
+
+      await refreshBetrouwbaarheidsscore(supabase, p.bedrijfId);
+
+      const route =
+        action.target_route ??
+        `/dashboard/werkposts/samenwerkingen?channel=${p.channelId}`;
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_route: route,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Sanctie ${sanctieStatus}: ${p.sanctionType}`,
+        outputJson: { sanctieId: sanctie?.id, sanctionType: p.sanctionType },
+      });
+
+      revalidatePath("/dashboard/automatisaties");
+      revalidatePath("/admin/rapportages");
+      return { ok: true, route };
+    }
+
+    if (action.action_type === "propose_werkpost_match") {
+      const p = payload as unknown as ProposeWerkpostMatchPayload;
+      const { assertCanAutoSendReactie, markAutoSendTimestamp } = await import(
+        "@/lib/bouwnetwerk/send-guardrails"
+      );
+
+      const guard = await assertCanAutoSendReactie(supabase, {
+        companyId,
+        werkpostId: p.werkpostId,
+      });
+
+      let sent = false;
+      let skipReason: string | undefined;
+      if (!guard.ok) {
+        skipReason = guard.reason;
+      } else {
+        const { error: reactieError } = await supabase
+          .from("werkpost_reacties")
+          .insert({
+            werkpost_id: p.werkpostId,
+            company_id: companyId,
+            user_id: userId,
+            bericht: p.draftMessage.trim(),
+            voorgesteld_tarief: null,
+            beschikbaarheid_vanaf: null,
+            beschikbaarheid_tot: null,
+            status: "in_afwachting",
+          });
+        if (reactieError) {
+          skipReason = reactieError.message;
+        } else {
+          sent = true;
+          await markAutoSendTimestamp(supabase, companyId);
+          const { count } = await supabase
+            .from("werkpost_reacties")
+            .select("id", { count: "exact", head: true })
+            .eq("werkpost_id", p.werkpostId);
+          await supabase
+            .from("werkposts")
+            .update({
+              aantal_reacties: count ?? 0,
+              pipeline_status: "interesse_verstuurd",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", p.werkpostId);
+        }
+      }
+
+      if (!sent) {
+        await supabase
+          .from("werkposts")
+          .update({
+            pipeline_status: "interesse_verstuurd",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", p.werkpostId);
+      }
+
+      const route = `/bouwnetwerk`;
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_route: route,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: sent
+          ? `Reactie verstuurd op «${p.werkpostTitel}» (na goedkeuring)`
+          : `Match goedgekeurd zonder auto-send: ${skipReason ?? "onbekend"}`,
+        outputJson: {
+          werkpostId: p.werkpostId,
+          draftMessage: p.draftMessage,
+          sent,
+          skipReason,
+        },
+      });
+
+      revalidatePath("/dashboard/automatisaties");
+      revalidatePath("/bouwnetwerk");
+      revalidatePath("/dashboard/werkposts");
+      return { ok: true, route };
+    }
+
+    if (action.action_type === "propose_geschil_samenvatting") {
+      const p = payload as unknown as ProposeGeschilSamenvattingPayload;
+      await supabase
+        .from("geschillen")
+        .update({
+          ai_samenvatting: p.samenvatting,
+          status: "verklaringen",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", p.geschilId);
+
+      const route = `/admin/geschillen`;
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_route: route,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Geschil-samenvatting goedgekeurd`,
+        outputJson: { geschilId: p.geschilId },
+      });
+
+      revalidatePath("/admin/geschillen");
+      revalidatePath("/dashboard/geschillen");
+      return { ok: true, route };
+    }
+
+    if (action.action_type === "propose_materiaal_zoek") {
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: new Date().toISOString(),
+          target_route: "/dashboard/bouwmaterialen",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", actionId);
+      return { ok: true, route: "/dashboard/bouwmaterialen" };
+    }
+
+    if (action.action_type === "propose_create_task") {
+      const p = payload as unknown as ProposeCreateTaskPayload;
+      if (!p.title?.trim()) throw new Error("Taaktitel is verplicht.");
+
+      const now = new Date().toISOString();
+      const { data: task, error: taskError } = await supabase
+        .from("tasks")
+        .insert({
+          company_id: companyId,
+          title: p.title.trim(),
+          description: p.description ?? null,
+          priority: p.priority ?? "medium",
+          due_at: p.dueAt ?? null,
+          assigned_to_user_id: p.assignedToUserId ?? null,
+          contact_id: p.contactId ?? null,
+          offerte_id: p.offerteId ?? null,
+          factuur_id: p.factuurId ?? null,
+          project_id: p.projectId ?? null,
+          related_entity_type: p.relatedEntityType ?? null,
+          related_entity_id: p.relatedEntityId ?? null,
+          source: "agent",
+          ai_generated: true,
+          requires_approval: false,
+          status: "todo",
+          created_by_user_id: userId,
+          created_by: userId,
+          updated_at: now,
+        })
+        .select("id")
+        .single();
+
+      if (taskError) throw new Error(taskError.message);
+
+      const route = `/dashboard/taken/${task.id}`;
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: now,
+          target_entity_type: "task",
+          target_entity_id: task.id,
+          target_route: route,
+          updated_at: now,
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Taak aangemaakt: ${p.title.trim()}`,
+        outputJson: { taskId: task.id },
+      });
+
+      revalidatePath("/dashboard/taken");
+      revalidatePath("/dashboard/command-center");
+      revalidatePath("/dashboard/automatisaties");
+      return { ok: true, taskId: task.id, route };
+    }
+
+    if (action.action_type === "propose_invoice_followup_task") {
+      const p = payload as unknown as ProposeInvoiceFollowupTaskPayload;
+      if (!p.factuurId || typeof p.factuurId !== "number") {
+        throw new Error("Factuur-ID is verplicht voor opvolgingstaak.");
+      }
+      const title = p.title?.trim() || `Opvolging factuur #${p.factuurId}`;
+
+      const now = new Date().toISOString();
+      const dueAt =
+        p.dueAt ?? new Date(Date.now() + 3 * 86_400_000).toISOString();
+
+      const { data: task, error: taskError } = await supabase
+        .from("tasks")
+        .insert({
+          company_id: companyId,
+          title,
+          description: p.description ?? null,
+          priority: "high",
+          due_at: dueAt,
+          assigned_to_user_id: p.assignedToUserId ?? null,
+          factuur_id: p.factuurId,
+          related_entity_type: "factuur",
+          related_entity_id: p.factuurId,
+          source: "agent",
+          ai_generated: true,
+          requires_approval: false,
+          status: "todo",
+          created_by_user_id: userId,
+          created_by: userId,
+          updated_at: now,
+        })
+        .select("id")
+        .single();
+
+      if (taskError) throw new Error(taskError.message);
+
+      const route = `/dashboard/taken/${task.id}`;
+
+      await supabase
+        .from("agent_actions")
+        .update({
+          executed_at: now,
+          target_entity_type: "task",
+          target_entity_id: task.id,
+          target_route: route,
+          updated_at: now,
+        })
+        .eq("id", actionId);
+
+      await logActivity(supabase, {
+        companyId,
+        userId,
+        agentName,
+        actionType: action.action_type,
+        message: `Opvolgingstaak aangemaakt voor factuur #${p.factuurId}: ${title}`,
+        outputJson: { taskId: task.id, factuurId: p.factuurId },
+      });
+
+      revalidatePath("/dashboard/taken");
+      revalidatePath(`/dashboard/facturen/${p.factuurId}`);
+      revalidatePath("/dashboard/command-center");
+      revalidatePath("/dashboard/automatisaties");
+      return { ok: true, taskId: task.id, route };
     }
 
     return { error: `Onbekend actietype: ${action.action_type}` };

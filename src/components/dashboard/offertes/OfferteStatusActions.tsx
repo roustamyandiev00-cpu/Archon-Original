@@ -39,6 +39,15 @@ export default function OfferteStatusActions({
       setError(result.error);
       return;
     }
+    if (
+      next === "geaccepteerd" &&
+      "projectId" in result &&
+      typeof result.projectId === "string"
+    ) {
+      router.push(`/dashboard/offertes/projecten/${result.projectId}`);
+      router.refresh();
+      return;
+    }
     router.refresh();
   }
 

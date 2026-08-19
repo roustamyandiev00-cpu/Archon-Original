@@ -43,6 +43,7 @@ const AgentCompletionsContext =
 
 const SEEN_KEY = "archon-completion-seen-ids";
 const POLL_MS = 20_000;
+const BANNER_AUTO_DISMISS_MS = 8_000;
 
 function readSeenIds(): Set<number> {
   if (typeof window === "undefined") return new Set();
@@ -197,7 +198,14 @@ export function AgentCompletionsProvider({
   useEffect(() => {
     if (!enabled || !companyId) return;
 
-    const tick = () => void poll();
+    const tick = () => {
+      void poll().catch((error: unknown) => {
+        console.warn(
+          "[agent-completions] Achtergrondcontrole tijdelijk overgeslagen.",
+          error,
+        );
+      });
+    };
     const initialId = window.setTimeout(tick, 0);
     const intervalId = window.setInterval(tick, POLL_MS);
     return () => {
@@ -205,6 +213,17 @@ export function AgentCompletionsProvider({
       window.clearInterval(intervalId);
     };
   }, [poll, enabled, companyId]);
+
+  useEffect(() => {
+    if (!bannerItem) return;
+
+    const timeoutId = window.setTimeout(
+      () => setBannerItem(null),
+      BANNER_AUTO_DISMISS_MS,
+    );
+
+    return () => window.clearTimeout(timeoutId);
+  }, [bannerItem]);
 
   const openChatForBanner = useCallback(() => {
     if (!bannerItem) return;
@@ -240,7 +259,9 @@ export function AgentCompletionsProvider({
       {bannerItem && (
         <div
           role="status"
-          className="fixed inset-x-0 top-14 z-[35] border-b border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 backdrop-blur-md lg:left-[220px]"
+          aria-live="polite"
+          aria-atomic="true"
+          className="fixed inset-x-0 top-14 z-[35] border-b border-emerald-500/30 bg-emerald-950/95 px-4 py-2.5 shadow-lg shadow-black/20 backdrop-blur-md lg:left-[220px]"
         >
           <div className="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-start gap-2.5">
@@ -258,26 +279,26 @@ export function AgentCompletionsProvider({
               <Link
                 href={bannerItem.href}
                 onClick={dismissBanner}
-                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-3.5 py-1.5 text-xs font-semibold text-zinc-950 hover:bg-emerald-400"
+                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-3.5 py-1.5 text-xs font-semibold text-zinc-950 transition-colors hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-950"
               >
-                <CheckCircle2 size={13} />
+                <CheckCircle2 size={13} aria-hidden="true" />
                 Bekijk resultaat
               </Link>
               <button
                 type="button"
                 onClick={openChatForBanner}
-                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 px-3.5 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-500/15"
+                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 px-3.5 py-1.5 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-950"
               >
-                <MessageCircle size={13} />
+                <MessageCircle size={13} aria-hidden="true" />
                 Vraag agent
               </button>
               <button
                 type="button"
                 onClick={dismissBanner}
                 aria-label="Melding sluiten"
-                className="grid h-8 w-8 place-items-center rounded-lg text-emerald-300/80 hover:bg-emerald-500/15 hover:text-emerald-100"
+                className="grid h-8 w-8 place-items-center rounded-lg text-emerald-300/80 transition-colors hover:bg-emerald-500/15 hover:text-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-950"
               >
-                <X size={16} />
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
           </div>

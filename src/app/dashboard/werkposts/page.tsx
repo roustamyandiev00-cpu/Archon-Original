@@ -5,17 +5,25 @@ import { isActivePreviewMode } from "@/components/dashboard/context";
 import { DemoBadge } from "@/components/dashboard/mission";
 import BouwnetwerkHub from "@/components/dashboard/bouwnetwerk/BouwnetwerkHub";
 import { loadBouwnetwerkData } from "@/components/dashboard/bouwnetwerk/load-bouwnetwerk-data";
+import { BouwnetwerkComingSoonBanner } from "@/components/dashboard/werkposts/BouwnetwerkComingSoonBanner";
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  fetchPlatformRegistrationCount,
+} from "@/lib/bouwnetwerk-gate";
 
 export const metadata = { title: "Bouwnetwerk — ArchonPro" };
 
 export default async function WerkpostsPage() {
   const preview = await isActivePreviewMode();
   const { supabase, companyId } = await getCompanyContext();
-  const data = await loadBouwnetwerkData(supabase, companyId);
+  const [data, registeredUsers] = await Promise.all([
+    loadBouwnetwerkData(supabase, companyId),
+    fetchPlatformRegistrationCount(supabase),
+  ]);
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+    <div className="dashboard-page flex h-full min-h-0 flex-col gap-2">
+      <header className="dashboard-page-header flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-sky-500/10 bg-sky-500/10 text-sky-400">
             <HardHat size={20} />
@@ -59,7 +67,7 @@ export default async function WerkpostsPage() {
       </header>
 
       {!companyId && !preview && (
-        <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-300">
+        <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-300">
           <ShieldAlert size={18} className="shrink-0" />
           <div>
             <span className="block font-semibold">Bedrijfsprofiel niet gevonden</span>
@@ -74,11 +82,18 @@ export default async function WerkpostsPage() {
         </div>
       )}
 
-      <BouwnetwerkHub
-        {...data}
-        companyId={companyId}
-        preview={preview}
+      <BouwnetwerkComingSoonBanner
+        registeredUsers={registeredUsers}
+        requiredUsers={BOUWNETWERK_REQUIRED_USERS}
       />
+
+      <div className="dashboard-page-content min-h-0 flex-1">
+        <BouwnetwerkHub
+          {...data}
+          companyId={companyId}
+          preview={preview}
+        />
+      </div>
     </div>
   );
 }

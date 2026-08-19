@@ -94,6 +94,102 @@ export type OfferteLijnInput = {
   btw_percentage: number;
 };
 
+export type OfferteValidationInput = {
+  klant: string;
+  datum: string;
+  geldigTot: string;
+  lines: OfferteLijnInput[];
+};
+
+export type OfferteValidationIssue = {
+  field:
+    | "klant"
+    | "datum"
+    | "geldigTot"
+    | `lines.${number}.omschrijving`
+    | `lines.${number}.aantal`
+    | `lines.${number}.prijs`
+    | `lines.${number}.btw`;
+  message: string;
+};
+
+export function offerteLineHasContent(line: OfferteLijnInput) {
+  return (
+    line.omschrijving.trim() !== "" || Number(line.prijs_per_eenheid) !== 0
+  );
+}
+
+export function validateOfferteInput(
+  input: OfferteValidationInput,
+): OfferteValidationIssue[] {
+  const issues: OfferteValidationIssue[] = [];
+
+  if (!input.klant.trim()) {
+    issues.push({ field: "klant", message: "Kies of maak eerst een klant." });
+  }
+  if (!input.datum || Number.isNaN(Date.parse(input.datum))) {
+    issues.push({ field: "datum", message: "Vul een geldige offertedatum in." });
+  }
+  if (!input.geldigTot || Number.isNaN(Date.parse(input.geldigTot))) {
+    issues.push({
+      field: "geldigTot",
+      message: "Vul een geldige vervaldatum in.",
+    });
+  } else if (input.datum && input.geldigTot < input.datum) {
+    issues.push({
+      field: "geldigTot",
+      message: "Geldig tot mag niet vóór de offertedatum liggen.",
+    });
+  }
+
+  const activeLines = input.lines
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => offerteLineHasContent(line));
+
+  if (activeLines.length === 0) {
+    issues.push({
+      field: "lines.0.omschrijving",
+      message: "Voeg minstens één volledige offertelijn toe.",
+    });
+  }
+
+  for (const { line, index } of activeLines) {
+    if (!line.omschrijving.trim()) {
+      issues.push({
+        field: `lines.${index}.omschrijving`,
+        message: "Vul een omschrijving in.",
+      });
+    }
+    if (!Number.isFinite(Number(line.aantal)) || Number(line.aantal) <= 0) {
+      issues.push({
+        field: `lines.${index}.aantal`,
+        message: "Aantal moet groter zijn dan nul.",
+      });
+    }
+    if (
+      !Number.isFinite(Number(line.prijs_per_eenheid)) ||
+      Number(line.prijs_per_eenheid) < 0
+    ) {
+      issues.push({
+        field: `lines.${index}.prijs`,
+        message: "Prijs mag niet negatief zijn.",
+      });
+    }
+    if (
+      !Number.isFinite(Number(line.btw_percentage)) ||
+      Number(line.btw_percentage) < 0 ||
+      Number(line.btw_percentage) > 100
+    ) {
+      issues.push({
+        field: `lines.${index}.btw`,
+        message: "BTW moet tussen 0 en 100% liggen.",
+      });
+    }
+  }
+
+  return issues;
+}
+
 export function lineTotals(lines: OfferteLijnInput[]) {
   let subtotaal = 0;
   let btw = 0;

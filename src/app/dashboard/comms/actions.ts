@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
+import { assertChatTermsAccepted } from "@/app/dashboard/comms/chat-terms-actions";
+import {
+  evaluateContactSharing,
+  proposeChatModerationIfNeeded,
+} from "@/lib/bouwnetwerk/chat-guards";
 
 const COMMS_MEDIA_BUCKET = "werkpost-media";
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -41,13 +46,29 @@ export async function sendMessage(channelId: string, content: string) {
     return { error: "Je bent geen lid van dit kanaal." };
   }
 
-  const { error } = await supabase.from("bouwnetwerk_messages").insert({
-    channel_id: channelId,
-    sender_company_id: companyId,
-    sender_user_id: user.id,
-    content: content.trim(),
-    type: "text",
+  const terms = await assertChatTermsAccepted(supabase, companyId, user.id);
+  if ("error" in terms) return { error: terms.error };
+
+  const trimmed = content.trim();
+  const contact = await evaluateContactSharing({
+    supabase,
+    channelId,
+    content: trimmed,
+    blockWithoutContract: false,
   });
+  if (contact.blocked) return { error: contact.blocked };
+
+  const { data: inserted, error } = await supabase
+    .from("bouwnetwerk_messages")
+    .insert({
+      channel_id: channelId,
+      sender_company_id: companyId,
+      sender_user_id: user.id,
+      content: trimmed,
+      type: "text",
+    })
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: error.message };
 
@@ -56,8 +77,22 @@ export async function sendMessage(channelId: string, content: string) {
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", channelId);
 
+  // Fire-and-forget moderatie-voorstel (mens bevestigt)
+  void proposeChatModerationIfNeeded({
+    supabase,
+    companyId,
+    channelId,
+    messageId: inserted?.id ?? null,
+    content: trimmed,
+    contactHits: contact.hits,
+  });
+
   revalidatePath("/dashboard/comms");
-  return { success: true };
+  revalidatePath("/dashboard/werkposts/samenwerkingen");
+  return {
+    success: true as const,
+    warning: contact.warning,
+  };
 }
 
 /**
@@ -80,6 +115,9 @@ export async function sendAttachments(channelId: string, formData: FormData) {
   if (!membership) {
     return { error: "Je bent geen lid van dit kanaal." };
   }
+
+  const terms = await assertChatTermsAccepted(supabase, companyId, user.id);
+  if ("error" in terms) return { error: terms.error };
 
   const files = formData
     .getAll("files")
@@ -120,15 +158,25 @@ export async function sendAttachments(channelId: string, formData: FormData) {
   }
 
   const caption = String(formData.get("content") || "").trim();
-
-  const { error } = await supabase.from("bouwnetwerk_messages").insert({
-    channel_id: channelId,
-    sender_company_id: companyId,
-    sender_user_id: user.id,
-    content: caption || null,
-    type: "file",
-    attachments,
+  const contact = await evaluateContactSharing({
+    supabase,
+    channelId,
+    content: caption,
+    blockWithoutContract: false,
   });
+
+  const { data: inserted, error } = await supabase
+    .from("bouwnetwerk_messages")
+    .insert({
+      channel_id: channelId,
+      sender_company_id: companyId,
+      sender_user_id: user.id,
+      content: caption || null,
+      type: "file",
+      attachments,
+    })
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: error.message };
 
@@ -137,6 +185,21 @@ export async function sendAttachments(channelId: string, formData: FormData) {
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", channelId);
 
+  if (caption) {
+    void proposeChatModerationIfNeeded({
+      supabase,
+      companyId,
+      channelId,
+      messageId: inserted?.id ?? null,
+      content: caption,
+      contactHits: contact.hits,
+    });
+  }
+
   revalidatePath("/dashboard/comms");
-  return { success: true };
+  revalidatePath("/dashboard/werkposts/samenwerkingen");
+  return {
+    success: true as const,
+    warning: contact.warning,
+  };
 }

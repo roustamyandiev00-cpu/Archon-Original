@@ -52,13 +52,15 @@ export interface StudioInvoiceFormValues {
   items: StudioInvoiceLineItem[];
 }
 
+/** Belgische BTW-tarieven */
 export const studioInvoiceTaxOptions: StudioInvoiceTaxOption[] = [
-  { id: "gst", name: "GST", rate: 18 },
-  { id: "vat", name: "VAT", rate: 12 },
-  { id: "service-tax", name: "Service Tax", rate: 10 },
-  { id: "none", name: "No Tax", rate: 0 },
+  { id: "btw-21", name: "BTW", rate: 21 },
+  { id: "btw-12", name: "BTW", rate: 12 },
+  { id: "btw-6", name: "BTW", rate: 6 },
+  { id: "btw-0", name: "Geen BTW", rate: 0 },
 ];
 
+/** Demo-klanten alleen voor isDemo-modus */
 export const studioInvoiceClients: StudioInvoiceToDetails[] = [
   {
     id: "bright-enterprises",
@@ -118,7 +120,7 @@ export const studioDefaultInvoiceValues: StudioInvoiceFormValues = {
   paymentDueDate: plusDaysIso(14),
   from: studioDefaultFrom,
   to: studioInvoiceClients[1],
-  taxId: "vat",
+  taxId: "btw-21",
   discountType: "fixed",
   discountValue: 40,
   items: [
@@ -145,13 +147,14 @@ export const studioDefaultInvoiceValues: StudioInvoiceFormValues = {
 
 export function studioTaxIdFromRate(rate: number) {
   return (
-    studioInvoiceTaxOptions.find((option) => option.rate === rate)?.id ?? "vat"
+    studioInvoiceTaxOptions.find((option) => option.rate === rate)?.id ??
+    "btw-21"
   );
 }
 
 export function studioRateFromTaxId(taxId: string) {
   return (
-    studioInvoiceTaxOptions.find((option) => option.id === taxId)?.rate ?? 12
+    studioInvoiceTaxOptions.find((option) => option.id === taxId)?.rate ?? 21
   );
 }
 
@@ -191,33 +194,38 @@ export function getStudioInvoiceDiscount(invoice: StudioInvoiceFormValues) {
 export function getStudioInvoiceTax(invoice: StudioInvoiceFormValues) {
   const taxRate = getStudioInvoiceTaxOption(invoice).rate;
   return (
-    Math.max(getStudioInvoiceSubtotal(invoice) - getStudioInvoiceDiscount(invoice), 0) *
+    Math.max(
+      getStudioInvoiceSubtotal(invoice) - getStudioInvoiceDiscount(invoice),
+      0,
+    ) *
     (taxRate / 100)
   );
 }
 
 export function getStudioInvoiceTotal(invoice: StudioInvoiceFormValues) {
   return (
-    Math.max(getStudioInvoiceSubtotal(invoice) - getStudioInvoiceDiscount(invoice), 0) +
-    getStudioInvoiceTax(invoice)
+    Math.max(
+      getStudioInvoiceSubtotal(invoice) - getStudioInvoiceDiscount(invoice),
+      0,
+    ) + getStudioInvoiceTax(invoice)
   );
 }
 
 export function formatStudioCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("nl-BE", {
     style: "currency",
-    currency: "USD",
+    currency: "EUR",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);
 }
 
 export function formatStudioDisplayDate(iso: string) {
-  if (!iso) return "Pick a date";
+  if (!iso) return "Kies een datum";
   try {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "long",
+    return new Intl.DateTimeFormat("nl-BE", {
       day: "numeric",
+      month: "long",
       year: "numeric",
     }).format(new Date(iso + "T12:00:00"));
   } catch {
@@ -234,21 +242,32 @@ export function getInitials(name: string) {
     .join("");
 }
 
+export function customerDisplayName(c: {
+  name?: string | null;
+  company_name?: string | null;
+}) {
+  return (c.company_name || c.name || "").trim();
+}
+
 function mapBedrijfToFrom(bedrijf: BedrijfLite): StudioInvoiceFromDetails {
-  const addressLines = [bedrijf.adres, [bedrijf.postcode, bedrijf.stad].filter(Boolean).join(" ")]
+  const addressLines = [
+    bedrijf.adres,
+    [bedrijf.postcode, bedrijf.stad].filter(Boolean).join(" "),
+  ]
     .map((line) => line?.trim())
     .filter(Boolean) as string[];
 
   return {
-    name: bedrijf.naam || studioDefaultFrom.name,
-    email: bedrijf.email || studioDefaultFrom.email,
-    phone: bedrijf.telefoon || studioDefaultFrom.phone,
-    website: studioDefaultFrom.website,
-    addressLines: addressLines.length > 0 ? addressLines : studioDefaultFrom.addressLines,
-    taxId: bedrijf.btw || studioDefaultFrom.taxId,
-    paymentAccountName: bedrijf.naam || studioDefaultFrom.paymentAccountName,
-    routingNumber: bedrijf.iban || studioDefaultFrom.routingNumber,
-    issuerName: studioDefaultFrom.issuerName,
+    name: bedrijf.naam || "Jouw bedrijf",
+    email: bedrijf.email || "",
+    phone: bedrijf.telefoon || "",
+    website: "",
+    addressLines:
+      addressLines.length > 0 ? addressLines : ["Adres niet ingesteld"],
+    taxId: bedrijf.btw || "—",
+    paymentAccountName: bedrijf.naam || "Rekening",
+    routingNumber: bedrijf.iban || "—",
+    issuerName: bedrijf.naam || "",
   };
 }
 
@@ -273,31 +292,39 @@ export function buildStudioInvoiceValues(
 ): StudioInvoiceFormValues {
   const items = input.lines.map((line, index) => ({
     id: `line-${index}`,
-    description: line.omschrijving,
+    description: line.omschrijving || "—",
     quantity: Number(line.aantal) || 0,
     unitPrice: Number(line.prijs_per_eenheid) || 0,
   }));
 
-  const matchedClient =
-    studioInvoiceClients.find(
-      (client) => client.name.toLowerCase() === input.klantNaam.toLowerCase(),
-    ) ??
+  const matchedDemo =
+    input.useStudioDemoFrom
+      ? studioInvoiceClients.find(
+          (client) =>
+            client.name.toLowerCase() === input.klantNaam.toLowerCase(),
+        )
+      : undefined;
+
+  const to: StudioInvoiceToDetails =
+    matchedDemo ??
     ({
       id: "custom",
-      name: input.klantNaam || "Client",
+      name: input.klantNaam || "Klant",
       email: input.klantEmail || "",
       addressLines: input.klantAddress?.length
         ? input.klantAddress
-        : ["Address not provided"],
+        : ["Adres niet opgegeven"],
       taxId: input.klantTaxId || "—",
     } satisfies StudioInvoiceToDetails);
 
   return {
-    referenceNumber: input.reference,
+    referenceNumber: input.reference || "Concept",
     issuedDate: input.datum,
     paymentDueDate: input.vervaldatum,
-    from: input.useStudioDemoFrom ? studioDefaultFrom : mapBedrijfToFrom(input.bedrijf),
-    to: matchedClient,
+    from: input.useStudioDemoFrom
+      ? studioDefaultFrom
+      : mapBedrijfToFrom(input.bedrijf),
+    to,
     taxId: input.taxId,
     discountType: input.discountType,
     discountValue: input.discountValue,

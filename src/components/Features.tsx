@@ -54,44 +54,46 @@ const features = [
 
 export default function Features() {
   return (
-    <section id="features-section" className="section-tint relative py-14 sm:py-20 lg:py-24">
+    <section
+      id="features-section"
+      className="relative border-b border-white/[0.08] bg-[#030914] py-16 sm:py-20 lg:py-24"
+    >
       <div id="features" className="absolute -top-24" aria-hidden />
-      <div aria-hidden className="section-edge" />
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-medium text-sky-400">Functies</p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl lg:text-4xl">
+      <div className="mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-10">
+        <div className="grid gap-5 border-b border-white/[0.08] pb-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-end lg:gap-16 lg:pb-12">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-orange-300">
+              Eén centrale werkruimte
+            </p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.025em] text-white sm:text-4xl">
             Alles om tijd te winnen
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-zinc-400 sm:mt-4 sm:text-lg">
+            </h2>
+          </div>
+          <p className="max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
             Slimme functies die je elke dag tijd besparen — van eerste offerte
             tot betaalde factuur.
           </p>
         </div>
 
-        {/* Mobiel: horizontaal scrollen · tablet+: grid */}
-        <div className="mt-8 sm:mt-14">
-          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 lg:gap-5 [&::-webkit-scrollbar]:hidden">
+        <div className="mt-8 sm:mt-10">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
             {features.map((f) => (
               <div
                 key={f.title}
-                className="card-subtle group w-[min(82vw,280px)] shrink-0 p-5 sm:w-auto sm:shrink sm:p-6"
+                className="group rounded-2xl border border-white/[0.09] bg-[#081320] p-5 shadow-[0_18px_48px_rgba(0,0,0,0.14)] transition-colors hover:border-sky-400/25 hover:bg-[#0a1726] sm:p-6"
               >
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.04] text-sky-400 ring-1 ring-inset ring-white/10 sm:h-11 sm:w-11">
-                  <f.icon size={20} />
+                <div className="grid h-10 w-10 place-items-center rounded-xl border border-sky-300/20 bg-sky-400/[0.07] text-sky-300 sm:h-11 sm:w-11">
+                  <f.icon size={20} strokeWidth={1.7} />
                 </div>
-                <h3 className="mt-4 text-[15px] font-semibold leading-snug text-zinc-50 sm:mt-5 sm:text-base">
+                <h3 className="mt-5 text-[15px] font-semibold leading-snug text-slate-100 sm:text-base">
                   {f.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                <p className="mt-2 text-sm leading-6 text-slate-400">
                   {f.desc}
                 </p>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-center text-xs text-zinc-600 sm:hidden">
-            Swipe voor meer functies →
-          </p>
         </div>
       </div>
     </section>

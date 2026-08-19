@@ -1,21 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
-import {
-  Building2,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Mail,
-  MoreHorizontal,
-  RotateCcw,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
 import DocumentContactActions from "@/components/dashboard/DocumentContactActions";
+import {
+  DashboardMobileCard,
+  DashboardMobileEmpty,
+} from "@/components/dashboard/DashboardMobileCard";
+import { tableColumnClass } from "@/components/dashboard/table-columns";
 import type { OfferteListRow } from "@/components/dashboard/offertes/OffertesView";
+import SendOfferteModal from "@/components/dashboard/offertes/SendOfferteModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +21,43 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate, formatEuro, statusMeta } from "@/lib/offertes";
+import {
+  Building2,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  FileText,
+  Mail,
+  MoreHorizontal,
+  RotateCcw,
+  Search,
+  Send,
+  SlidersHorizontal,
+} from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
 const pageSize = 5;
+
+export type OfferteColumnKey = "date" | "validUntil" | "send";
+
+export type OfferteColumnVisibility = Record<OfferteColumnKey, boolean>;
+
+export const OFFERTE_COLUMN_OPTIONS = [
+  { id: "date", label: "Datum" },
+  { id: "validUntil", label: "Geldig tot" },
+  { id: "send", label: "Versturen" },
+] as const;
+
+export const defaultOfferteColumnVisibility: OfferteColumnVisibility = {
+  date: true,
+  validUntil: true,
+  send: true,
+};
+
+const stickyActionsClass = "w-12 text-right dashboard-table-sticky-actions";
 
 type StatusFilter =
   | "all"
@@ -62,16 +89,18 @@ export default function OffertesDataTable({
   offertes,
   isDemo = false,
   showFilters = true,
+  columnVisibility = defaultOfferteColumnVisibility,
 }: {
   offertes: OfferteListRow[];
   isDemo?: boolean;
   showFilters?: boolean;
+  columnVisibility?: OfferteColumnVisibility;
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [sendOfferteId, setSendOfferteId] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -98,8 +127,7 @@ export default function OffertesDataTable({
   const pageEnd = Math.min(pageStart + pageSize, filtered.length);
   const visible = filtered.slice(pageStart, pageEnd);
 
-  const allVisibleSelected =
-    visible.length > 0 && visible.every((o) => selectedIds.has(o.id));
+  const hasActiveFilters = query.trim().length > 0 || statusFilter !== "all";
 
   function resetFilters() {
     setQuery("");
@@ -107,29 +135,8 @@ export default function OffertesDataTable({
     setPage(1);
   }
 
-  function toggleSelectAll() {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (allVisibleSelected) {
-        visible.forEach((o) => next.delete(o.id));
-      } else {
-        visible.forEach((o) => next.add(o.id));
-      }
-      return next;
-    });
-  }
-
-  function toggleSelect(id: number) {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   return (
-    <div className="dashboard-table-scroll flex min-h-0 flex-1 flex-col gap-2 lg:gap-1.5">
+    <div className="dashboard-table-scroll flex min-h-0 flex-1 flex-col gap-2 lg:!flex-none lg:!overflow-visible lg:gap-1.5">
       {showFilters && (
         <div className="grid shrink-0 gap-2 lg:grid-cols-[minmax(12rem,1fr)_9rem_auto]">
           <label className="relative block">
@@ -171,6 +178,7 @@ export default function OffertesDataTable({
             type="button"
             variant="ghost"
             onClick={resetFilters}
+            disabled={!hasActiveFilters}
             className="justify-center"
           >
             <RotateCcw size={15} />
@@ -185,34 +193,114 @@ export default function OffertesDataTable({
           {filtered.length.toLocaleString("nl-BE")} van{" "}
           {offertes.length.toLocaleString("nl-BE")} offertes
         </span>
-        {selectedIds.size > 0 && (
-          <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300">
-            {selectedIds.size} geselecteerd
-          </span>
-        )}
       </div>
 
-      <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10">
+      <div className="dashboard-table-scroll min-h-0 flex-1 overflow-hidden rounded-xl border border-white/10 lg:!flex-none lg:!overflow-visible">
+        <div className="flex h-full flex-col gap-2 overflow-y-auto p-2 lg:hidden">
+          {visible.length > 0 ? (
+            visible.map((o, index) => {
+              const meta = statusMeta(o.status_new);
+              const tone =
+                avatarTones[index % avatarTones.length] ?? avatarTones[0];
+
+              return (
+                <DashboardMobileCard key={o.id}>
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${tone}`}
+                      aria-hidden
+                    >
+                      <FileText size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          {isDemo ? (
+                            <p className="truncate font-mono text-sm font-medium text-zinc-100">
+                              {o.nummer ?? `#${o.id}`}
+                            </p>
+                          ) : (
+                            <Link
+                              href={`/dashboard/offertes/${o.id}`}
+                              className="truncate font-mono text-sm font-medium text-sky-400"
+                            >
+                              {o.nummer ?? `#${o.id}`}
+                            </Link>
+                          )}
+                          {o.klant ? (
+                            <p className="mt-0.5 truncate text-xs text-zinc-400">{o.klant}</p>
+                          ) : null}
+                        </div>
+                        <Badge variant={statusBadgeVariant(o.status_new)}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                          {meta.label}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 font-mono text-sm font-semibold text-zinc-100">
+                        {formatEuro(o.bedrag)}
+                      </p>
+                      <p className="mt-1 font-mono text-xs text-zinc-500">
+                        {formatDate(o.datum)}
+                        {o.geldig_tot ? ` · geldig tot ${formatDate(o.geldig_tot)}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2">
+                    <DocumentContactActions
+                      soort="offerte"
+                      nummer={o.nummer ?? `#${o.id}`}
+                      klant={o.klant ?? "klant"}
+                      bedrag={o.bedrag}
+                      email={o.email}
+                      phone={o.phone}
+                      detailPath={isDemo ? undefined : `/dashboard/offertes/${o.id}`}
+                      pdfPath={isDemo ? undefined : `/dashboard/offertes/${o.id}/pdf`}
+                      onSend={
+                        isDemo ? undefined : () => setSendOfferteId(o.id)
+                      }
+                    />
+                    <OfferteActionMenu
+                      offerte={o}
+                      isDemo={isDemo}
+                      open={openMenuId === o.id}
+                      onOpenChange={(open) => setOpenMenuId(open ? o.id : null)}
+                      onSend={() => setSendOfferteId(o.id)}
+                    />
+                  </div>
+                </DashboardMobileCard>
+              );
+            })
+          ) : (
+            <DashboardMobileEmpty
+              icon={<FileText size={22} />}
+              title={offertes.length === 0 ? "Nog geen offertes" : "Geen resultaten"}
+              description={
+                offertes.length === 0
+                  ? "Maak je eerste offerte via Nieuw manueel of Met AI-agent."
+                  : "Pas je zoekopdracht of filters aan."
+              }
+            />
+          )}
+        </div>
+
+        <div className="hidden h-full min-h-0 lg:block lg:h-auto">
         <Table className="w-full table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-10">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onChange={toggleSelectAll}
-                  aria-label="Selecteer alle zichtbare offertes"
-                  className="h-4 w-4 rounded border-white/20 bg-zinc-950 accent-sky-500"
-                />
+              <TableHead className="w-[17%] min-w-0">Offerte</TableHead>
+              <TableHead className="w-[16%] min-w-0">Klant</TableHead>
+              <TableHead className={tableColumnClass(columnVisibility.date, "lg")}>
+                Datum
               </TableHead>
-              <TableHead className="min-w-0">Offerte</TableHead>
-              <TableHead className="min-w-0">Klant</TableHead>
-              <TableHead className="hidden min-w-0 lg:table-cell">Datum</TableHead>
-              <TableHead className="hidden min-w-0 xl:table-cell">Geldig tot</TableHead>
+              <TableHead className={tableColumnClass(columnVisibility.validUntil, "xl")}>
+                Geldig tot
+              </TableHead>
               <TableHead className="text-right">Bedrag</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="hidden text-right 2xl:table-cell">Versturen</TableHead>
-              <TableHead className="text-right lg:sticky lg:right-0 lg:z-10 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+              <TableHead className={tableColumnClass(columnVisibility.send, undefined, "text-right")}>
+                Versturen
+              </TableHead>
+              <TableHead className={stickyActionsClass}>
                 <span className="sr-only">Acties</span>
               </TableHead>
             </TableRow>
@@ -226,15 +314,6 @@ export default function OffertesDataTable({
 
                 return (
                   <TableRow key={o.id}>
-                    <TableCell>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(o.id)}
-                        onChange={() => toggleSelect(o.id)}
-                        aria-label={`Selecteer ${o.nummer ?? o.klant}`}
-                        className="h-4 w-4 rounded border-white/20 bg-zinc-950 accent-sky-500"
-                      />
-                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <span
@@ -277,13 +356,19 @@ export default function OffertesDataTable({
                         <span className="text-xs text-zinc-600">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden min-w-0 lg:table-cell">
+                    <TableCell className={tableColumnClass(columnVisibility.date, "lg")}>
                       <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-400">
                         <Calendar size={11} />
                         {formatDate(o.datum)}
                       </span>
                     </TableCell>
-                    <TableCell className="hidden min-w-0 font-mono text-xs text-zinc-400 xl:table-cell">
+                    <TableCell
+                      className={tableColumnClass(
+                        columnVisibility.validUntil,
+                        "xl",
+                        "min-w-0 font-mono text-xs text-zinc-400",
+                      )}
+                    >
                       {formatDate(o.geldig_tot)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold text-zinc-100">
@@ -295,7 +380,13 @@ export default function OffertesDataTable({
                         {meta.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden text-right 2xl:table-cell">
+                    <TableCell
+                      className={tableColumnClass(
+                        columnVisibility.send,
+                        undefined,
+                        "text-right",
+                      )}
+                    >
                       <DocumentContactActions
                         soort="offerte"
                         nummer={o.nummer ?? `#${o.id}`}
@@ -306,9 +397,15 @@ export default function OffertesDataTable({
                         detailPath={
                           isDemo ? undefined : `/dashboard/offertes/${o.id}`
                         }
+                        pdfPath={
+                          isDemo ? undefined : `/dashboard/offertes/${o.id}/pdf`
+                        }
+                        onSend={
+                          isDemo ? undefined : () => setSendOfferteId(o.id)
+                        }
                       />
                     </TableCell>
-                    <TableCell className="text-right lg:sticky lg:right-0 lg:bg-zinc-950 lg:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                    <TableCell className={stickyActionsClass}>
                       <OfferteActionMenu
                         offerte={o}
                         isDemo={isDemo}
@@ -316,6 +413,7 @@ export default function OffertesDataTable({
                         onOpenChange={(open) =>
                           setOpenMenuId(open ? o.id : null)
                         }
+                        onSend={() => setSendOfferteId(o.id)}
                       />
                     </TableCell>
                   </TableRow>
@@ -323,7 +421,7 @@ export default function OffertesDataTable({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="py-16 text-center">
+                <TableCell colSpan={8} className="py-16 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center">
                     <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/5 text-zinc-500">
                       <FileText size={22} />
@@ -344,9 +442,11 @@ export default function OffertesDataTable({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
-      <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">
+      {pageCount > 1 && (
+        <div className="flex shrink-0 flex-col gap-2 border-t border-white/10 pt-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-zinc-500">
           Rijen per pagina{" "}
           <span className="font-mono text-zinc-300">{pageSize}</span>
@@ -387,7 +487,16 @@ export default function OffertesDataTable({
             <ChevronRight size={16} />
           </Button>
         </div>
-      </div>
+        </div>
+      )}
+
+      {sendOfferteId != null ? (
+        <SendOfferteModal
+          open
+          onClose={() => setSendOfferteId(null)}
+          offerteId={sendOfferteId}
+        />
+      ) : null}
     </div>
   );
 }
@@ -397,11 +506,13 @@ function OfferteActionMenu({
   isDemo,
   open,
   onOpenChange,
+  onSend,
 }: {
   offerte: OfferteListRow;
   isDemo: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSend?: () => void;
 }) {
   const nummer = offerte.nummer ?? `#${offerte.id}`;
 
@@ -425,7 +536,7 @@ function OfferteActionMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-9 z-30 w-44 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 py-1 text-left shadow-2xl"
+          className="absolute right-0 top-9 z-30 w-48 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 py-1 text-left shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           {isDemo ? (
@@ -433,14 +544,41 @@ function OfferteActionMenu({
               Demo-offerte
             </span>
           ) : (
-            <Link
-              href={`/dashboard/offertes/${offerte.id}`}
-              role="menuitem"
-              className="block px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
-              onClick={() => onOpenChange(false)}
-            >
-              Open offerte
-            </Link>
+            <>
+              <Link
+                href={`/dashboard/offertes/${offerte.id}`}
+                role="menuitem"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
+                onClick={() => onOpenChange(false)}
+              >
+                <Eye size={14} className="text-zinc-500" />
+                Open offerte
+              </Link>
+              <Link
+                href={`/dashboard/offertes/${offerte.id}/pdf`}
+                target="_blank"
+                role="menuitem"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
+                onClick={() => onOpenChange(false)}
+              >
+                <Download size={14} className="text-zinc-500" />
+                Download PDF
+              </Link>
+              {onSend ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-white/5 hover:text-zinc-100"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onSend();
+                  }}
+                >
+                  <Send size={14} className="text-zinc-500" />
+                  Versturen…
+                </button>
+              ) : null}
+            </>
           )}
         </div>
       )}

@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/agent-followups",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/task-reminders",
+      "schedule": "0 8 * * *"
     }
   ],
   "buildCommand": "pnpm run build",
