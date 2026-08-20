@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import {
   getLlmRuntimeConfig,
+  getVisionRuntimeConfig,
   type LlmRuntimeConfig,
 } from "@/lib/ai/config";
 
@@ -21,18 +22,16 @@ function createClient(config: LlmRuntimeConfig): OpenAI {
   });
 }
 
-export async function runChatCompletion(input: {
-  messages: ChatCompletionMessageParam[];
-  temperature?: number;
-  jsonMode?: boolean;
-  model?: string;
-  maxTokens?: number;
-}): Promise<{ result?: ChatCompletionResult; error?: string }> {
-  const config = getLlmRuntimeConfig();
-  if (!config) {
-    return { error: "Geen AI-provider geconfigureerd (GROQ_API_KEY of OPENAI_API_KEY)." };
-  }
-
+async function runWithConfig(
+  config: LlmRuntimeConfig,
+  input: {
+    messages: ChatCompletionMessageParam[];
+    temperature?: number;
+    jsonMode?: boolean;
+    model?: string;
+    maxTokens?: number;
+  },
+): Promise<{ result?: ChatCompletionResult; error?: string }> {
   try {
     const client = createClient(config);
     const completion = await client.chat.completions.create({
@@ -60,4 +59,38 @@ export async function runChatCompletion(input: {
     const msg = e instanceof Error ? e.message : "AI-aanroep mislukt.";
     return { error: msg };
   }
+}
+
+export async function runChatCompletion(input: {
+  messages: ChatCompletionMessageParam[];
+  temperature?: number;
+  jsonMode?: boolean;
+  model?: string;
+  maxTokens?: number;
+}): Promise<{ result?: ChatCompletionResult; error?: string }> {
+  const config = getLlmRuntimeConfig();
+  if (!config) {
+    return {
+      error:
+        "Geen AI-provider geconfigureerd (GROQ_API_KEY of OPENAI_API_KEY).",
+    };
+  }
+  return runWithConfig(config, input);
+}
+
+/** Multimodal chat (foto's) via vision-model. */
+export async function runVisionChatCompletion(input: {
+  messages: ChatCompletionMessageParam[];
+  temperature?: number;
+  jsonMode?: boolean;
+  maxTokens?: number;
+}): Promise<{ result?: ChatCompletionResult; error?: string }> {
+  const config = getVisionRuntimeConfig();
+  if (!config) {
+    return {
+      error:
+        "Geen vision-model geconfigureerd. Zet OPENAI_API_KEY (aanbevolen) of GROQ_API_KEY.",
+    };
+  }
+  return runWithConfig(config, input);
 }

@@ -2,6 +2,8 @@ import {
   BarChart3,
   Bot,
   BrainCircuit,
+  CalendarDays,
+  CheckSquare,
   Contact,
   Crosshair,
   FileText,
@@ -17,11 +19,18 @@ import {
   Search,
   Settings,
   Shield,
+  Tags,
   Users,
   Wallet,
   Zap,
   type LucideIcon,
 } from "lucide-react";
+
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  bouwnetwerkSidebarHint,
+  isBouwnetwerkUnlocked,
+} from "@/lib/bouwnetwerk-gate";
 
 export type SidebarItem = {
   label: string;
@@ -29,9 +38,29 @@ export type SidebarItem = {
   icon: LucideIcon;
   badge?: number;
   badgeTone?: "info" | "warning";
+  /** Optioneel label bv. "Beta" of "WIP" naast de link. */
+  tag?: string;
+  /** Kleur van label/icoon — bv. waarschuwing voor modules die nog niet live zijn. */
+  labelTone?: "default" | "warning" | "danger";
   available?: boolean;
+  /** Tooltip wanneer item disabled of in waarschuwingsmodus is. */
+  hint?: string;
   children?: SidebarItem[];
 };
+
+export function bouwnetwerkSidebarMeta(
+  registeredUsers: number,
+): Pick<SidebarItem, "labelTone" | "tag" | "available" | "hint"> {
+  if (isBouwnetwerkUnlocked(registeredUsers)) {
+    return { labelTone: "default", available: true };
+  }
+  return {
+    labelTone: "warning",
+    tag: "WIP",
+    available: false,
+    hint: bouwnetwerkSidebarHint(BOUWNETWERK_REQUIRED_USERS),
+  };
+}
 
 export type SidebarGroup = {
   title: string;
@@ -39,7 +68,7 @@ export type SidebarGroup = {
   collapsible?: boolean;
 };
 
-export const SIDEBAR_GROUPS: SidebarGroup[] = [
+const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
   {
     title: "Overzicht",
     items: [
@@ -50,6 +79,11 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     title: "Operatie",
     items: [
       { label: "Contacten", href: "/dashboard/contacten", icon: Users },
+      {
+        label: "Prijslijst",
+        href: "/dashboard/prijslijst",
+        icon: Tags,
+      },
       { label: "Offertes", href: "/dashboard/offertes", icon: FileText },
       {
         label: "Projecten",
@@ -57,21 +91,42 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         icon: FolderKanban,
       },
       {
+        label: "Agenda",
+        href: "/dashboard/agenda",
+        icon: CalendarDays,
+      },
+      {
+        label: "Taken",
+        href: "/dashboard/taken",
+        icon: CheckSquare,
+      },
+      {
         label: "Facturen",
         href: "/dashboard/facturen",
         icon: Receipt,
-        badge: 3,
-        badgeTone: "warning",
+      },
+      {
+        label: "Boekhouding",
+        href: "/dashboard/boekhouding",
+        icon: Wallet,
       },
       {
         label: "Leads / CRM",
         href: "/dashboard/leads",
         icon: Contact,
-        badge: 5,
-        badgeTone: "info",
       },
       { label: "Automatisaties", href: "/dashboard/automatisaties", icon: Zap },
-      { label: "Bouwnetwerk", href: "/dashboard/werkposts", icon: HardHat },
+    ],
+  },
+  {
+    title: "Later",
+    collapsible: true,
+    items: [
+      {
+        label: "Bouwnetwerk",
+        href: "/dashboard/werkposts",
+        icon: HardHat,
+      },
       {
         label: "Samenwerkingen",
         href: "/dashboard/werkposts/samenwerkingen",
@@ -80,22 +135,29 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     ],
   },
   {
-    title: "Administratie",
+    title: "Beheer",
+    collapsible: true,
     items: [
       {
         label: "E-Facturen",
         href: "/dashboard/e-facturen",
         icon: ScrollText,
-      },
-      {
-        label: "Boekhouding",
-        href: "/dashboard/boekhouding",
-        icon: Wallet,
+        tag: "Beta",
       },
       {
         label: "Activiteiten",
         href: "/dashboard/activiteit",
         icon: List,
+      },
+      {
+        label: "Team",
+        href: "/dashboard/team",
+        icon: Users,
+      },
+      {
+        label: "Audit",
+        href: "/dashboard/audit",
+        icon: Shield,
       },
     ],
   },
@@ -109,16 +171,30 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
   },
 ];
 
+/** Sidebar-groepen met Bouwnetwerk/Samenwerkingen WIP-status o.b.v. echte teller. */
+export function getSidebarGroups(registeredUsers: number): SidebarGroup[] {
+  const meta = bouwnetwerkSidebarMeta(registeredUsers);
+  return SIDEBAR_GROUPS_BASE.map((group) => ({
+    ...group,
+    items: group.items.map((item) =>
+      item.href === "/dashboard/werkposts" ||
+      item.href === "/dashboard/werkposts/samenwerkingen"
+        ? { ...item, ...meta }
+        : item,
+    ),
+  }));
+}
+
 /** Observeer-links in de topbar (niet in sidebar). */
 export const TOPBAR_OBSERVEER_ITEMS: SidebarItem[] = [
-  { label: "Onderzoek", href: "/dashboard/onderzoek", icon: Search, available: false },
-  { label: "KPI's", href: "/dashboard/kpi", icon: BarChart3, available: false },
-  { label: "Analytics", href: "/dashboard/analytics", icon: LineChart, available: false },
+  { label: "Onderzoek", href: "/dashboard/onderzoek", icon: Search, available: true },
+  { label: "KPI's", href: "/dashboard/kpi", icon: BarChart3, available: true },
+  { label: "Analytics", href: "/dashboard/analytics", icon: LineChart, available: true },
 ];
 
 export const SIDEBAR_CEO_CONSOLE = {
   label: "CEO Console",
-  href: "/dashboard/admin",
+  href: "/admin",
   icon: Shield,
 } as const;
 

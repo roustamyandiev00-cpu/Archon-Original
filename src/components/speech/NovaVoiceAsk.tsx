@@ -9,7 +9,7 @@ type NovaVoiceAskProps = {
   stepTitle?: string;
   stepText?: string;
   variant?: "sky" | "orange";
-  /** Dashboard: stuur vraag naar Lima-chat i.p.v. lokaal antwoord. */
+  /** Dashboard: stuur vraag naar Ela-chat i.p.v. lokaal antwoord. */
   onAskChat?: (question: string) => void;
 };
 
@@ -28,7 +28,7 @@ export default function NovaVoiceAsk({
 
     if (onAskChat) {
       onAskChat(text);
-      setAnswer("Ik open Lima-chat met je vraag — even geduld.");
+      setAnswer("Ik open Ela-chat met je vraag — even geduld.");
       return;
     }
 
@@ -55,7 +55,7 @@ export default function NovaVoiceAsk({
 
       {answer && (
         <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.06] px-3 py-2.5 text-xs leading-relaxed text-sky-100/90">
-          <span className="font-medium text-sky-300">Lima:</span> {answer}
+          <span className="font-medium text-sky-300">Ela:</span> {answer}
         </div>
       )}
     </div>

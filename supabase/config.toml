@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "workspace"
+project_id = "Archon-Original"
 
 [api]
 enabled = true
@@ -102,7 +102,8 @@ openai_api_key = "env(OPENAI_API_KEY)"
 
 # Email testing server. Emails sent with the local dev setup are not actually sent - rather, they
 # are monitored, and you can view the emails that would have been sent from the web interface.
-[local_smtp]
+# CLI 2.107 expects [inbucket]; newer templates use [local_smtp].
+[inbucket]
 enabled = true
 # Port to use for the email testing server web interface.
 port = 54324

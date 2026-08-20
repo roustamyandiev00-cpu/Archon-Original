@@ -22,9 +22,18 @@ export function useVisibleCenterPosition(
   );
 
   React.useEffect(() => {
+    let frame = 0;
+    let cancelled = false;
+
     function updateLayout() {
       const parent = parentRef.current;
-      if (!parent) return;
+      if (!parent || cancelled) return;
+
+      // Flex-layout is soms pas 1 frame later klaar — anders blijft preview op 0px.
+      if (parent.clientWidth < 8 || parent.clientHeight < 8) {
+        frame = window.requestAnimationFrame(updateLayout);
+        return;
+      }
 
       const parentRect = parent.getBoundingClientRect();
       const visibleTop = Math.max(parentRect.top, 0);
@@ -75,6 +84,8 @@ export function useVisibleCenterPosition(
     }
 
     return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", updateLayout);
       window.removeEventListener("resize", updateLayout);
       resizeObserver?.disconnect();

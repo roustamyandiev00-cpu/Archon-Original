@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import PlaceholderPage from "@/components/dashboard/PlaceholderPage";
-import { CalendarDays, History, Send, Tags, Users, Wallet } from "lucide-react";
+import { History, Send, Wallet } from "lucide-react";
 
 type ModuleDef = {
   title: string;
@@ -10,26 +10,6 @@ type ModuleDef = {
 };
 
 const MODULES: Record<string, ModuleDef> = {
-  prijslijst: {
-    title: "Prijslijst",
-    description: "Beheer standaardprijzen, eenheden en calculatieregels voor offertes.",
-    icon: <Tags size={20} />,
-    features: [
-      "Artikelen en eenheidsprijzen",
-      "Koppeling met offertes en projecten",
-      "Import uit Excel of CSV",
-    ],
-  },
-  agenda: {
-    title: "Agenda",
-    description: "Plan werfbezoeken, afspraken en teamplanning op één plek.",
-    icon: <CalendarDays size={20} />,
-    features: [
-      "Dag- en weekweergave",
-      "Koppeling met projecten en klanten",
-      "Herinneringen en uitnodigingen",
-    ],
-  },
   telegram: {
     title: "Telegram Support",
     description: "Koppel Telegram voor snelle support en teamnotificaties.",
@@ -38,16 +18,6 @@ const MODULES: Record<string, ModuleDef> = {
       "Bot-koppeling voor meldingen",
       "Supportkanaal voor je team",
       "Statusupdates vanuit het dashboard",
-    ],
-  },
-  team: {
-    title: "Team",
-    description: "Beheer gebruikers, rollen en toegang binnen je organisatie.",
-    icon: <Users size={20} />,
-    features: [
-      "Teamleden uitnodigen",
-      "Rollen en rechten",
-      "Activiteit per gebruiker",
     ],
   },
   audit: {
@@ -77,6 +47,7 @@ export function createDashboardModulePage(slug: keyof typeof MODULES) {
   return function DashboardModulePage() {
     return (
       <PlaceholderPage
+        moduleId={slug}
         title={mod.title}
         description={mod.description}
         icon={mod.icon}

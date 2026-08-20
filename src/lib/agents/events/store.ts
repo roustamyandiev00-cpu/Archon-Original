@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Json } from "@/types/database.types";
+import type { Database } from "@/types/database.types";
 import type { DomainEvent, StoredDomainEvent } from "@/lib/agents/events/types";
-import { untyped } from "@/lib/integraties";
+
+type TypedSupabase = SupabaseClient<Database>;
 
 type DomainEventRow = {
   id: string;
@@ -46,11 +48,11 @@ function rowToEvent(row: DomainEventRow): StoredDomainEvent {
 }
 
 export async function storeDomainEvent(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   event: DomainEvent,
 ): Promise<{ id: string } | { duplicate: true } | { error: string }> {
   if (event.idempotencyKey) {
-    const { data: existing } = await untyped(supabase)
+    const { data: existing } = await supabase
       .from("domain_events")
       .select("id")
       .eq("tenant_id", event.tenantId)
@@ -60,7 +62,7 @@ export async function storeDomainEvent(
     if (existing) return { duplicate: true };
   }
 
-  const { data, error } = await untyped(supabase)
+  const { data, error } = await supabase
     .from("domain_events")
     .insert({
       event_id: event.eventId,
@@ -86,25 +88,25 @@ export async function storeDomainEvent(
     return { error: error.message };
   }
 
-  return { id: data.id as string };
+  return { id: data.id };
 }
 
 export async function markEventProcessed(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   eventDbId: string,
 ): Promise<void> {
-  await untyped(supabase)
+  await supabase
     .from("domain_events")
     .update({ processed_at: new Date().toISOString() })
     .eq("id", eventDbId);
 }
 
 export async function fetchUnprocessedEvents(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   tenantId: number,
   limit = 20,
 ): Promise<StoredDomainEvent[]> {
-  const { data } = await untyped(supabase)
+  const { data } = await supabase
     .from("domain_events")
     .select("*")
     .eq("tenant_id", tenantId)
@@ -116,7 +118,7 @@ export async function fetchUnprocessedEvents(
 }
 
 export async function createAgentRun(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   input: {
     tenantId: number;
     agentId: string;
@@ -126,7 +128,7 @@ export async function createAgentRun(
     inputRef?: Record<string, unknown>;
   },
 ): Promise<string | null> {
-  const { data, error } = await untyped(supabase)
+  const { data, error } = await supabase
     .from("agent_runs")
     .insert({
       tenant_id: input.tenantId,
@@ -140,11 +142,11 @@ export async function createAgentRun(
     .single();
 
   if (error) return null;
-  return data.id as string;
+  return data.id;
 }
 
 export async function updateAgentRun(
-  supabase: SupabaseClient,
+  supabase: TypedSupabase,
   runId: string,
   patch: {
     status?: string;
@@ -153,7 +155,7 @@ export async function updateAgentRun(
     completed?: boolean;
   },
 ): Promise<void> {
-  await untyped(supabase)
+  await supabase
     .from("agent_runs")
     .update({
       status: patch.status,

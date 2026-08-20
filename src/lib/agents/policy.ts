@@ -86,6 +86,38 @@ const POLICIES: Record<
     cooldownHours: 24,
     reversibility: "none",
   },
+  "Nova:propose_chat_sanction": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "high",
+    allowedChannels: ["internal"],
+    cooldownHours: 1,
+    reversibility: "full",
+  },
+  "Nova:propose_werkpost_match": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "medium",
+    allowedChannels: ["internal"],
+    cooldownHours: 24,
+    reversibility: "partial",
+  },
+  "Nova:propose_materiaal_zoek": {
+    autonomyLevel: 4,
+    requiresApproval: false,
+    riskLevel: "low",
+    allowedChannels: ["internal"],
+    cooldownHours: 0,
+    reversibility: "full",
+  },
+  "Nova:propose_geschil_samenvatting": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "high",
+    allowedChannels: ["internal"],
+    cooldownHours: 0,
+    reversibility: "partial",
+  },
   "Lima:create_invoice_from_offerte": {
     autonomyLevel: 3,
     requiresApproval: true,
@@ -93,6 +125,22 @@ const POLICIES: Record<
     allowedChannels: ["internal", "peppol"],
     cooldownHours: 0,
     reversibility: "partial",
+  },
+  "Nova:propose_create_task": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "low",
+    allowedChannels: ["internal"],
+    cooldownHours: 0,
+    reversibility: "full",
+  },
+  "Lima:propose_invoice_followup_task": {
+    autonomyLevel: 3,
+    requiresApproval: true,
+    riskLevel: "low",
+    allowedChannels: ["internal"],
+    cooldownHours: 24,
+    reversibility: "full",
   },
 };
 
@@ -142,8 +190,11 @@ export function evaluatePolicy(input: PolicyInput): PolicyDecision {
   };
 }
 
-export function canApproveAction(userRole?: string): boolean {
-  if (!userRole) return true;
-  const blocked = new Set(["viewer", "readonly"]);
-  return !blocked.has(userRole.toLowerCase());
+export function canApproveAction(userRole?: string | null): boolean {
+  if (userRole == null) return false;
+  const normalized = userRole.trim().toLowerCase();
+  if (!normalized) return false;
+  // Deny-by-default: alleen expliciete allowlist.
+  const allowed = new Set(["owner", "admin"]);
+  return allowed.has(normalized);
 }

@@ -1,6 +1,5 @@
 import { createHash } from "crypto";
 import { normalizeStructuredCommunication } from "@/lib/peppol/be";
-import { validateMercuriusInvoice } from "@/lib/peppol/mercurius";
 
 export type ParsedBankLine = {
   datum: string;

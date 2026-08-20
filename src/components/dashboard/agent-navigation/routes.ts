@@ -54,7 +54,7 @@ const PAGE_PATTERNS: { patterns: RegExp[]; route: string; label: string; openCon
   },
   {
     patterns: [/project/],
-    route: "/dashboard/projecten",
+    route: "/dashboard/offertes/projecten",
     label: "Projecten",
   },
   {

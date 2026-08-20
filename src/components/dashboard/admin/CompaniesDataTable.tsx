@@ -163,7 +163,7 @@ export default function CompaniesDataTable({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="grid gap-3 lg:grid-cols-[minmax(18rem,1fr)_12rem_12rem_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(18rem,1fr)_12rem_12rem_auto]">
           <label className="relative block">
             <span className="sr-only">Search companies</span>
             <Search
@@ -228,132 +228,242 @@ export default function CompaniesDataTable({
           </Button>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10">
-          <Table className="min-w-[1320px]">
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="min-w-[260px]">Company Name</TableHead>
-                <TableHead className="min-w-[190px]">Owner</TableHead>
-                <TableHead>Subscription Plan</TableHead>
-                <TableHead className="text-right">Active Users</TableHead>
-                <TableHead className="text-right">AI Tokens Used</TableHead>
-                <TableHead className="text-right">AI Cost</TableHead>
-                <TableHead className="text-right">
-                  <button
-                    type="button"
-                    onClick={toggleRevenueSort}
-                    className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
-                    aria-label="Sort by monthly revenue"
-                  >
-                    Monthly Revenue
-                    {revenueSort === "desc" ? (
-                      <ArrowDown size={13} />
-                    ) : (
-                      <ArrowUp size={13} />
-                    )}
-                  </button>
-                </TableHead>
-                <TableHead className="text-right">Storage Used</TableHead>
-                <TableHead>Last Login</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created Date</TableHead>
-                <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleCompanies.length > 0 ? (
-                visibleCompanies.map((company) => (
-                  <TableRow key={company.id} id={`company-${company.id}`}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border font-mono text-xs font-semibold ${logoToneClasses[company.logoTone]}`}
-                          aria-hidden
-                        >
-                          {company.logoInitials}
-                        </span>
-                        <div className="min-w-0">
-                          <Link
-                            href={`/dashboard/admin/companies/${company.id}`}
-                            className="block truncate font-medium text-zinc-100 transition-colors hover:text-sky-300"
-                          >
-                            {company.name}
-                          </Link>
-                          <p className="truncate font-mono text-xs text-zinc-500">
-                            {company.domain}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="min-w-0">
-                        <p className="truncate text-zinc-200">{company.owner}</p>
-                        <p className="truncate text-xs text-zinc-500">
-                          {company.ownerEmail}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={planBadgeVariants[company.plan]}>
-                        {planLabels[company.plan]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-zinc-300">
-                      {company.activeUsers.toLocaleString("nl-BE")}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-zinc-300">
-                      {formatTokens(company.aiTokensUsed)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-zinc-300">
-                      {formatCurrency(company.aiCost)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-semibold text-zinc-100">
-                      {formatCurrency(company.monthlyRevenue)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-zinc-300">
-                      {formatStorage(company.storageUsedGb)}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-zinc-500">
-                      {formatDateTime(company.lastLogin)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusBadgeVariants[company.status]}>
-                        {statusLabels[company.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-zinc-500">
-                      {formatDate(company.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-right md:sticky md:right-0 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
-                      <CompanyActionMenu
-                        company={company}
-                        open={openMenuId === company.id}
-                        onOpenChange={(open) =>
-                          setOpenMenuId(open ? company.id : null)
-                        }
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={12} className="py-12 text-center">
-                    <div className="mx-auto max-w-sm">
-                      <p className="text-sm font-medium text-zinc-200">
-                        No companies found
-                      </p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        Adjust search or filters to broaden the company list.
+        {visibleCompanies.length > 0 ? (
+          <>
+            <div className="space-y-3 lg:hidden">
+              {visibleCompanies.map((company) => (
+                <article
+                  key={company.id}
+                  className="rounded-2xl border border-white/10 bg-zinc-950/50 p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border font-mono text-xs font-semibold ${logoToneClasses[company.logoTone]}`}
+                      aria-hidden
+                    >
+                      {company.logoInitials}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/admin/companies/${company.id}`}
+                        className="block truncate text-base font-semibold text-zinc-100 transition-colors hover:text-sky-300"
+                      >
+                        {company.name}
+                      </Link>
+                      <p className="truncate font-mono text-xs text-zinc-500">
+                        {company.domain}
                       </p>
                     </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge variant={planBadgeVariants[company.plan]}>
+                      {planLabels[company.plan]}
+                    </Badge>
+                    <Badge variant={statusBadgeVariants[company.status]}>
+                      {statusLabels[company.status]}
+                    </Badge>
+                    <Badge
+                      variant={
+                        company.risicoStatus === "normaal" ? "default" : "warning"
+                      }
+                    >
+                      {(company.risicoStatus ?? "normaal").replaceAll("_", " ")}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                      Owner
+                    </p>
+                    <p className="mt-2 text-sm text-zinc-200">{company.owner}</p>
+                    <p className="text-xs text-zinc-500">{company.ownerEmail}</p>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <MobileMetric
+                      label="MRR"
+                      value={formatCurrency(company.monthlyRevenue)}
+                      emphasis
+                    />
+                    <MobileMetric
+                      label="Users"
+                      value={company.activeUsers.toLocaleString("nl-BE")}
+                    />
+                    <MobileMetric
+                      label="AI tokens"
+                      value={formatTokens(company.aiTokensUsed)}
+                    />
+                    <MobileMetric
+                      label="Storage"
+                      value={formatStorage(company.storageUsedGb)}
+                    />
+                    <MobileMetric
+                      label="AI cost"
+                      value={formatCurrency(company.aiCost)}
+                    />
+                    <MobileMetric
+                      label="Created"
+                      value={formatDate(company.createdAt)}
+                    />
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                        Last login
+                      </p>
+                      <p className="mt-1 font-mono text-xs text-zinc-300">
+                        {formatDateTime(company.lastLogin)}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/admin/companies/${company.id}`}
+                      className="inline-flex min-h-10 items-center justify-center rounded-full bg-sky-500 px-4 text-sm font-medium text-zinc-950 transition-colors hover:bg-sky-400"
+                    >
+                      Open
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto rounded-2xl border border-white/10 lg:block">
+              <Table className="min-w-[1320px]">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="min-w-[260px]">Bedrijf</TableHead>
+                    <TableHead className="min-w-[190px]">Eigenaar</TableHead>
+                    <TableHead>Abonnement</TableHead>
+                    <TableHead className="text-right">Actieve gebruikers</TableHead>
+                    <TableHead className="text-right">AI-tokens</TableHead>
+                    <TableHead className="text-right">Geregistreerde AI-kosten</TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        type="button"
+                        onClick={toggleRevenueSort}
+                        className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
+                        aria-label="Sort by monthly revenue"
+                      >
+                        Monthly Revenue
+                        {revenueSort === "desc" ? (
+                          <ArrowDown size={13} />
+                        ) : (
+                          <ArrowUp size={13} />
+                        )}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">Opslag</TableHead>
+                    <TableHead>Laatste login</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Risico</TableHead>
+                    <TableHead>Aangemaakt</TableHead>
+                    <TableHead className="text-right md:sticky md:right-0 md:z-10 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                      <span className="sr-only">Acties</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleCompanies.map((company) => (
+                    <TableRow key={company.id} id={`company-${company.id}`}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border font-mono text-xs font-semibold ${logoToneClasses[company.logoTone]}`}
+                            aria-hidden
+                          >
+                            {company.logoInitials}
+                          </span>
+                          <div className="min-w-0">
+                            <Link
+                              href={`/admin/companies/${company.id}`}
+                              className="block truncate font-medium text-zinc-100 transition-colors hover:text-sky-300"
+                            >
+                              {company.name}
+                            </Link>
+                            <p className="truncate font-mono text-xs text-zinc-500">
+                              {company.domain}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="min-w-0">
+                          <p className="truncate text-zinc-200">{company.owner}</p>
+                          <p className="truncate text-xs text-zinc-500">
+                            {company.ownerEmail}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={planBadgeVariants[company.plan]}>
+                          {planLabels[company.plan]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-zinc-300">
+                        {company.activeUsers.toLocaleString("nl-BE")}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-zinc-300">
+                        {formatTokens(company.aiTokensUsed)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-zinc-300">
+                        {formatCurrency(company.aiCost)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold text-zinc-100">
+                        {formatCurrency(company.monthlyRevenue)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-zinc-300">
+                        {formatStorage(company.storageUsedGb)}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-zinc-500">
+                        {formatDateTime(company.lastLogin)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusBadgeVariants[company.status]}>
+                          {statusLabels[company.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            company.risicoStatus === "normaal"
+                              ? "default"
+                              : "warning"
+                          }
+                        >
+                          {(company.risicoStatus ?? "normaal").replaceAll("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-zinc-500">
+                        {formatDate(company.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right md:sticky md:right-0 md:bg-zinc-950 md:shadow-[-16px_0_24px_rgba(9,9,11,0.72)]">
+                        <CompanyActionMenu
+                          company={company}
+                          open={openMenuId === company.id}
+                          onOpenChange={(open) =>
+                            setOpenMenuId(open ? company.id : null)
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center">
+            <div className="mx-auto max-w-sm px-4">
+              <p className="text-sm font-medium text-zinc-200">
+                No companies found
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Adjust search or filters to broaden the company list.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
@@ -400,6 +510,31 @@ export default function CompaniesDataTable({
   );
 }
 
+function MobileMetric({
+  label,
+  value,
+  emphasis = false,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+        {label}
+      </p>
+      <p
+        className={`mt-1 font-mono text-sm ${
+          emphasis ? "font-semibold text-zinc-100" : "text-zinc-300"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function CompanyActionMenu({
   company,
   open,
@@ -437,34 +572,34 @@ function CompanyActionMenu({
           onClick={(event) => event.stopPropagation()}
         >
           <MenuLink
-            href={`/dashboard/admin/companies/${company.id}`}
+            href={`/admin/companies/${company.id}`}
             icon={<ExternalLink size={14} />}
             onClick={closeMenu}
           >
             Open Company
           </MenuLink>
-          <MenuItem icon={<Pencil size={14} />} onClick={closeMenu}>
+          <MenuItem icon={<Pencil size={14} />} onClick={closeMenu} disabled>
             Edit
           </MenuItem>
           <MenuItem
             icon={<Ban size={14} />}
             onClick={closeMenu}
-            disabled={company.status === "suspended"}
+            disabled
           >
             Suspend
           </MenuItem>
           <MenuItem
             icon={<CheckCircle2 size={14} />}
             onClick={closeMenu}
-            disabled={company.status === "active"}
+            disabled
           >
             Activate
           </MenuItem>
           <div className="my-1 h-px bg-white/10" />
-          <MenuItem icon={<CreditCard size={14} />} onClick={closeMenu}>
+          <MenuItem icon={<CreditCard size={14} />} onClick={closeMenu} disabled>
             View Billing
           </MenuItem>
-          <MenuItem icon={<Bot size={14} />} onClick={closeMenu}>
+          <MenuItem icon={<Bot size={14} />} onClick={closeMenu} disabled>
             View AI Usage
           </MenuItem>
         </div>

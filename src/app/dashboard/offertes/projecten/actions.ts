@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWriteAccess } from "@/components/dashboard/context";
-import type { ProjectStatus } from "@/components/dashboard/projecten/projecten";
+import {
+  toDbProjectStatus,
+  type ProjectStatus,
+} from "@/components/dashboard/projecten/projecten";
 
 const STATUSES = new Set<ProjectStatus>([
   "gepland",
@@ -26,8 +29,9 @@ export async function createProject(input: {
   if (!naam) return { error: "Projectnaam is verplicht." };
   if (!klant) return { error: "Klantnaam is verplicht." };
 
-  const status =
+  const uiStatus =
     input.status && STATUSES.has(input.status) ? input.status : "gepland";
+  const status = toDbProjectStatus(uiStatus);
   const startLabel =
     input.start_datum_label?.trim() ||
     new Date().toLocaleDateString("nl-BE", {
@@ -62,7 +66,7 @@ export async function updateProjectStatus(id: string, status: ProjectStatus) {
 
   const { error } = await supabase
     .from("projecten")
-    .update({ status })
+    .update({ status: toDbProjectStatus(status) })
     .eq("id", id)
     .eq("bedrijf_id", companyId);
 

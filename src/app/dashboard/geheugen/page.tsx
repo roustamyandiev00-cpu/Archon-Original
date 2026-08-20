@@ -18,6 +18,7 @@ import {
 import { getCompanyContext } from "@/lib/company";
 import { isActivePreviewMode } from "@/components/dashboard/context";
 import { showDemoData } from "@/lib/demo-mode";
+import SeedPricesButton from "@/components/dashboard/geheugen/SeedPricesButton";
 
 export const metadata = { title: "Geheugen — ArchonPro" };
 
@@ -121,6 +122,7 @@ export default async function GeheugenPage() {
         actions={
           <div className="flex items-center gap-2">
             {isDemo && <DemoBadge />}
+            {companyId && !isDemo && <SeedPricesButton />}
             <Link
               href="/dashboard/instellingen"
               className="text-xs text-sky-400 hover:underline"

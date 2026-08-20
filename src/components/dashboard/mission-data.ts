@@ -9,6 +9,10 @@ import {
   type AgentCapability,
   type CustomAgent,
 } from "@/components/dashboard/agents/config";
+import {
+  BOUWNETWERK_REQUIRED_USERS,
+  fetchPlatformRegistrationCount,
+} from "@/lib/bouwnetwerk-gate";
 
 /** Actieve pipeline-stadia — alles behalve gesloten deals. */
 const OPEN_STADIA = STADIA.filter(
@@ -135,6 +139,9 @@ export type TopbarSummary = {
   offertesVandaag: number;
   verzonden: number;
   pipeline: number;
+  /** Echte platform-registraties (profiles). */
+  registeredUsers: number;
+  requiredUsers: number;
   notifications: { id: string; title: string; detail: string; href: string }[];
   syncedAt: string;
 };
@@ -245,10 +252,13 @@ export async function loadTopbarSummary(
   companyId: number | null,
 ): Promise<TopbarSummary> {
   const today = new Date().toISOString().slice(0, 10);
+  const registeredUsers = await fetchPlatformRegistrationCount(supabase);
   const fallback: TopbarSummary = {
     offertesVandaag: 0,
     verzonden: 0,
     pipeline: 0,
+    registeredUsers,
+    requiredUsers: BOUWNETWERK_REQUIRED_USERS,
     notifications: [],
     syncedAt: new Date().toISOString(),
   };
@@ -301,6 +311,8 @@ export async function loadTopbarSummary(
     offertesVandaag: offertesToday.count ?? 0,
     verzonden: sentToday.count ?? 0,
     pipeline,
+    registeredUsers,
+    requiredUsers: BOUWNETWERK_REQUIRED_USERS,
     notifications,
     syncedAt: new Date().toISOString(),
   };
@@ -360,6 +372,7 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
       deals,
       recentAccepted,
       recentPaid,
+      crmTasksRes,
     ] = await Promise.all([
       supabase
         .from("offertes")
@@ -419,6 +432,15 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
         .not("paid_at", "is", null)
         .order("paid_at", { ascending: false })
         .limit(3),
+      supabase
+        .from("tasks")
+        .select("id, title, status, priority, due_at, assigned_to_user_id")
+        .eq("company_id", companyId)
+        .is("deleted_at", null)
+        .neq("status", "completed")
+        .neq("status", "cancelled")
+        .order("due_at", { ascending: true, nullsFirst: false })
+        .limit(12),
     ]);
 
     const overdueFacturen = openFacturen.filter(
@@ -531,6 +553,38 @@ export const fetchMissionCore = cache(async function fetchMissionCore(
           label: "Lead",
         });
       }
+    }
+
+    const crmTasks = (crmTasksRes.data ?? []) as {
+      id: number;
+      title: string;
+      status: string;
+      priority: string;
+      due_at: string | null;
+    }[];
+    for (const t of crmTasks) {
+      const overdue =
+        t.due_at != null &&
+        Date.parse(t.due_at) < Date.now() &&
+        t.status !== "completed";
+      const item: MissionTask = {
+        id: `crm-task-${t.id}`,
+        title: t.title,
+        detail: t.due_at
+          ? `Deadline ${shortDateFmt.format(new Date(t.due_at))} · ${t.status}`
+          : `Status ${t.status}`,
+        kind: "opvolging",
+        href: `/dashboard/taken/${t.id}`,
+        priority:
+          t.priority === "urgent" || overdue
+            ? "high"
+            : t.priority === "high"
+              ? "medium"
+              : "low",
+        label: overdue ? "Achterstallig" : t.priority,
+      };
+      if (overdue || t.priority === "urgent") important.unshift(item);
+      else tasks.unshift(item);
     }
 
     if (offertesCount === 0 && klantenCount > 0) {
@@ -830,13 +884,13 @@ function proactiveForAgent(
 function agentMatchesLog(agent: CustomAgent, logName: string) {
   const n = logName.toLowerCase();
   if (n.includes(agent.name.toLowerCase())) return true;
-  if (agent.id === "nova" && (n.includes("nova") || n === agent.name.toLowerCase()))
+  if (agent.id === "nova" && (n.includes("nova") || n.includes("lara") || n === agent.name.toLowerCase()))
     return true;
-  if (agent.id === "schatter" && (n.includes("schatter") || n.includes("offerte")))
+  if (agent.id === "schatter" && (n.includes("schatter") || n.includes("viktor") || n.includes("offerte")))
     return true;
-  if (agent.id === "facturatie" && (n.includes("factuur") || n.includes("peppol")))
+  if (agent.id === "facturatie" && (n.includes("facturatie") || n.includes("nina") || n.includes("factuur") || n.includes("peppol")))
     return true;
-  if (agent.id === "opvolger" && (n.includes("opvolg") || n.includes("lead")))
+  if (agent.id === "opvolger" && (n.includes("opvolger") || n.includes("daan") || n.includes("opvolg") || n.includes("lead")))
     return true;
   return false;
 }

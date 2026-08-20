@@ -67,6 +67,8 @@ describe("policy engine", () => {
   it("blocks readonly users from approving", () => {
     expect(canApproveAction("viewer")).toBe(false);
     expect(canApproveAction("admin")).toBe(true);
+    expect(canApproveAction(undefined)).toBe(false);
+    expect(canApproveAction("member")).toBe(false);
   });
 });
 

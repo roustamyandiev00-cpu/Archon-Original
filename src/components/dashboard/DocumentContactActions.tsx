@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, MessageCircle, Phone, Link2, Check } from "lucide-react";
+import { Mail, MessageCircle, Phone, Link2, Check, Download, Send } from "lucide-react";
 import { formatEuro } from "@/lib/offertes";
+import { SITE_URL } from "@/lib/seo";
 
 type Soort = "offerte" | "factuur" | "proforma";
 
@@ -24,6 +25,7 @@ function berichtTekst(
   nummer: string,
   klant: string,
   bedrag: number | null,
+  shareUrl?: string | null,
 ): string {
   const label =
     soort === "factuur"
@@ -33,7 +35,8 @@ function berichtTekst(
         : "offerte";
   const bedragTekst =
     bedrag != null ? ` ter waarde van ${formatEuro(bedrag)}` : "";
-  return `Beste ${klant},\n\nHierbij ${label} ${nummer}${bedragTekst}. Heeft u nog vragen, laat het gerust weten.\n\nMet vriendelijke groet`;
+  const linkRegel = shareUrl ? `\n\nBekijk hier: ${shareUrl}` : "";
+  return `Beste ${klant},\n\nHierbij ${label} ${nummer}${bedragTekst}.${linkRegel}\n\nHeeft u nog vragen, laat het gerust weten.\n\nMet vriendelijke groet`;
 }
 
 export default function DocumentContactActions({
@@ -44,6 +47,10 @@ export default function DocumentContactActions({
   email,
   phone,
   detailPath,
+  pdfPath,
+  onSend,
+  sendDisabled = false,
+  sendTitle,
 }: {
   soort: Soort;
   nummer: string;
@@ -52,6 +59,12 @@ export default function DocumentContactActions({
   email: string | null;
   phone: string | null;
   detailPath?: string;
+  /** Pad naar PDF-download, bv. /dashboard/facturen/12/pdf */
+  pdfPath?: string;
+  /** Extra actie: open verstuur-modal (offerte SMTP/link). */
+  onSend?: () => void;
+  sendDisabled?: boolean;
+  sendTitle?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
@@ -62,7 +75,12 @@ export default function DocumentContactActions({
       : soort === "proforma"
         ? "Proforma"
         : "Offerte";
-  const bericht = berichtTekst(soort, nummer, klant, bedrag);
+
+  const absoluteDetail = detailPath
+    ? `${SITE_URL.replace(/\/$/, "")}${detailPath}`
+    : null;
+
+  const bericht = berichtTekst(soort, nummer, klant, bedrag, absoluteDetail);
 
   const mailtoHref = email
     ? `mailto:${email}?subject=${encodeURIComponent(
@@ -70,11 +88,12 @@ export default function DocumentContactActions({
       )}&body=${encodeURIComponent(bericht)}`
     : undefined;
 
+  // Met nummer: directe chat. Zonder: WhatsApp openen met voorgeladen tekst.
   const whatsappHref = phone
     ? `https://wa.me/${toWhatsappNumber(phone)}?text=${encodeURIComponent(
         bericht,
       )}`
-    : undefined;
+    : `https://wa.me/?text=${encodeURIComponent(bericht)}`;
 
   const telHref = phone ? `tel:${phone.replace(/\s+/g, "")}` : undefined;
 
@@ -83,7 +102,7 @@ export default function DocumentContactActions({
     const url =
       typeof window !== "undefined"
         ? `${window.location.origin}${detailPath}`
-        : detailPath;
+        : `${SITE_URL.replace(/\/$/, "")}${detailPath}`;
     setCopyError(false);
     try {
       await navigator.clipboard.writeText(url);
@@ -96,7 +115,23 @@ export default function DocumentContactActions({
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center justify-end gap-0.5">
+      {onSend ? (
+        <IconAction
+          as="button"
+          onClick={onSend}
+          disabled={sendDisabled}
+          title={
+            sendTitle ??
+            (sendDisabled ? "Versturen niet beschikbaar" : "Versturen…")
+          }
+          colorClass="text-sky-400 hover:bg-sky-500/15 hover:text-sky-300"
+          label="Versturen"
+        >
+          <Send size={15} />
+        </IconAction>
+      ) : null}
+
       <IconAction
         as="a"
         href={mailtoHref}
@@ -112,8 +147,12 @@ export default function DocumentContactActions({
         as="a"
         href={whatsappHref}
         target="_blank"
-        disabled={!phone}
-        title={phone ? "Versturen via WhatsApp" : "Geen telefoonnummer bekend"}
+        disabled={false}
+        title={
+          phone
+            ? `WhatsApp naar ${phone}`
+            : "WhatsApp openen (kies contact)"
+        }
         colorClass="text-emerald-400 hover:bg-emerald-500/15 hover:text-emerald-300"
         label="WhatsApp"
       >
@@ -131,7 +170,21 @@ export default function DocumentContactActions({
         <Phone size={15} />
       </IconAction>
 
-      {detailPath && (
+      {pdfPath ? (
+        <IconAction
+          as="a"
+          href={pdfPath}
+          target="_blank"
+          disabled={false}
+          title="PDF downloaden"
+          colorClass="text-amber-400 hover:bg-amber-500/15 hover:text-amber-300"
+          label="PDF downloaden"
+        >
+          <Download size={15} />
+        </IconAction>
+      ) : null}
+
+      {detailPath ? (
         <IconAction
           as="button"
           onClick={copyLink}
@@ -152,7 +205,7 @@ export default function DocumentContactActions({
         >
           {copied ? <Check size={15} /> : <Link2 size={15} />}
         </IconAction>
-      )}
+      ) : null}
     </div>
   );
 }

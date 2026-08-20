@@ -229,7 +229,7 @@ export function incassoTitle(ctx: InvoiceOverdueContext): string {
 export function incassoReason(ctx: InvoiceOverdueContext): string {
   if (!ctx.stage) return `${ctx.klant} — factuur openstaand`;
   if (ctx.stage === "deurwaarder") {
-    return `${ctx.klant} — openstaand na herinneringen. Lima stelt het volledige dossier samen voor de deurwaarder.`;
+    return `${ctx.klant} — openstaand na herinneringen. Ela stelt het volledige dossier samen voor de deurwaarder.`;
   }
-  return `${ctx.klant} — factuur ${ctx.daysOverdue} dagen over vervaldatum. Lima stelt ${stageLabel(ctx.stage).toLowerCase()} voor.`;
+  return `${ctx.klant} — factuur ${ctx.daysOverdue} dagen over vervaldatum. Ela stelt ${stageLabel(ctx.stage).toLowerCase()} voor.`;
 }

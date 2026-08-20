@@ -466,6 +466,73 @@ export type Database = {
           },
         ]
       }
+      agent_runs: {
+        Row: {
+          agent_id: string
+          completed_at: string | null
+          correlation_id: string
+          created_at: string
+          error: string | null
+          event_id: string | null
+          id: string
+          input_ref: Json | null
+          output_ref: Json | null
+          started_at: string
+          status: string
+          tenant_id: number
+        }
+        Insert: {
+          agent_id: string
+          completed_at?: string | null
+          correlation_id: string
+          created_at?: string
+          error?: string | null
+          event_id?: string | null
+          id?: string
+          input_ref?: Json | null
+          output_ref?: Json | null
+          started_at?: string
+          status?: string
+          tenant_id: number
+        }
+        Update: {
+          agent_id?: string
+          completed_at?: string | null
+          correlation_id?: string
+          created_at?: string
+          error?: string | null
+          event_id?: string | null
+          id?: string
+          input_ref?: Json | null
+          output_ref?: Json | null
+          started_at?: string
+          status?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_runs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "domain_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_tasks: {
         Row: {
           approved_by_user_id: string | null
@@ -1170,6 +1237,65 @@ export type Database = {
           },
         ]
       }
+      bedrijf_connecties: {
+        Row: {
+          bedrijf_id: number
+          connectie_bedrijf_id: number
+          created_at: string
+          id: string
+          notities: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bedrijf_id: number
+          connectie_bedrijf_id: number
+          created_at?: string
+          id?: string
+          notities?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bedrijf_id?: number
+          connectie_bedrijf_id?: number
+          created_at?: string
+          id?: string
+          notities?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bedrijf_connecties_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_connecties_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_connecties_connectie_bedrijf_id_fkey"
+            columns: ["connectie_bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_connecties_connectie_bedrijf_id_fkey"
+            columns: ["connectie_bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bedrijf_reviews: {
         Row: {
           commentaar: string
@@ -1177,6 +1303,7 @@ export type Database = {
           id: string
           rating: number
           reviewer_company_id: number
+          samenwerking_contract_id: string | null
           target_company_id: number
         }
         Insert: {
@@ -1185,6 +1312,7 @@ export type Database = {
           id?: string
           rating: number
           reviewer_company_id: number
+          samenwerking_contract_id?: string | null
           target_company_id: number
         }
         Update: {
@@ -1193,6 +1321,7 @@ export type Database = {
           id?: string
           rating?: number
           reviewer_company_id?: number
+          samenwerking_contract_id?: string | null
           target_company_id?: number
         }
         Relationships: [
@@ -1211,6 +1340,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bedrijf_reviews_samenwerking_contract_id_fkey"
+            columns: ["samenwerking_contract_id"]
+            isOneToOne: false
+            referencedRelation: "samenwerking_contracts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bedrijf_reviews_target_company_id_fkey"
             columns: ["target_company_id"]
             isOneToOne: false
@@ -1222,6 +1358,79 @@ export type Database = {
             columns: ["target_company_id"]
             isOneToOne: false
             referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bedrijf_sancties: {
+        Row: {
+          bedrijf_id: number
+          bevestigd_door: string | null
+          bewijs_agent_action_id: number | null
+          bewijs_agent_run_id: string | null
+          channel_id: string | null
+          created_at: string
+          id: string
+          ingaat_op: string | null
+          message_id: string | null
+          reden: string
+          status: string
+          type: string
+          updated_at: string
+          verloopt_op: string | null
+        }
+        Insert: {
+          bedrijf_id: number
+          bevestigd_door?: string | null
+          bewijs_agent_action_id?: number | null
+          bewijs_agent_run_id?: string | null
+          channel_id?: string | null
+          created_at?: string
+          id?: string
+          ingaat_op?: string | null
+          message_id?: string | null
+          reden: string
+          status?: string
+          type: string
+          updated_at?: string
+          verloopt_op?: string | null
+        }
+        Update: {
+          bedrijf_id?: number
+          bevestigd_door?: string | null
+          bewijs_agent_action_id?: number | null
+          bewijs_agent_run_id?: string | null
+          channel_id?: string | null
+          created_at?: string
+          id?: string
+          ingaat_op?: string | null
+          message_id?: string | null
+          reden?: string
+          status?: string
+          type?: string
+          updated_at?: string
+          verloopt_op?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bedrijf_sancties_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_sancties_bedrijf_id_fkey"
+            columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bedrijf_sancties_bewijs_agent_action_id_fkey"
+            columns: ["bewijs_agent_action_id"]
+            isOneToOne: false
+            referencedRelation: "agent_actions"
             referencedColumns: ["id"]
           },
         ]
@@ -1283,6 +1492,7 @@ export type Database = {
           ai_assistant: string | null
           algemene_voorwaarden: string | null
           betaalterm: number
+          betrouwbaarheidsscore: number | null
           btw: string | null
           created_at: string | null
           default_advance_template: string
@@ -1301,6 +1511,7 @@ export type Database = {
           peppol_participant_id: string | null
           plan: string | null
           postcode: string | null
+          risicostatus: string
           slug: string | null
           stad: string | null
           status: string
@@ -1308,12 +1519,14 @@ export type Database = {
           telefoon: string | null
           updated_at: string | null
           user_id: string | null
+          verificatiestatus: string
         }
         Insert: {
           adres?: string | null
           ai_assistant?: string | null
           algemene_voorwaarden?: string | null
           betaalterm?: number
+          betrouwbaarheidsscore?: number | null
           btw?: string | null
           created_at?: string | null
           default_advance_template?: string
@@ -1332,6 +1545,7 @@ export type Database = {
           peppol_participant_id?: string | null
           plan?: string | null
           postcode?: string | null
+          risicostatus?: string
           slug?: string | null
           stad?: string | null
           status?: string
@@ -1339,12 +1553,14 @@ export type Database = {
           telefoon?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verificatiestatus?: string
         }
         Update: {
           adres?: string | null
           ai_assistant?: string | null
           algemene_voorwaarden?: string | null
           betaalterm?: number
+          betrouwbaarheidsscore?: number | null
           btw?: string | null
           created_at?: string | null
           default_advance_template?: string
@@ -1363,6 +1579,7 @@ export type Database = {
           peppol_participant_id?: string | null
           plan?: string | null
           postcode?: string | null
+          risicostatus?: string
           slug?: string | null
           stad?: string | null
           status?: string
@@ -1370,6 +1587,7 @@ export type Database = {
           telefoon?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verificatiestatus?: string
         }
         Relationships: []
       }
@@ -1609,6 +1827,85 @@ export type Database = {
           },
         ]
       }
+      bouwmateriaal_prijzen: {
+        Row: {
+          bron_url: string | null
+          btw_status: string
+          created_at: string
+          created_by_company_id: number | null
+          eenheid: string
+          gecontroleerd_op: string
+          hoeveelheid_beschikbaar: number | null
+          id: string
+          leveringskosten: number | null
+          levertijd_dagen: number | null
+          merk: string | null
+          prijs: number
+          productnaam: string
+          specificaties: string | null
+          updated_at: string
+          winkel_id: number
+        }
+        Insert: {
+          bron_url?: string | null
+          btw_status?: string
+          created_at?: string
+          created_by_company_id?: number | null
+          eenheid?: string
+          gecontroleerd_op: string
+          hoeveelheid_beschikbaar?: number | null
+          id?: string
+          leveringskosten?: number | null
+          levertijd_dagen?: number | null
+          merk?: string | null
+          prijs: number
+          productnaam: string
+          specificaties?: string | null
+          updated_at?: string
+          winkel_id: number
+        }
+        Update: {
+          bron_url?: string | null
+          btw_status?: string
+          created_at?: string
+          created_by_company_id?: number | null
+          eenheid?: string
+          gecontroleerd_op?: string
+          hoeveelheid_beschikbaar?: number | null
+          id?: string
+          leveringskosten?: number | null
+          levertijd_dagen?: number | null
+          merk?: string | null
+          prijs?: number
+          productnaam?: string
+          specificaties?: string | null
+          updated_at?: string
+          winkel_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bouwmateriaal_prijzen_created_by_company_id_fkey"
+            columns: ["created_by_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bouwmateriaal_prijzen_created_by_company_id_fkey"
+            columns: ["created_by_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bouwmateriaal_prijzen_winkel_id_fkey"
+            columns: ["winkel_id"]
+            isOneToOne: false
+            referencedRelation: "bouwmateriaal_winkels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bouwmateriaal_winkels: {
         Row: {
           adres: string | null
@@ -1617,14 +1914,19 @@ export type Database = {
           created_at: string
           fotos: string[]
           id: number
+          laatste_controle_datum: string | null
           lat: number | null
+          leveringsgebied: string | null
           lng: number | null
+          materialen: string[]
           naam: string
+          openingsuren: string | null
           postcode: string | null
           regio: string | null
           stad: string | null
           telefoon: string | null
           toegevoegd_door: string | null
+          verificatiestatus: string
           website: string | null
         }
         Insert: {
@@ -1634,14 +1936,19 @@ export type Database = {
           created_at?: string
           fotos?: string[]
           id?: never
+          laatste_controle_datum?: string | null
           lat?: number | null
+          leveringsgebied?: string | null
           lng?: number | null
+          materialen?: string[]
           naam: string
+          openingsuren?: string | null
           postcode?: string | null
           regio?: string | null
           stad?: string | null
           telefoon?: string | null
           toegevoegd_door?: string | null
+          verificatiestatus?: string
           website?: string | null
         }
         Update: {
@@ -1651,14 +1958,19 @@ export type Database = {
           created_at?: string
           fotos?: string[]
           id?: never
+          laatste_controle_datum?: string | null
           lat?: number | null
+          leveringsgebied?: string | null
           lng?: number | null
+          materialen?: string[]
           naam?: string
+          openingsuren?: string | null
           postcode?: string | null
           regio?: string | null
           stad?: string | null
           telefoon?: string | null
           toegevoegd_door?: string | null
+          verificatiestatus?: string
           website?: string | null
         }
         Relationships: []
@@ -1949,6 +2261,7 @@ export type Database = {
           low_balance_notified: boolean
           low_balance_threshold: number | null
           stripe_customer_id: string | null
+          token_limit: number | null
           total_purchased: number
           total_spent: number | null
           updated_at: string
@@ -1965,6 +2278,7 @@ export type Database = {
           low_balance_notified?: boolean
           low_balance_threshold?: number | null
           stripe_customer_id?: string | null
+          token_limit?: number | null
           total_purchased?: number
           total_spent?: number | null
           updated_at?: string
@@ -1981,6 +2295,7 @@ export type Database = {
           low_balance_notified?: boolean
           low_balance_threshold?: number | null
           stripe_customer_id?: string | null
+          token_limit?: number | null
           total_purchased?: number
           total_spent?: number | null
           updated_at?: string
@@ -2242,6 +2557,8 @@ export type Database = {
       company_memberships: {
         Row: {
           activated_at: string | null
+          chat_terms_accepted_at: string | null
+          chat_terms_version: string | null
           company_id: number
           created_at: string | null
           custom_permissions: Json | null
@@ -2258,6 +2575,8 @@ export type Database = {
         }
         Insert: {
           activated_at?: string | null
+          chat_terms_accepted_at?: string | null
+          chat_terms_version?: string | null
           company_id: number
           created_at?: string | null
           custom_permissions?: Json | null
@@ -2274,6 +2593,8 @@ export type Database = {
         }
         Update: {
           activated_at?: string | null
+          chat_terms_accepted_at?: string | null
+          chat_terms_version?: string | null
           company_id?: number
           created_at?: string | null
           custom_permissions?: Json | null
@@ -2353,6 +2674,60 @@ export type Database = {
           {
             foreignKeyName: "contacten_bedrijf_id_fkey"
             columns: ["bedrijf_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_rapportages: {
+        Row: {
+          created_at: string
+          id: string
+          reden: string
+          reporter_company_id: number
+          reporter_user_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reden: string
+          reporter_company_id: number
+          reporter_user_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reden?: string
+          reporter_company_id?: number
+          reporter_user_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_rapportages_reporter_company_id_fkey"
+            columns: ["reporter_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_rapportages_reporter_company_id_fkey"
+            columns: ["reporter_company_id"]
             isOneToOne: false
             referencedRelation: "bedrijven_directory"
             referencedColumns: ["id"]
@@ -2626,6 +3001,7 @@ export type Database = {
           city: string | null
           company_id: number
           company_name: string | null
+          contact_type: string
           country: string | null
           created_at: string | null
           created_by: string | null
@@ -2654,6 +3030,7 @@ export type Database = {
           city?: string | null
           company_id: number
           company_name?: string | null
+          contact_type?: string
           country?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -2682,6 +3059,7 @@ export type Database = {
           city?: string | null
           company_id?: number
           company_name?: string | null
+          contact_type?: string
           country?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -2764,14 +3142,18 @@ export type Database = {
           created_at: string
           fotos: string[]
           id: number
+          laatste_controle_datum: string | null
           lat: number | null
+          leveringsgebied: string | null
           lng: number | null
           naam: string
+          openingsuren: string | null
           postcode: string | null
           regio: string | null
           stad: string | null
           telefoon: string | null
           toegevoegd_door: string | null
+          verificatiestatus: string
           website: string | null
         }
         Insert: {
@@ -2781,14 +3163,18 @@ export type Database = {
           created_at?: string
           fotos?: string[]
           id?: never
+          laatste_controle_datum?: string | null
           lat?: number | null
+          leveringsgebied?: string | null
           lng?: number | null
           naam: string
+          openingsuren?: string | null
           postcode?: string | null
           regio?: string | null
           stad?: string | null
           telefoon?: string | null
           toegevoegd_door?: string | null
+          verificatiestatus?: string
           website?: string | null
         }
         Update: {
@@ -2798,14 +3184,18 @@ export type Database = {
           created_at?: string
           fotos?: string[]
           id?: never
+          laatste_controle_datum?: string | null
           lat?: number | null
+          leveringsgebied?: string | null
           lng?: number | null
           naam?: string
+          openingsuren?: string | null
           postcode?: string | null
           regio?: string | null
           stad?: string | null
           telefoon?: string | null
           toegevoegd_door?: string | null
+          verificatiestatus?: string
           website?: string | null
         }
         Relationships: []
@@ -3106,6 +3496,81 @@ export type Database = {
           },
         ]
       }
+      domain_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          causation_id: string | null
+          correlation_id: string
+          created_at: string
+          entity_id: number
+          entity_type: string
+          event_id: string
+          event_type: string
+          id: string
+          idempotency_key: string | null
+          occurred_at: string
+          origin_agent_id: string | null
+          payload: Json
+          payload_version: number
+          processed_at: string | null
+          tenant_id: number
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type?: string
+          causation_id?: string | null
+          correlation_id: string
+          created_at?: string
+          entity_id: number
+          entity_type: string
+          event_id: string
+          event_type: string
+          id?: string
+          idempotency_key?: string | null
+          occurred_at?: string
+          origin_agent_id?: string | null
+          payload?: Json
+          payload_version?: number
+          processed_at?: string | null
+          tenant_id: number
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          causation_id?: string | null
+          correlation_id?: string
+          created_at?: string
+          entity_id?: number
+          entity_type?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          idempotency_key?: string | null
+          occurred_at?: string
+          origin_agent_id?: string | null
+          payload?: Json
+          payload_version?: number
+          processed_at?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "domain_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facturen: {
         Row: {
           accounting_export_error: string | null
@@ -3136,6 +3601,7 @@ export type Database = {
           peppol_message_id: string | null
           peppol_sent_at: string | null
           peppol_status: string
+          project_id: string | null
           reminder_count: number
           sent_at: string | null
           status: string
@@ -3176,6 +3642,7 @@ export type Database = {
           peppol_message_id?: string | null
           peppol_sent_at?: string | null
           peppol_status?: string
+          project_id?: string | null
           reminder_count?: number
           sent_at?: string | null
           status?: string
@@ -3216,6 +3683,7 @@ export type Database = {
           peppol_message_id?: string | null
           peppol_sent_at?: string | null
           peppol_status?: string
+          project_id?: string | null
           reminder_count?: number
           sent_at?: string | null
           status?: string
@@ -3247,6 +3715,13 @@ export type Database = {
             columns: ["offerte_id"]
             isOneToOne: false
             referencedRelation: "offertes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturen_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
             referencedColumns: ["id"]
           },
         ]
@@ -3362,6 +3837,125 @@ export type Database = {
             columns: ["factuur_id"]
             isOneToOne: false
             referencedRelation: "facturen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      geschillen: {
+        Row: {
+          agent_action_id: number | null
+          ai_samenvatting: string | null
+          beheerder_id: string | null
+          beschrijving: string
+          beslist_op: string | null
+          bezwaar_op: string | null
+          bezwaar_reden: string | null
+          channel_id: string | null
+          created_at: string
+          id: string
+          melder_company_id: number
+          melder_verklaring: string | null
+          motivatie: string | null
+          samenwerking_contract_id: string | null
+          status: string
+          tegenpartij_company_id: number | null
+          tegenpartij_verklaring: string | null
+          titel: string
+          updated_at: string
+          werkpost_id: string | null
+        }
+        Insert: {
+          agent_action_id?: number | null
+          ai_samenvatting?: string | null
+          beheerder_id?: string | null
+          beschrijving: string
+          beslist_op?: string | null
+          bezwaar_op?: string | null
+          bezwaar_reden?: string | null
+          channel_id?: string | null
+          created_at?: string
+          id?: string
+          melder_company_id: number
+          melder_verklaring?: string | null
+          motivatie?: string | null
+          samenwerking_contract_id?: string | null
+          status?: string
+          tegenpartij_company_id?: number | null
+          tegenpartij_verklaring?: string | null
+          titel: string
+          updated_at?: string
+          werkpost_id?: string | null
+        }
+        Update: {
+          agent_action_id?: number | null
+          ai_samenvatting?: string | null
+          beheerder_id?: string | null
+          beschrijving?: string
+          beslist_op?: string | null
+          bezwaar_op?: string | null
+          bezwaar_reden?: string | null
+          channel_id?: string | null
+          created_at?: string
+          id?: string
+          melder_company_id?: number
+          melder_verklaring?: string | null
+          motivatie?: string | null
+          samenwerking_contract_id?: string | null
+          status?: string
+          tegenpartij_company_id?: number | null
+          tegenpartij_verklaring?: string | null
+          titel?: string
+          updated_at?: string
+          werkpost_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geschillen_agent_action_id_fkey"
+            columns: ["agent_action_id"]
+            isOneToOne: false
+            referencedRelation: "agent_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geschillen_melder_company_id_fkey"
+            columns: ["melder_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geschillen_melder_company_id_fkey"
+            columns: ["melder_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geschillen_samenwerking_contract_id_fkey"
+            columns: ["samenwerking_contract_id"]
+            isOneToOne: false
+            referencedRelation: "samenwerking_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geschillen_tegenpartij_company_id_fkey"
+            columns: ["tegenpartij_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geschillen_tegenpartij_company_id_fkey"
+            columns: ["tegenpartij_company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geschillen_werkpost_id_fkey"
+            columns: ["werkpost_id"]
+            isOneToOne: false
+            referencedRelation: "werkposts"
             referencedColumns: ["id"]
           },
         ]
@@ -4039,6 +4633,7 @@ export type Database = {
       offertes: {
         Row: {
           accepted_at: string | null
+          afmetingen: string | null
           bedrag: number
           bedrijf_id: number
           converted_at: string | null
@@ -4055,6 +4650,7 @@ export type Database = {
           klant: string | null
           notes: string | null
           nummer: string | null
+          project_naam: string | null
           public_token: string | null
           rejected_at: string | null
           rejection_reason: string | null
@@ -4070,6 +4666,7 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          afmetingen?: string | null
           bedrag?: number
           bedrijf_id: number
           converted_at?: string | null
@@ -4086,6 +4683,7 @@ export type Database = {
           klant?: string | null
           notes?: string | null
           nummer?: string | null
+          project_naam?: string | null
           public_token?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -4101,6 +4699,7 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          afmetingen?: string | null
           bedrag?: number
           bedrijf_id?: number
           converted_at?: string | null
@@ -4117,6 +4716,7 @@ export type Database = {
           klant?: string | null
           notes?: string | null
           nummer?: string | null
+          project_naam?: string | null
           public_token?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
@@ -4142,6 +4742,75 @@ export type Database = {
             foreignKeyName: "offertes_bedrijf_id_fkey"
             columns: ["bedrijf_id"]
             isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onderaannemer_agent_settings: {
+        Row: {
+          auto_send_na_goedkeuring: boolean
+          beschikbaar: boolean
+          company_id: number
+          cooldown_minuten: number
+          created_at: string
+          enabled: boolean
+          id: string
+          last_auto_send_at: string | null
+          max_afstand_km: number | null
+          max_berichten_per_dag: number
+          minimum_uurtarief: number | null
+          regio: string[]
+          specialisaties: string[]
+          type_werk: string[]
+          updated_at: string
+        }
+        Insert: {
+          auto_send_na_goedkeuring?: boolean
+          beschikbaar?: boolean
+          company_id: number
+          cooldown_minuten?: number
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_auto_send_at?: string | null
+          max_afstand_km?: number | null
+          max_berichten_per_dag?: number
+          minimum_uurtarief?: number | null
+          regio?: string[]
+          specialisaties?: string[]
+          type_werk?: string[]
+          updated_at?: string
+        }
+        Update: {
+          auto_send_na_goedkeuring?: boolean
+          beschikbaar?: boolean
+          company_id?: number
+          cooldown_minuten?: number
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_auto_send_at?: string | null
+          max_afstand_km?: number | null
+          max_berichten_per_dag?: number
+          minimum_uurtarief?: number | null
+          regio?: string[]
+          specialisaties?: string[]
+          type_werk?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onderaannemer_agent_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onderaannemer_agent_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
             referencedRelation: "bedrijven_directory"
             referencedColumns: ["id"]
           },
@@ -4400,6 +5069,151 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_billing_delivery_logs: {
+        Row: {
+          company_id: number
+          created_at: string
+          error_message: string | null
+          id: number
+          invoice_id: number
+          provider: string
+          recipient_email: string | null
+          requested_by: string | null
+          status: string
+        }
+        Insert: {
+          company_id: number
+          created_at?: string
+          error_message?: string | null
+          id?: number
+          invoice_id: number
+          provider?: string
+          recipient_email?: string | null
+          requested_by?: string | null
+          status: string
+        }
+        Update: {
+          company_id?: number
+          created_at?: string
+          error_message?: string | null
+          id?: number
+          invoice_id?: number
+          provider?: string
+          recipient_email?: string | null
+          requested_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_billing_delivery_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_billing_delivery_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_billing_delivery_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "platform_billing_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_billing_invoices: {
+        Row: {
+          amount_due: number
+          amount_paid: number
+          billing_reason: string | null
+          company_id: number
+          created_at: string
+          currency: string
+          customer_email: string | null
+          hosted_invoice_url: string | null
+          id: number
+          invoice_pdf_url: string | null
+          last_event_created_at: string
+          livemode: boolean
+          number: string | null
+          paid_at: string | null
+          period_end: string | null
+          period_start: string | null
+          status: string
+          stripe_customer_id: string
+          stripe_invoice_id: string
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_due?: number
+          amount_paid?: number
+          billing_reason?: string | null
+          company_id: number
+          created_at?: string
+          currency: string
+          customer_email?: string | null
+          hosted_invoice_url?: string | null
+          id?: number
+          invoice_pdf_url?: string | null
+          last_event_created_at: string
+          livemode?: boolean
+          number?: string | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status: string
+          stripe_customer_id: string
+          stripe_invoice_id: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number
+          billing_reason?: string | null
+          company_id?: number
+          created_at?: string
+          currency?: string
+          customer_email?: string | null
+          hosted_invoice_url?: string | null
+          id?: number
+          invoice_pdf_url?: string | null
+          last_event_created_at?: string
+          livemode?: boolean
+          number?: string | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          stripe_customer_id?: string
+          stripe_invoice_id?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_billing_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_billing_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           afbeelding_url: string | null
@@ -4466,6 +5280,63 @@ export type Database = {
         }
         Relationships: []
       }
+      prijslijst_items: {
+        Row: {
+          btw_percentage: number
+          categorie: string | null
+          company_id: number
+          created_at: string
+          created_by: string | null
+          eenheid: string
+          id: number
+          is_active: boolean
+          omschrijving: string
+          prijs: number
+          updated_at: string
+        }
+        Insert: {
+          btw_percentage?: number
+          categorie?: string | null
+          company_id: number
+          created_at?: string
+          created_by?: string | null
+          eenheid?: string
+          id?: number
+          is_active?: boolean
+          omschrijving: string
+          prijs?: number
+          updated_at?: string
+        }
+        Update: {
+          btw_percentage?: number
+          categorie?: string | null
+          company_id?: number
+          created_at?: string
+          created_by?: string | null
+          eenheid?: string
+          id?: number
+          is_active?: boolean
+          omschrijving?: string
+          prijs?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prijslijst_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prijslijst_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           ai_preferences: Json | null
@@ -4508,6 +5379,96 @@ export type Database = {
         }
         Relationships: []
       }
+      project_bestanden: {
+        Row: {
+          category: string
+          company_id: number
+          created_at: string
+          customer_id: number | null
+          file_name: string
+          id: string
+          mime_type: string | null
+          offerte_id: number | null
+          original_name: string
+          project_id: string | null
+          size_bytes: number | null
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string
+          company_id: number
+          created_at?: string
+          customer_id?: number | null
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          offerte_id?: number | null
+          original_name: string
+          project_id?: string | null
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          company_id?: number
+          created_at?: string
+          customer_id?: number | null
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          offerte_id?: number | null
+          original_name?: string
+          project_id?: string | null
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_bestanden_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bestanden_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bestanden_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bestanden_offerte_id_fkey"
+            columns: ["offerte_id"]
+            isOneToOne: false
+            referencedRelation: "offertes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_bestanden_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_notities: {
         Row: {
           datum_label: string
@@ -4541,27 +5502,33 @@ export type Database = {
         Row: {
           bedrijf_id: number | null
           created_at: string
+          customer_id: number | null
           id: string
           klant_naam: string
           naam: string
+          offerte_id: number | null
           start_datum_label: string
           status: string
         }
         Insert: {
           bedrijf_id?: number | null
           created_at?: string
+          customer_id?: number | null
           id?: string
           klant_naam: string
           naam: string
+          offerte_id?: number | null
           start_datum_label?: string
           status?: string
         }
         Update: {
           bedrijf_id?: number | null
           created_at?: string
+          customer_id?: number | null
           id?: string
           klant_naam?: string
           naam?: string
+          offerte_id?: number | null
           start_datum_label?: string
           status?: string
         }
@@ -4578,6 +5545,20 @@ export type Database = {
             columns: ["bedrijf_id"]
             isOneToOne: false
             referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projecten_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projecten_offerte_id_fkey"
+            columns: ["offerte_id"]
+            isOneToOne: false
+            referencedRelation: "offertes"
             referencedColumns: ["id"]
           },
         ]
@@ -4784,6 +5765,54 @@ export type Database = {
           },
         ]
       }
+      stripe_webhook_events: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_type: string
+          failed_at: string | null
+          id: string
+          last_error: string | null
+          livemode: boolean
+          payload_hash: string
+          processed_at: string | null
+          processing_started_at: string
+          status: string
+          stripe_event_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_type: string
+          failed_at?: string | null
+          id?: string
+          last_error?: string | null
+          livemode?: boolean
+          payload_hash: string
+          processed_at?: string | null
+          processing_started_at?: string
+          status?: string
+          stripe_event_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_type?: string
+          failed_at?: string | null
+          id?: string
+          last_error?: string | null
+          livemode?: boolean
+          payload_hash?: string
+          processed_at?: string | null
+          processing_started_at?: string
+          status?: string
+          stripe_event_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       taken: {
         Row: {
           created_at: string
@@ -4817,57 +5846,551 @@ export type Database = {
         }
         Relationships: []
       }
+      task_activity_logs: {
+        Row: {
+          actor_id: string | null
+          company_id: number
+          created_at: string
+          event_type: string
+          id: number
+          metadata: Json
+          task_id: number
+        }
+        Insert: {
+          actor_id?: string | null
+          company_id: number
+          created_at?: string
+          event_type: string
+          id?: number
+          metadata?: Json
+          task_id: number
+        }
+        Update: {
+          actor_id?: string | null
+          company_id?: number
+          created_at?: string
+          event_type?: string
+          id?: number
+          metadata?: Json
+          task_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_activity_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_attachments: {
+        Row: {
+          company_id: number
+          created_at: string
+          deleted_at: string | null
+          file_name: string
+          id: string
+          mime_type: string | null
+          original_name: string
+          size_bytes: number | null
+          storage_bucket: string
+          storage_path: string
+          task_id: number
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id: number
+          created_at?: string
+          deleted_at?: string | null
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          original_name: string
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path: string
+          task_id: number
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: number
+          created_at?: string
+          deleted_at?: string | null
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          original_name?: string
+          size_bytes?: number | null
+          storage_bucket?: string
+          storage_path?: string
+          task_id?: number
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_attachments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          body: string
+          company_id: number
+          created_at: string
+          created_by_user_id: string | null
+          deleted_at: string | null
+          id: number
+          task_id: number
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          company_id: number
+          created_at?: string
+          created_by_user_id?: string | null
+          deleted_at?: string | null
+          id?: number
+          task_id: number
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          company_id?: number
+          created_at?: string
+          created_by_user_id?: string | null
+          deleted_at?: string | null
+          id?: number
+          task_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_label_assignments: {
+        Row: {
+          company_id: number
+          created_at: string
+          label_id: number
+          task_id: number
+        }
+        Insert: {
+          company_id: number
+          created_at?: string
+          label_id: number
+          task_id: number
+        }
+        Update: {
+          company_id?: number
+          created_at?: string
+          label_id?: number
+          task_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_label_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_label_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_label_assignments_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "task_labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_label_assignments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_labels: {
+        Row: {
+          color: string | null
+          company_id: number
+          created_at: string
+          id: number
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          company_id: number
+          created_at?: string
+          id?: number
+          name: string
+        }
+        Update: {
+          color?: string | null
+          company_id?: number
+          created_at?: string
+          id?: number
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_labels_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_labels_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_recurrence_occurrences: {
+        Row: {
+          company_id: number
+          created_at: string
+          id: number
+          occurrence_key: string
+          recurrence_rule_id: number
+          task_id: number | null
+        }
+        Insert: {
+          company_id: number
+          created_at?: string
+          id?: number
+          occurrence_key: string
+          recurrence_rule_id: number
+          task_id?: number | null
+        }
+        Update: {
+          company_id?: number
+          created_at?: string
+          id?: number
+          occurrence_key?: string
+          recurrence_rule_id?: number
+          task_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_recurrence_occurrences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_recurrence_occurrences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_recurrence_occurrences_recurrence_rule_id_fkey"
+            columns: ["recurrence_rule_id"]
+            isOneToOne: false
+            referencedRelation: "task_recurrence_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_recurrence_occurrences_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_recurrence_rules: {
+        Row: {
+          company_id: number
+          created_at: string
+          created_by_user_id: string | null
+          ends_at: string | null
+          frequency: string
+          id: number
+          interval_count: number
+          is_active: boolean
+          next_run_at: string | null
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: number
+          created_at?: string
+          created_by_user_id?: string | null
+          ends_at?: string | null
+          frequency: string
+          id?: number
+          interval_count?: number
+          is_active?: boolean
+          next_run_at?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: number
+          created_at?: string
+          created_by_user_id?: string | null
+          ends_at?: string | null
+          frequency?: string
+          id?: number
+          interval_count?: number
+          is_active?: boolean
+          next_run_at?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_recurrence_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_recurrence_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_reminders: {
+        Row: {
+          channel: string
+          company_id: number
+          created_at: string
+          created_by_user_id: string | null
+          id: number
+          idempotency_key: string
+          last_error: string | null
+          remind_at: string
+          sent_at: string | null
+          status: string
+          task_id: number
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          company_id: number
+          created_at?: string
+          created_by_user_id?: string | null
+          id?: number
+          idempotency_key: string
+          last_error?: string | null
+          remind_at: string
+          sent_at?: string | null
+          status?: string
+          task_id: number
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          company_id?: number
+          created_at?: string
+          created_by_user_id?: string | null
+          id?: number
+          idempotency_key?: string
+          last_error?: string | null
+          remind_at?: string
+          sent_at?: string | null
+          status?: string
+          task_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_reminders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_reminders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "bedrijven_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_reminders_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
+          afspraak_id: number | null
+          ai_generated: boolean
           assigned_to: string | null
+          assigned_to_user_id: string | null
           company_id: number
           completed_at: string | null
+          contact_id: number | null
           created_at: string | null
           created_by: string | null
+          created_by_user_id: string | null
           customer_id: number | null
+          deal_id: number | null
+          deleted_at: string | null
           description: string | null
+          due_at: string | null
           due_date: string | null
+          factuur_id: number | null
           id: number
+          metadata: Json
+          offerte_id: number | null
+          parent_task_id: number | null
+          position: number
           priority: string
           project_id: number | null
+          recurrence_rule_id: number | null
           related_entity_id: number | null
           related_entity_type: string | null
+          requires_approval: boolean
+          source: string
+          start_at: string | null
           status: string
           title: string
           updated_at: string | null
         }
         Insert: {
+          afspraak_id?: number | null
+          ai_generated?: boolean
           assigned_to?: string | null
+          assigned_to_user_id?: string | null
           company_id: number
           completed_at?: string | null
+          contact_id?: number | null
           created_at?: string | null
           created_by?: string | null
+          created_by_user_id?: string | null
           customer_id?: number | null
+          deal_id?: number | null
+          deleted_at?: string | null
           description?: string | null
+          due_at?: string | null
           due_date?: string | null
+          factuur_id?: number | null
           id?: number
+          metadata?: Json
+          offerte_id?: number | null
+          parent_task_id?: number | null
+          position?: number
           priority?: string
           project_id?: number | null
+          recurrence_rule_id?: number | null
           related_entity_id?: number | null
           related_entity_type?: string | null
+          requires_approval?: boolean
+          source?: string
+          start_at?: string | null
           status?: string
           title: string
           updated_at?: string | null
         }
         Update: {
+          afspraak_id?: number | null
+          ai_generated?: boolean
           assigned_to?: string | null
+          assigned_to_user_id?: string | null
           company_id?: number
           completed_at?: string | null
+          contact_id?: number | null
           created_at?: string | null
           created_by?: string | null
+          created_by_user_id?: string | null
           customer_id?: number | null
+          deal_id?: number | null
+          deleted_at?: string | null
           description?: string | null
+          due_at?: string | null
           due_date?: string | null
+          factuur_id?: number | null
           id?: number
+          metadata?: Json
+          offerte_id?: number | null
+          parent_task_id?: number | null
+          position?: number
           priority?: string
           project_id?: number | null
+          recurrence_rule_id?: number | null
           related_entity_id?: number | null
           related_entity_type?: string | null
+          requires_approval?: boolean
+          source?: string
+          start_at?: string | null
           status?: string
           title?: string
           updated_at?: string | null
@@ -4892,6 +6415,27 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_offerte_id_fkey"
+            columns: ["offerte_id"]
+            isOneToOne: false
+            referencedRelation: "offertes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_recurrence_rule_id_fkey"
+            columns: ["recurrence_rule_id"]
+            isOneToOne: false
+            referencedRelation: "task_recurrence_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -5350,6 +6894,7 @@ export type Database = {
           gesloten_reden: string | null
           id: string
           is_actief: boolean | null
+          pipeline_status: string | null
           postcode: string | null
           regio: string
           stad: string | null
@@ -5363,6 +6908,7 @@ export type Database = {
           urgentie: Database["public"]["Enums"]["werkpost_urgentie"]
           vereiste_vaardigheden: string[] | null
           verloopt_op: string | null
+          zichtbaarheid: string
         }
         Insert: {
           aantal_personen?: number
@@ -5385,6 +6931,7 @@ export type Database = {
           gesloten_reden?: string | null
           id?: string
           is_actief?: boolean | null
+          pipeline_status?: string | null
           postcode?: string | null
           regio: string
           stad?: string | null
@@ -5398,6 +6945,7 @@ export type Database = {
           urgentie?: Database["public"]["Enums"]["werkpost_urgentie"]
           vereiste_vaardigheden?: string[] | null
           verloopt_op?: string | null
+          zichtbaarheid?: string
         }
         Update: {
           aantal_personen?: number
@@ -5420,6 +6968,7 @@ export type Database = {
           gesloten_reden?: string | null
           id?: string
           is_actief?: boolean | null
+          pipeline_status?: string | null
           postcode?: string | null
           regio?: string
           stad?: string | null
@@ -5433,6 +6982,7 @@ export type Database = {
           urgentie?: Database["public"]["Enums"]["werkpost_urgentie"]
           vereiste_vaardigheden?: string[] | null
           verloopt_op?: string | null
+          zichtbaarheid?: string
         }
         Relationships: [
           {
@@ -5720,10 +7270,12 @@ export type Database = {
           }
         | { Args: { record_id: number; table_name: string }; Returns: number }
       get_plan_limits: { Args: { plan_name: string }; Returns: Json }
+      get_platform_registration_count: { Args: never; Returns: number }
       get_project_file_storage_path: {
         Args: { p_filename: string; p_project_id: string }
         Returns: string
       }
+      get_public_offerte_by_token: { Args: { p_token: string }; Returns: Json }
       get_quotation_storage_path: {
         Args: { p_quotation_id: string }
         Returns: string
@@ -5808,6 +7360,34 @@ export type Database = {
         Returns: number
       }
       storage_tenant_access: { Args: { object_path: string }; Returns: boolean }
+      team_add_member: {
+        Args: { p_company_id: number; p_email: string; p_role?: string }
+        Returns: number
+      }
+      team_list_members: {
+        Args: { p_company_id: number }
+        Returns: {
+          activated_at: string
+          avatar_url: string
+          email: string
+          full_name: string
+          invited_at: string
+          is_active: boolean
+          joined_at: string
+          membership_id: number
+          role: string
+          user_id: string
+        }[]
+      }
+      team_update_member: {
+        Args: {
+          p_company_id: number
+          p_is_active: boolean
+          p_membership_id: number
+          p_role: string
+        }
+        Returns: undefined
+      }
       validate_factuur_state_transition: {
         Args: { p_current_status: string; p_new_status: string }
         Returns: boolean

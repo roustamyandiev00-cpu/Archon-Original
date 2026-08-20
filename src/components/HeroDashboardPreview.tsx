@@ -13,11 +13,12 @@ import { BrandLockup } from "@/components/BrandLogo";
 import AgentPortrait from "@/components/dashboard/agents/AgentPortrait";
 import { DEFAULT_BUILTIN_AVATARS } from "@/lib/agents/avatar-options";
 import { DEMO_DASHBOARD } from "@/lib/demo";
+import { TRIAL_DAYS } from "@/components/dashboard/trial";
 
 const agents = [
   {
     id: "nova",
-    name: "Lima",
+    name: "Lara",
     role: "AI-metgezel",
     gradient: "from-sky-400 to-indigo-500",
     avatarUrl: DEFAULT_BUILTIN_AVATARS.nova,
@@ -29,7 +30,7 @@ const agents = [
   },
   {
     id: "schatter",
-    name: "Schatter",
+    name: "Viktor",
     role: "Offertes",
     gradient: "from-violet-400 to-purple-500",
     avatarUrl: DEFAULT_BUILTIN_AVATARS.schatter,
@@ -41,7 +42,7 @@ const agents = [
   },
   {
     id: "facturatie",
-    name: "Facturatie",
+    name: "Nina",
     role: "Peppol",
     gradient: "from-amber-400 to-orange-500",
     avatarUrl: DEFAULT_BUILTIN_AVATARS.facturatie,
@@ -53,7 +54,7 @@ const agents = [
   },
   {
     id: "opvolger",
-    name: "Opvolger",
+    name: "Daan",
     role: "Leads",
     gradient: "from-emerald-400 to-teal-500",
     avatarUrl: DEFAULT_BUILTIN_AVATARS.opvolger,
@@ -188,7 +189,7 @@ export default function HeroDashboardPreview() {
                     <li
                       key={item.label}
                       className={`flex items-center justify-between rounded-md px-2 py-1 text-[10px] ${
-                        item.active
+                        "active" in item && item.active
                           ? "bg-sky-500/15 font-medium text-sky-300"
                           : "text-zinc-500"
                       }`}
@@ -207,12 +208,12 @@ export default function HeroDashboardPreview() {
           </div>
 
           <div className="mt-2 rounded-lg bg-sky-500 px-2 py-1.5 text-center text-[9px] font-semibold text-zinc-950">
-            Start 7 dagen gratis
+            Start {TRIAL_DAYS} dagen gratis
           </div>
         </aside>
 
         {/* Main panel */}
-        <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="min-w-0 flex-1 overflow-x-hidden overflow-hidden">
           {/* Mobiele navigatie-chips */}
           <div className="flex gap-1.5 overflow-x-auto border-b border-white/[0.06] bg-zinc-950/80 px-3 py-2 [scrollbar-width:none] md:hidden">
             {["Offertes", "Facturen", "Leads", "AI-agents"].map((item, i) => (
@@ -267,11 +268,11 @@ export default function HeroDashboardPreview() {
             </div>
 
             {/* Agent fleet — horizontaal scroll op mobiel */}
-            <div className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-1.5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+            <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-0.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-1.5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
               {agents.map((agent) => (
                 <div
                   key={agent.id}
-                  className="relative w-[148px] shrink-0 overflow-hidden rounded-lg border border-white/[0.06] bg-zinc-900/70 p-2 sm:w-auto sm:rounded-xl sm:p-2.5"
+                  className="relative w-[min(148px,78vw)] shrink-0 overflow-hidden rounded-lg border border-white/[0.06] bg-zinc-900/70 p-2 sm:w-auto sm:rounded-xl sm:p-2.5"
                 >
                   <div
                     className={`pointer-events-none absolute -right-4 -top-4 h-14 w-14 rounded-full bg-gradient-to-br ${agent.gradient} opacity-10 blur-xl`}
@@ -331,7 +332,7 @@ export default function HeroDashboardPreview() {
                 >
                   <div className="flex items-start justify-between gap-1">
                     <p className="text-[8px] font-semibold uppercase tracking-wide text-zinc-500 sm:text-[9px]">
-                      {kpi.label}
+                      <span className="line-clamp-2">{kpi.label}</span>
                     </p>
                     <Sparkline values={kpi.spark} color={kpi.sparkColor} />
                   </div>

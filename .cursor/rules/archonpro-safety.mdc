@@ -1,0 +1,27 @@
+---
+description: Verplichte veiligheids- en workflowregels voor alle wijzigingen aan ArchonPro
+alwaysApply: true
+---
+
+# ArchonPro safety rules
+
+Lees en volg vóór iedere taak het bestand `/AGENTS.md` in de repositoryroot.
+
+Kernregels:
+
+- Onderzoek eerst de bestaande implementatie en Git-status.
+- Behandel bestaande wijzigingen als werk van de gebruiker.
+- Geef vóór implementatie scope, risico's en verwachte bestanden.
+- Verwijder, verplaats of hernoem niets zonder expliciete toestemming.
+- Maak geen dubbele routes, componenten, services of `v2`/`final`/`fixed`-bestanden.
+- Beperk iedere taak tot de noodzakelijke wijziging; pauzeer boven 10 bestanden.
+- Wijzig geen auth, rollen, tenant-isolatie, database, migraties, betalingen, secrets of productieconfiguratie buiten expliciete scope.
+- Herschrijf nooit uitgevoerde migraties en gebruik nooit service-role credentials in clientcode.
+- Gebruik alleen de bestaande package manager en maak geen tweede lockbestand.
+- Voer geen destructieve Git-acties uit en overschrijf geen gebruikerswerk.
+- Gebruik geen mock- of demoresultaat als productiefunctionaliteit.
+- Voer relevante lint-, typecheck-, test- en buildcontroles uit.
+- Eindig met resultaat, gewijzigde bestanden, controles, risico's en openstaand werk.
+
+Wanneer een opdracht strijdig is met `/AGENTS.md`, stop en meld het conflict voordat je schrijft.
+

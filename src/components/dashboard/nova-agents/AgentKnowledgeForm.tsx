@@ -119,9 +119,12 @@ export default function AgentKnowledgeForm({
 
   const selected = agents.find((a) => a.id === agentId);
 
-  useEffect(() => {
+  // Afgeleide state uit de prop; tijdens render i.p.v. in een effect.
+  const [prevDefaultAgentId, setPrevDefaultAgentId] = useState(defaultAgentId);
+  if (prevDefaultAgentId !== defaultAgentId) {
+    setPrevDefaultAgentId(defaultAgentId);
     if (defaultAgentId) setAgentId(defaultAgentId);
-  }, [defaultAgentId]);
+  }
 
   const loadDocuments = useCallback(async (id: string) => {
     if (!id) {
@@ -137,6 +140,9 @@ export default function AgentKnowledgeForm({
   }, []);
 
   useEffect(() => {
+    // Echte externe synchronisatie (documenten ophalen), geen afgeleide state.
+    // loadDocuments zet direct een laadvlag, vandaar de regel-uitzondering.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDocuments(agentId);
   }, [agentId, loadDocuments]);
 
@@ -218,7 +224,7 @@ export default function AgentKnowledgeForm({
     (docMode === "mandate" ? mandateFilled : content.trim().length > 0);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <div className="flex items-start gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-violet-400">
           <BrainCircuit size={18} />
@@ -301,20 +307,20 @@ export default function AgentKnowledgeForm({
       )}
 
       {docMode === "mandate" ? (
-        <div className="space-y-3 rounded-xl border border-white/[0.06] bg-zinc-950/40 p-3">
+        <div className="space-y-2.5 rounded-xl border border-white/[0.06] bg-zinc-950/40 p-3">
           <p className="text-xs text-zinc-500">
             Vul de secties in die relevant zijn. Hoe gedetailleerder, hoe
             betrouwbaarder de agent handelt.
           </p>
           {MANDATE_FIELDS.map((field) => (
             <div key={field.key}>
-              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                 {field.label}
               </label>
               <textarea
                 value={mandate[field.key]}
                 onChange={(e) => updateMandate(field.key, e.target.value)}
-                rows={3}
+                rows={2}
                 placeholder={field.placeholder}
                 className={sectionClass}
                 disabled={readOnly}

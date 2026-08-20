@@ -7,21 +7,23 @@ const sizeMap = {
     box: "h-7 w-7 rounded-md",
     text: "text-[10px]",
     icon: 12,
-    image: 28,
   },
   md: {
     box: "h-10 w-10 rounded-xl",
     text: "text-sm",
     icon: 16,
-    image: 40,
   },
   lg: {
     box: "h-14 w-14 rounded-2xl",
     text: "text-base",
     icon: 20,
-    image: 56,
   },
 } as const;
+
+/** Lokale avatars: geen Next image-optimizer (Safari breekt op Content-Disposition: attachment). */
+function isLocalStaticAvatar(url: string) {
+  return url.startsWith("/avatars/");
+}
 
 export default function AgentPortrait({
   name,
@@ -44,18 +46,30 @@ export default function AgentPortrait({
     return (
       <span
         className={cn(
-          "relative shrink-0 overflow-hidden bg-zinc-900/40 ring-1 ring-white/10",
+          "relative block shrink-0 overflow-hidden bg-zinc-900/40 ring-1 ring-white/10",
           dim.box,
           className,
         )}
       >
-        <Image
-          src={avatarUrl}
-          alt=""
-          width={dim.image}
-          height={dim.image}
-          className="h-full w-full object-cover object-top"
-        />
+        {isLocalStaticAvatar(avatarUrl) ? (
+          // eslint-disable-next-line @next/next/no-img-element -- lokale PNG’s betrouwbaar in Safari
+          <img
+            src={avatarUrl}
+            alt=""
+            decoding="async"
+            draggable={false}
+            className="absolute inset-0 h-full w-full max-h-full max-w-full object-cover object-top"
+          />
+        ) : (
+          <Image
+            src={avatarUrl}
+            alt=""
+            fill
+            sizes="56px"
+            className="object-cover object-top"
+            unoptimized={avatarUrl.startsWith("/")}
+          />
+        )}
       </span>
     );
   }

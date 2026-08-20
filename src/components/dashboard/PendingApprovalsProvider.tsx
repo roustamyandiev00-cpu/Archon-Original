@@ -176,7 +176,14 @@ export function PendingApprovalsProvider({
     let cancelled = false;
 
     const tick = () => {
-      if (!cancelled) void poll();
+      if (!cancelled) {
+        void poll().catch((error: unknown) => {
+          console.warn(
+            "[pending-approvals] Achtergrondcontrole tijdelijk overgeslagen.",
+            error,
+          );
+        });
+      }
     };
 
     const channel = supabase

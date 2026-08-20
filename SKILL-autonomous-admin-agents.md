@@ -1,25 +1,41 @@
 ---
 name: autonomous-admin-agents
-description: Bouw een event-driven systeem van digitale administratieve medewerkers die wijzigingen in het SaaS-platform analyseren, veilige acties uitvoeren en gebruikers alleen contacteren wanneer menselijke input nodig is.
+description: Bouw een event-driven systeem van digitale bedrijfsmedewerkers die binnen één tenant (één bouwbedrijf) wijzigingen analyseren, veilige acties uitvoeren en gebruikers alleen contacteren wanneer menselijke input nodig is. Deze agents zijn tenantagents, geen platformbeheerders.
 ---
 
-# Autonomous Admin Agents
+# Autonomous Business Agents (CRM & Financieel)
+
+> **Centrale referentie:** Dit bestand is de bron van waarheid voor tenant business agents (Nova, Lima, Archon Copilot). Vervang het niet door een apart `AI_AGENTS.md` of een parallelle docsstructuur.
+>
+> **Scope:** Nova en Lima zijn digitale bedrijfsmedewerkers die uitsluitend werken binnen de context van één actief bedrijf (tenant). Hun gebruikersinterface valt onder `/dashboard/*` (`src/app/dashboard/*`). Zij zijn geen platformbeheerders en krijgen nooit automatisch platformrechten. Platformbrede agentconfiguratie is een apart toekomstig onderdeel dat thuishoort onder `/admin/*` en buiten de scope van dit document valt.
 
 ## Doel
 
-Implementeer digitale administratieve medewerkers die continu relevante wijzigingen in het platform detecteren, beoordelen en afhandelen.
+Implementeer digitale bedrijfsmedewerkers die continu relevante wijzigingen binnen de eigen tenant detecteren, beoordelen en afhandelen.
 
 De agents mogen niet periodiek de volledige database met een LLM scannen. Gebruik een event-driven architectuur met expliciete domeinevents, beleidsregels, permissies, workflowstatussen, auditlogging en gecontroleerde communicatie.
 
 De agents moeten:
 
-- relevante platformwijzigingen analyseren;
+- relevante tenantwijzigingen analyseren;
 - administratieve taken voorbereiden of uitvoeren;
 - alleen noodzakelijke context gebruiken;
 - gebruikers contacteren wanneer goedkeuring, informatie of interventie nodig is;
 - routinewerk stil uitvoeren wanneer dat veilig is;
 - elke beslissing en mutatie auditbaar maken;
 - dubbele uitvoering, agent-loops en verouderde acties voorkomen.
+
+## Archon Copilot — centrale interface
+
+Archon Copilot is de conversationele AI-interface voor de tenant en het startpunt voor AI-gestuurde acties.
+
+- Route: `/dashboard/agent-chat` (tenant-dashboard; geen platform-adminroute).
+- Elke tenant heeft een eigen Copilot-context.
+- Copilot stuurt gespecialiseerde agents (Nova/Lima) aan via vooraf gedefinieerde tools en permissies.
+- Bij autonomieniveau 3 presenteert Copilot voorstellen en wacht op goedkeuring.
+- Copilot heeft geen directe onbeperkte databasetoegang.
+
+Er zijn geen autonome agents die rechtstreeks en onbeperkt in de database werken. Financiële, juridische, externe communicatie- en moderatieacties vereisen menselijke goedkeuring vóór uitvoering.
 
 ## Belangrijke uitvoeringsregel
 
@@ -397,7 +413,9 @@ Na goedkeuring:
 
 ## Dashboardaanpassingen
 
-Maak van “Acties vandaag” een centrale agent work inbox.
+Maak van “Acties vandaag” een centrale agent work inbox binnen het tenant-dashboard (`/dashboard/*`).
+
+> Dit is een tenantpagina. Zij toont uitsluitend acties en voorstellen voor het actieve bedrijf. Zij heeft geen toegang tot platformdata van andere tenants.
 
 Elke kaart toont minimaal:
 
@@ -445,11 +463,16 @@ Toon daar alleen:
 
 Gebruik consistente rollen:
 
-- Nova = salesadministratie;
-- Lima = financiële administratie;
-- Command Center = centrale pagina voor agentactiviteiten.
+| Rol | Backend-ID | UI-alias | Scope |
+|---|---|---|---|
+| Salesadministratie | `nova` | Lara | Tenant (`/dashboard/*`) |
+| Financiële administratie | `lima` | Nina | Tenant (`/dashboard/*`) |
+| Command Center / work inbox | — | — | Tenant-dashboardpagina onder `/dashboard/*`; geen platformbeheer |
 
-Gebruik geen extra agentnamen zonder expliciete verantwoordelijkheid, permissions en event ownership.
+- Gebruik backend-IDs (`nova`, `lima`) in backend-logica, database en server actions.
+- UI-aliassen (`Lara`, `Nina`) zijn uitsluitend voor presentatielaag en marketing.
+- Gebruik geen extra agentnamen zonder expliciete verantwoordelijkheid, permissions en event ownership.
+- Voeg geen v2-agents (netwerk, inkoop, analyse) toe vóór de v1-kern (offertes, projecten, facturen, contacten, rechten) stabiel is.
 
 ## Datamodel
 
@@ -458,7 +481,7 @@ Maak of pas entiteiten aan voor minimaal:
 ### AgentDefinition
 
 - id
-- tenant scope
+- tenant_id (verplicht; agents zijn altijd gekoppeld aan één tenant, nooit platform-breed)
 - name
 - role
 - capabilities
@@ -615,6 +638,8 @@ Gebruik bestaande testconventies.
 - Geen nieuwe externe dependency toevoegen zonder duidelijke noodzaak.
 - Geen secrets, persoonsgegevens of tokens loggen.
 - Geen autonome financiële of contractuele mutaties.
+- Geen agent-loop starten door een self-triggering event.
+- Dit document niet vervangen door een parallel `AI_AGENTS.md` of nieuwe docsstructuur.
 
 ## Uitvoeringsvolgorde
 

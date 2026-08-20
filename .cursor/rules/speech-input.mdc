@@ -1,0 +1,15 @@
+---
+description: Spraakinvoer-hook, browser support en mobiele mic UX
+globs: src/hooks/useSpeechInput.ts,src/lib/speech/**/*,src/components/speech/**/*,src/components/dashboard/agent-chat/AgentChatWidget.tsx
+alwaysApply: false
+---
+
+# Spraakinvoer
+
+- Bron van waarheid: `src/lib/speech/speechRecognition.ts` + `useSpeechInput`.
+- Secure context vereist (HTTPS/localhost). Toon `speechSupportMessage` voor `insecure-context` / `unsupported`.
+- Tijdens `supportReason === "ssr"` niets als “niet beschikbaar” tonen (voorkomt hydratatie-flits).
+- Mobiel: push-to-talk (`pointerdown`/`up`); desktop: click-toggle + optionele spatie.
+- `continuous: false` + herstart terwijl `wantListening` is stabieler op iOS/Android dan native continuous.
+- Negeer `no-speech` / `aborted` tijdens actief luisteren; toon duidelijke fout bij `not-allowed`.
+- Microphone Permissions-Policy blijft `microphone=(self)` in `next.config.ts`.

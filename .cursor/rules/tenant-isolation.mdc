@@ -1,0 +1,22 @@
+---
+description: Tenant-isolatie en server-side autorisatie voor dashboard/actions
+globs: src/app/dashboard/**/*.{ts,tsx},src/lib/**/*.ts,src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# Tenant-isolatie (ArchonPro)
+
+- Haal `user` en `companyId` altijd server-side op. Nooit `company_id`, `role` of `user_id` uit clientinput vertrouwen.
+- Filter tenantqueries op `company_id`. RLS is aanvulling, geen vervanging.
+- Deny-by-default: zonder user én company membership → weigeren.
+- Cross-tenant links controleren via bestaande helpers (bv. `assertSameCompanyLinks`).
+- Gebruik bestaande Supabase-helpers in `src/lib/supabase/` — geen nieuwe clients, geen service-role in clientcode.
+- Voeg geen nieuwe `untyped()`-aanroepen toe.
+
+```ts
+// ❌ BAD — companyId van de client
+async function save(companyId: string) { /* ... */ }
+
+// ✅ GOOD — companyId uit sessie/membership
+const { user, companyId } = await requireCompanySession();
+```

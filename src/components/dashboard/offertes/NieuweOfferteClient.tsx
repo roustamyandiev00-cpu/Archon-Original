@@ -7,6 +7,7 @@ import OfferteForm, {
   type OfferteFormInitial,
 } from "@/components/dashboard/offertes/OfferteForm";
 import type { OfferteLijnInput } from "@/lib/offertes";
+import type { PrijslijstPickItem } from "@/components/dashboard/prijslijst/types";
 
 type Customer = {
   id: number;
@@ -23,15 +24,21 @@ type Customer = {
 type OfferteMode = "manueel" | "ai" | "beide";
 
 export default function NieuweOfferteClient({
-  agentName = "Lima",
+  agentName = "Ela",
   customers,
   documentContext,
   mode = "beide",
+  prijslijstItems = [],
+  hideFormBackLink = false,
+  onBack,
 }: {
   agentName?: string;
   customers: Customer[];
   documentContext: OfferteDocumentContext;
   mode?: OfferteMode;
+  prijslijstItems?: PrijslijstPickItem[];
+  hideFormBackLink?: boolean;
+  onBack?: () => void;
 }) {
   const [seed, setSeed] = useState<OfferteFormInitial | undefined>();
   const [showManualForm, setShowManualForm] = useState(mode === "manueel");
@@ -41,6 +48,8 @@ export default function NieuweOfferteClient({
     klant: string;
     notes: string;
     lines: OfferteLijnInput[];
+    projectNaam?: string;
+    afmetingen?: string;
   }) {
     setSeed({
       customerId: draft.customerId ? String(draft.customerId) : "",
@@ -52,13 +61,15 @@ export default function NieuweOfferteClient({
         return d.toISOString().slice(0, 10);
       })(),
       notes: draft.notes,
+      projectNaam: draft.projectNaam ?? "",
+      afmetingen: draft.afmetingen ?? "",
       lines: draft.lines,
     });
     setShowManualForm(true);
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-full min-h-0 flex-col gap-6">
       {mode !== "manueel" && (
         <NovaOffertePanel
           agentName={agentName}
@@ -71,6 +82,9 @@ export default function NieuweOfferteClient({
           customers={customers}
           documentContext={documentContext}
           seedDraft={seed}
+          prijslijstItems={prijslijstItems}
+          hideBackLink={hideFormBackLink}
+          onBack={onBack}
         />
       ) : (
         <div className="text-center py-6 border border-white/5 rounded-2xl bg-zinc-950/20">

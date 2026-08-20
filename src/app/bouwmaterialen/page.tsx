@@ -5,14 +5,20 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
 import { createClient } from "@/lib/supabase/server";
-import { categorieMeta, formatDate, type BouwmateriaalWinkelRow } from "@/lib/bouwmaterialen";
+import {
+  BOUWMATERIAAL_CATEGORIEEN,
+  CATEGORIE_META,
+  categorieMeta,
+  formatDate,
+  type BouwmateriaalWinkelRow,
+} from "@/lib/bouwmaterialen";
 import BouwmateriaalWinkelForm from "@/components/bouwmaterialen/BouwmateriaalWinkelForm";
 import BouwmaterialenMap from "@/components/bouwmaterialen/BouwmaterialenMap";
 
 export const metadata: Metadata = {
-  title: "Winkeladressen — Dak & tegels | ArchonPro",
+  title: "Winkeladressen — Bouw- & renovatiematerialen | ArchonPro",
   description:
-    "Vind winkels voor dak- en tegelmaterialen zonder te zoeken via Google. Bekijk adres, foto's en kaart, of voeg zelf een winkel toe.",
+    "Vind winkels voor bouw- en renovatiematerialen — van dak en tegels tot hout, isolatie, sanitair en verf — zonder te zoeken via Google. Bekijk adres, foto's en kaart, of voeg zelf een winkel toe.",
 };
 
 export default async function BouwmaterialenPage({
@@ -27,7 +33,7 @@ export default async function BouwmaterialenPage({
   let query = supabase
     .from("bouwmateriaal_winkels")
     .select(
-      "id, naam, categorie, adres, postcode, stad, regio, telefoon, website, beschrijving, fotos, toegevoegd_door, lat, lng, created_at",
+      "id, naam, categorie, adres, postcode, stad, regio, telefoon, website, beschrijving, fotos, toegevoegd_door, lat, lng, verificatiestatus, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -49,6 +55,7 @@ export default async function BouwmaterialenPage({
       lng: w.lng as number,
       adres: w.adres,
       stad: w.stad,
+      verificatiestatus: w.verificatiestatus ?? "niet_geverifieerd",
     }));
 
   return (
@@ -62,9 +69,9 @@ export default async function BouwmaterialenPage({
               <MapPin size={13} className="text-amber-400 mr-1" /> Winkeladressen
             </>
           }
-          title="Winkels voor dak- en tegelmaterialen"
+          title="Winkels voor bouw- en renovatiematerialen"
           accent="zonder Google"
-          subtitle="Adres, foto's en kaart van winkels voor dakmaterialen en tegels — verzameld op één plek door bouwbedrijven zelf. Voeg zelf een winkel toe, geen account nodig."
+          subtitle="Adres, foto's en kaart van winkels voor dak, tegels, hout, isolatie, sanitair, elektriciteit, verf en meer — verzameld op één plek door bouwbedrijven zelf. Voeg zelf een winkel toe, geen account nodig."
           primary={{ label: "Bekijk de directory", href: "#lijst" }}
           secondary={{ label: "Voeg een winkel toe", href: "#toevoegen" }}
         />
@@ -128,8 +135,11 @@ export default async function BouwmaterialenPage({
                     className="w-full rounded-xl border border-white/10 bg-zinc-950/50 px-3.5 py-2.5 text-sm text-zinc-100 outline-none transition-all focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/10"
                   >
                     <option value="">Alles tonen</option>
-                    <option value="dak">Dak</option>
-                    <option value="tegels">Tegels</option>
+                    {BOUWMATERIAAL_CATEGORIEEN.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {CATEGORIE_META[cat].label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -289,11 +299,12 @@ export default async function BouwmaterialenPage({
             <div className="mb-10 text-center">
               <span className="text-xs font-bold uppercase tracking-widest text-sky-400">Zelf toevoegen</span>
               <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-50 sm:text-4xl">
-                Voeg een winkel voor dak- of tegelmaterialen toe
+                Voeg een winkel voor bouwmaterialen toe
               </h2>
               <p className="mt-3 text-base text-zinc-400">
-                Ken je een goede winkel voor dakmaterialen of tegels? Voeg ze toe zodat andere bouwbedrijven
-                ze niet meer via Google hoeven te zoeken. Geen account nodig.
+                Ken je een goede winkel voor dak, tegels, hout, isolatie, sanitair of andere
+                bouwmaterialen? Voeg ze toe zodat andere bouwbedrijven ze niet meer via Google
+                hoeven te zoeken. Geen account nodig.
               </p>
             </div>
 

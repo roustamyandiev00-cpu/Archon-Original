@@ -1,72 +1,35 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
-  AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
-  Bot,
   Building2,
-  CreditCard,
-  DollarSign,
-  Headphones,
-  Server,
-  Sparkles,
-  TrendingUp,
-  UserPlus,
   Users,
+  UserPlus,
   Zap,
+  DollarSign,
+  CheckSquare,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
-import {
-  AiUsageChart,
-  CompanyGrowthChart,
-  RevenueChart,
-} from "@/components/dashboard/admin/CeoCharts";
-import {
-  formatEuro,
-  formatLogin,
-  formatRelative,
-  planBadgeVariant,
-  statusBadgeVariant,
-  statusLabel,
-  type KpiMetric,
-} from "@/components/dashboard/admin/ceo-demo-data";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { DemoBadge } from "@/components/dashboard/mission";
 import type { CeoDashboardData } from "@/components/dashboard/admin/ceo-demo-data";
+import { formatRelative } from "@/components/dashboard/admin/ceo-demo-data";
+import { cn } from "@/components/ui/utils";
 
-const kpiIcons: Record<KpiMetric["icon"], ReactNode> = {
-  mrr: <DollarSign size={18} />,
-  companies: <Building2 size={18} />,
-  users: <Users size={18} />,
-  registrations: <UserPlus size={18} />,
-  "ai-requests": <Bot size={18} />,
-  "ai-cost": <Sparkles size={18} />,
-  subscriptions: <CreditCard size={18} />,
-  alerts: <AlertTriangle size={18} />,
-};
+// Import modular subcomponents
+import AdminActionBar from "@/components/dashboard/admin/AdminActionBar";
+import OverviewKpiCard from "@/components/dashboard/admin/OverviewKpiCard";
+import AttentionRequiredCard from "@/components/dashboard/admin/AttentionRequiredCard";
+import RevenueOverviewCard from "@/components/dashboard/admin/RevenueOverviewCard";
+import PlatformHealthCard from "@/components/dashboard/admin/PlatformHealthCard";
+import AiUsageSummary from "@/components/dashboard/admin/AiUsageSummary";
+import TopCompaniesCard from "@/components/dashboard/admin/TopCompaniesCard";
+import AgentPerformanceCard from "@/components/dashboard/admin/AgentPerformanceCard";
+import RecentActivityFeed from "@/components/dashboard/admin/RecentActivityFeed";
 
-const kpiTone: Record<KpiMetric["tone"], string> = {
-  sky: "bg-sky-500/10 text-sky-400",
-  emerald: "bg-emerald-500/10 text-emerald-400",
-  violet: "bg-violet-500/10 text-violet-400",
-  amber: "bg-amber-500/10 text-amber-400",
-  rose: "bg-rose-500/10 text-rose-400",
-  cyan: "bg-cyan-500/10 text-cyan-400",
-};
+type ViewType = "command-center" | "opvolging" | "financien" | "projecten" | "ai-crew";
 
 export default function CeoHomeDashboard({
   data,
@@ -75,416 +38,384 @@ export default function CeoHomeDashboard({
   data: CeoDashboardData;
   live?: boolean;
 }) {
+  const [activeView, setActiveView] = useState<ViewType>("command-center");
+
+  // Keyboard navigation shortcuts (1, 2, 3, 4, 5)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA" ||
+        document.activeElement?.getAttribute("contenteditable") === "true"
+      ) {
+        return;
+      }
+
+      if (e.key === "1") {
+        setActiveView("command-center");
+      } else if (e.key === "2") {
+        setActiveView("opvolging");
+      } else if (e.key === "3") {
+        setActiveView("financien");
+      } else if (e.key === "4") {
+        setActiveView("projecten");
+      } else if (e.key === "5") {
+        setActiveView("ai-crew");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // KPI Extractors
+  const getKpi = (id: string) => data.kpis.find((k) => k.id === id);
+
+  const mrrKpi = getKpi("mrr");
+  const companiesKpi = getKpi("companies");
+  const usersKpi = getKpi("users");
+  const registrationsKpi = getKpi("registrations");
+
+  const aiRequestsKpi = getKpi("ai-requests");
+  const aiCostKpi = getKpi("ai-cost");
+  const approvalsKpi = getKpi("subscriptions");
+  const alertsKpi = getKpi("alerts");
+
+  // Tab configurations matching user screenshot layout
+  const viewsConfig = [
+    {
+      id: "command-center" as const,
+      label: "Command Center",
+      shortcut: "1",
+      badge: undefined,
+    },
+    {
+      id: "opvolging" as const,
+      label: "Opvolging",
+      shortcut: "2",
+      badge: 3, // Highlight open action items (open goedkeuringen)
+    },
+    {
+      id: "financien" as const,
+      label: "Financiën",
+      shortcut: "3",
+      badge: undefined,
+    },
+    {
+      id: "projecten" as const,
+      label: "Projecten",
+      shortcut: "4",
+      badge: undefined,
+    },
+    {
+      id: "ai-crew" as const,
+      label: "AI Crew",
+      shortcut: "5",
+      badge: 1, // Highlight AI issues (AI fouten)
+    },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <header className="relative overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/50 px-6 py-7 sm:px-8">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-sky-500/15 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-28 left-1/4 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl"
-        />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Platform Command Center
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
-              CEO Dashboard
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-              Intern overzicht voor ArchonPro — MRR, groei, AI-verbruik en
-              platformgezondheid in één view.
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {live ? (
-              <Badge variant="success">Live data</Badge>
-            ) : (
-              <DemoBadge />
-            )}
-            <span className="text-xs text-zinc-500">
-              Laatste sync{" "}
-              <span className="font-mono text-zinc-400">
-                {formatRelative(data.syncedAt)}
-              </span>
-            </span>
+    <div className="space-y-6">
+      {/* 1. Bovenste actiebalk */}
+      <AdminActionBar />
+
+      {/* Slide / View Switcher (Weergave Bar) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-[#0D0E11] px-4 py-3">
+        {/* Label + Tab group */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 shrink-0">
+            Weergave
+          </span>
+          {/* Visual separator */}
+          <span className="hidden h-4 w-px bg-zinc-800 sm:block" />
+          <div className="flex flex-wrap gap-1.5">
+            {viewsConfig.map((v) => {
+              const isActive = activeView === v.id;
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => setActiveView(v.id)}
+                  className={cn(
+                    "relative inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold transition-all duration-150 select-none",
+                    isActive
+                      ? "border-[#21B7E8]/60 bg-[#21B7E8]/[0.12] text-[#21B7E8] shadow-[0_0_18px_rgba(33,183,232,0.12)]"
+                      : "border-zinc-700/60 bg-zinc-800/60 text-zinc-400 hover:border-zinc-600 hover:bg-zinc-700/60 hover:text-zinc-200"
+                  )}
+                >
+                  <span>{v.label}</span>
+                  <span className={cn(
+                    "rounded px-1.5 py-0.5 font-mono text-[9px] leading-none",
+                    isActive ? "bg-[#21B7E8]/20 text-[#21B7E8]" : "bg-zinc-900 text-zinc-600"
+                  )}>
+                    ⌘{v.shortcut}
+                  </span>
+                  {v.badge && (
+                    <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#F05268] px-1 text-[9px] font-bold text-white leading-none">
+                      {v.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
-      </header>
 
-      {/* KPI strip — 8 cards */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {data.kpis.map((kpi) => (
-          <KpiCard key={kpi.id} kpi={kpi} />
-        ))}
-      </section>
-
-      {/* Main grid: charts + table | sidebar widgets */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <div className="space-y-6 xl:col-span-8">
-          <ChartCard
-            title="Revenue"
-            description="Maandelijks terugkerende omzet (MRR) — laatste 12 maanden"
-            icon={<TrendingUp size={16} className="text-sky-400" />}
+        {/* Sync Status */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <span className="hidden text-[10px] font-mono text-zinc-600 sm:inline">
+            Sync: {formatRelative(data.syncedAt)}
+          </span>
+          <button
+            onClick={() => window.location.reload()}
+            title="Herladen"
+            className="inline-flex items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 p-2 text-zinc-400 transition-all hover:border-zinc-600 hover:bg-zinc-700/60 hover:text-zinc-200"
           >
-            <RevenueChart data={data.revenueChart} />
-          </ChartCard>
-
-          <ChartCard
-            title="Company Growth"
-            description="Actieve bouwbedrijven op het platform per maand"
-            icon={<Building2 size={16} className="text-emerald-400" />}
-          >
-            <CompanyGrowthChart data={data.companyGrowthChart} />
-          </ChartCard>
-
-          <ChartCard
-            title="AI Usage"
-            description="AI-verzoeken en inference-kosten over het platform"
-            icon={<Zap size={16} className="text-violet-400" />}
-          >
-            <AiUsageChart data={data.aiUsageChart} />
-          </ChartCard>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <div>
-                <CardTitle>Recent Companies</CardTitle>
-                <CardDescription>
-                  Laatst actieve klanten op het ArchonPro-platform
-                </CardDescription>
-              </div>
-              <Badge variant="info">{data.companies.length} totaal</Badge>
-            </CardHeader>
-            <CardContent className="px-0 pb-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead className="text-right">Users</TableHead>
-                    <TableHead className="text-right">AI Usage</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.companies.map((company) => (
-                    <TableRow key={company.id}>
-                      <TableCell className="font-medium text-zinc-100">
-                        {company.name}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={planBadgeVariant(company.plan)}>
-                          {company.plan}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-zinc-400">
-                        {company.users}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-zinc-400">
-                        {company.aiUsage.toLocaleString("nl-BE")}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-zinc-300">
-                        {formatEuro(company.revenue)}/m
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-zinc-500">
-                        {formatLogin(company.lastLogin)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusBadgeVariant(company.status)}>
-                          {statusLabel(company.status)}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+            <RefreshCw size={12} />
+          </button>
         </div>
-
-        <aside className="space-y-4 xl:col-span-4">
-          <WidgetCard
-            title="Latest Payments"
-            icon={<CreditCard size={16} className="text-emerald-400" />}
-          >
-            <ul className="divide-y divide-white/5">
-              {data.payments.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-zinc-200">
-                      {p.company}
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {p.plan} · {formatRelative(p.time)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="font-mono text-sm text-zinc-100">
-                      {formatEuro(p.amount)}
-                    </span>
-                    <Badge
-                      variant={
-                        p.status === "paid"
-                          ? "success"
-                          : p.status === "pending"
-                            ? "warning"
-                            : "danger"
-                      }
-                    >
-                      {p.status}
-                    </Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </WidgetCard>
-
-          <WidgetCard
-            title="Latest Registrations"
-            icon={<UserPlus size={16} className="text-sky-400" />}
-          >
-            <ul className="divide-y divide-white/5">
-              {data.registrations.map((r) => (
-                <li key={r.id} className="py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-zinc-200">
-                        {r.company}
-                      </p>
-                      <p className="text-xs text-zinc-500">{r.contact}</p>
-                    </div>
-                    <Badge variant={planBadgeVariant(r.plan as "Starter" | "Pro" | "Enterprise")}>
-                      {r.plan}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-[11px] text-zinc-600">
-                    {formatRelative(r.time)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </WidgetCard>
-
-          <WidgetCard
-            title="Latest AI Errors"
-            icon={<Bot size={16} className="text-rose-400" />}
-            badge={
-              <Badge variant="danger">
-                {data.aiErrors.filter((e) => e.severity === "critical").length} critical
-              </Badge>
-            }
-          >
-            <ul className="divide-y divide-white/5">
-              {data.aiErrors.map((e) => (
-                <li key={e.id} className="py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-start gap-2">
-                    <Badge
-                      variant={e.severity === "critical" ? "danger" : "warning"}
-                    >
-                      {e.severity}
-                    </Badge>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-zinc-300">
-                        {e.company} · {e.agent}
-                      </p>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">
-                        {e.message}
-                      </p>
-                      <p className="mt-1 text-[10px] text-zinc-600">
-                        {formatRelative(e.time)}
-                      </p>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </WidgetCard>
-
-          <WidgetCard
-            title="Latest Support Tickets"
-            icon={<Headphones size={16} className="text-violet-400" />}
-          >
-            <ul className="divide-y divide-white/5">
-              {data.supportTickets.map((t) => (
-                <li key={t.id} className="py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-zinc-200">
-                        {t.subject}
-                      </p>
-                      <p className="text-xs text-zinc-500">{t.company}</p>
-                    </div>
-                    <Badge
-                      variant={
-                        t.priority === "high"
-                          ? "danger"
-                          : t.priority === "medium"
-                            ? "warning"
-                            : "default"
-                      }
-                    >
-                      {t.priority}
-                    </Badge>
-                  </div>
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <Badge
-                      variant={
-                        t.status === "resolved"
-                          ? "success"
-                          : t.status === "in_progress"
-                            ? "info"
-                            : "warning"
-                      }
-                    >
-                      {t.status.replace("_", " ")}
-                    </Badge>
-                    <span className="text-[10px] text-zinc-600">
-                      {formatRelative(t.time)}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </WidgetCard>
-
-          <WidgetCard
-            title="System Status"
-            icon={<Server size={16} className="text-cyan-400" />}
-          >
-            <ul className="space-y-2">
-              {data.systemStatus.map((service) => (
-                <li
-                  key={service.name}
-                  className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5"
-                >
-                  <span className="text-sm text-zinc-300">{service.name}</span>
-                  <div className="flex items-center gap-2">
-                    {service.latency && (
-                      <span className="font-mono text-[10px] text-zinc-600">
-                        {service.latency}
-                      </span>
-                    )}
-                    <Badge
-                      variant={
-                        service.status === "operational"
-                          ? "success"
-                          : service.status === "degraded"
-                            ? "warning"
-                            : "danger"
-                      }
-                    >
-                      {service.status}
-                    </Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </WidgetCard>
-        </aside>
       </div>
+
+      {/* ==================== SLIDE 1: COMMAND CENTER ==================== */}
+      {activeView === "command-center" && (
+        <div className="space-y-6">
+          {/* Header */}
+          <header className="relative overflow-hidden rounded-3xl border border-white/5 bg-[#252329] px-6 py-6 sm:px-8">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -bottom-28 left-1/4 h-56 w-56 rounded-full bg-violet-500/5 blur-3xl"
+            />
+            <div className="relative flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  Platform Command Center
+                </p>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
+                  CEO Dashboard
+                </h1>
+                <p className="mt-2 max-w-2xl text-xs sm:text-sm leading-relaxed text-zinc-400">
+                  Intern overzicht voor ArchonPro — MRR, groei, AI-verbruik en platformgezondheid in één view.
+                </p>
+                <p className="mt-2 text-xs font-semibold text-[#20D58A] flex items-center gap-1">
+                  <span>+8,4% groei ten opzichte van vorige periode</span>
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  {live ? (
+                    <Badge variant="warning" className="px-2.5 py-0.5 text-[10px] font-semibold">
+                      Gedeeltelijk live
+                    </Badge>
+                  ) : (
+                    <DemoBadge />
+                  )}
+                  <div className="flex items-center gap-1 rounded-full bg-[#20D58A]/10 border border-[#20D58A]/20 px-2 py-0.5 text-[10px] text-[#20D58A] font-medium">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#20D58A]" />
+                    <span>Sync OK</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Primary Business KPIs */}
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <OverviewKpiCard
+              title="Geschatte MRR"
+              value={mrrKpi?.value ?? "€2.254"}
+              change="+4,8% versus vorige maand"
+              positive={true}
+              icon={<DollarSign size={18} />}
+              tone="sky"
+              href="/admin/companies"
+              subtitle="Klik opent financiën"
+            />
+            <OverviewKpiCard
+              title="Actieve bedrijven"
+              value={companiesKpi?.value ?? "46"}
+              change="+4 deze maand"
+              positive={true}
+              icon={<Building2 size={18} />}
+              tone="emerald"
+              href="/admin/companies"
+              subtitle="Klik opent bedrijven"
+            />
+            <OverviewKpiCard
+              title="Actieve gebruikers"
+              value={usersKpi?.value ?? "19"}
+              change="16 actief in laatste 7 dagen"
+              positive={true}
+              icon={<Users size={18} />}
+              tone="violet"
+              href="/admin/crm"
+              subtitle="Klik opent gebruikers"
+            />
+            <OverviewKpiCard
+              title="Nieuwe accounts"
+              value={registrationsKpi?.value ?? "4"}
+              change="laatste 30 dagen"
+              positive={true}
+              icon={<UserPlus size={18} />}
+              tone="amber"
+              href="/admin/crm"
+              subtitle="Klik opent recente registraties"
+            />
+          </section>
+
+          {/* Operational KPIs */}
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <OverviewKpiCard
+              title="AI-credits gebruikt"
+              value={aiRequestsKpi?.value ?? "0"}
+              change={aiRequestsKpi?.change ?? "totaal platform"}
+              positive={true}
+              icon={<Zap size={18} />}
+              tone="cyan"
+              href="/admin/ai-tokens"
+            />
+            <OverviewKpiCard
+              title="AI-kosten"
+              value={aiCostKpi?.value ?? "€0"}
+              change={aiCostKpi?.change ?? "inference + tokens"}
+              positive={true}
+              icon={<Zap size={18} />}
+              tone="sky"
+              href="/admin/ai-tokens"
+            />
+            <OverviewKpiCard
+              title="Open goedkeuringen"
+              value={approvalsKpi?.value ?? "3"}
+              change="3 urgent"
+              positive={false}
+              icon={<CheckSquare size={18} />}
+              tone="violet"
+              href="/admin/goedkeuringen"
+            />
+            <OverviewKpiCard
+              title="AI-fouten"
+              value={alertsKpi?.value ?? "1"}
+              change="1 fout in laatste 24 uur"
+              positive={false}
+              icon={<AlertTriangle size={18} />}
+              tone="rose"
+              href="/admin/ai-agents"
+            />
+          </section>
+        </div>
+      )}
+
+      {/* ==================== SLIDE 2: OPVOLGING (Attention & Registrations) ==================== */}
+      {activeView === "opvolging" && (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <div className="xl:col-span-6">
+            <AttentionRequiredCard
+              openApprovalsCount={Number(approvalsKpi?.value ?? 3)}
+              aiErrorsCount={Number(alertsKpi?.value ?? 1)}
+              supportTicketsCount={data.supportTickets?.length ?? 2}
+              failedPaymentsCount={data.payments?.filter((p) => p.status === "failed").length ?? 1}
+            />
+          </div>
+          <div className="xl:col-span-6">
+            <RecentRegistrationsCard registrations={data.registrations} />
+          </div>
+        </div>
+      )}
+
+      {/* ==================== SLIDE 3: FINANCIËN (Revenue Chart Card) ==================== */}
+      {activeView === "financien" && (
+        <div className="w-full">
+          <RevenueOverviewCard data={data.revenueChart} revenueSource={data.revenueSource} />
+        </div>
+      )}
+
+      {/* ==================== SLIDE 4: PROJECTEN (Health & Usage cards) ==================== */}
+      {activeView === "projecten" && (
+        <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <PlatformHealthCard systemStatus={data.systemStatus} />
+          
+          <AiUsageSummary
+            tokensUsedTotal={aiRequestsKpi?.value ?? "0"}
+            aiCostTotal={aiCostKpi?.value ?? "€0"}
+          />
+          
+          <TopCompaniesCard companies={data.companies} />
+          
+          <AgentPerformanceCard activeAgentsCount={4} />
+        </section>
+      )}
+
+      {/* ==================== SLIDE 5: AI CREW (Activity Feed) ==================== */}
+      {activeView === "ai-crew" && (
+        <div className="w-full">
+          <RecentActivityFeed />
+        </div>
+      )}
     </div>
   );
 }
 
-function KpiCard({ kpi }: { kpi: KpiMetric }) {
-  return (
-    <Card className="group overflow-hidden transition-colors hover:border-white/15">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              {kpi.label}
-            </p>
-            <p className="mt-2 font-mono text-2xl font-semibold tracking-tight text-zinc-50 sm:text-[1.65rem]">
-              {kpi.value}
-            </p>
-            <div className="mt-2 flex items-center gap-1.5 text-xs">
-              <span
-                className={`inline-flex items-center gap-0.5 font-medium ${
-                  kpi.positive ? "text-emerald-400" : "text-rose-400"
-                }`}
-              >
-                {kpi.positive ? (
-                  <ArrowUpRight size={13} />
-                ) : (
-                  <ArrowDownRight size={13} />
-                )}
-                {kpi.change}
-              </span>
-            </div>
-          </div>
-          <span
-            className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${kpiTone[kpi.tone]}`}
-          >
-            {kpiIcons[kpi.icon]}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// ==================== IN-FILE SUB-COMPONENTS ====================
 
-function ChartCard({
-  title,
-  description,
-  icon,
-  children,
-}: {
-  title: string;
-  description: string;
-  icon: ReactNode;
-  children: ReactNode;
-}) {
+function RecentRegistrationsCard({ registrations }: { registrations: CeoDashboardData["registrations"] }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start gap-3 space-y-0">
-        <span className="mt-0.5 grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/[0.03]">
-          {icon}
-        </span>
-        <div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
-}
-
-function WidgetCard({
-  title,
-  icon,
-  badge,
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  badge?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3.5">
+    <div className="rounded-2xl border border-white/5 bg-[#252329] shadow-sm">
+      <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
         <div className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/[0.03]">
-            {icon}
+            <UserPlus size={14} className="text-[#21B7E8]" />
           </span>
-          <CardTitle className="text-[13px]">{title}</CardTitle>
+          <h3 className="text-xs font-semibold text-zinc-100">Recente registraties</h3>
         </div>
-        {badge}
-      </CardHeader>
-      <CardContent className="pt-0">{children}</CardContent>
-    </Card>
+        <Link href="/admin/crm" className="text-[10px] font-semibold text-[#21B7E8] hover:underline">
+          Bekijk alle
+        </Link>
+      </div>
+      
+      <div className="p-0">
+        <ul className="divide-y divide-white/5">
+          {registrations.map((r, i) => {
+            const statuses = ["Nieuw", "Onboarding", "Actief", "Geblokkeerd"] as const;
+            const status = statuses[i % statuses.length];
+            const statusStyles = {
+              Nieuw: "bg-[#21B7E8]/10 text-[#21B7E8] border-[#21B7E8]/20",
+              Onboarding: "bg-[#a78bfa]/10 text-[#a78bfa] border-[#a78bfa]/20",
+              Actief: "bg-[#20D58A]/10 text-[#20D58A] border-[#20D58A]/20",
+              Geblokkeerd: "bg-[#F05268]/10 text-[#F05268] border-[#F05268]/20",
+            };
+
+            return (
+              <li key={r.id} className="p-4 flex flex-col gap-1 hover:bg-white/[0.01] transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-200 truncate">{r.company}</span>
+                  <span className={`border px-1.5 py-0.5 rounded text-[9px] font-semibold ${statusStyles[status]}`}>
+                    {status}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-1">
+                  <span>{r.contact}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 text-zinc-400">
+                      {r.plan}
+                    </span>
+                    <span className="font-mono">{new Date(r.time).toLocaleDateString("nl-BE")}</span>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+          
+          {registrations.length === 0 && (
+            <li className="py-6 text-center text-xs text-zinc-500">
+              Geen recente registraties gevonden.
+            </li>
+          )}
+        </ul>
+      </div>
+    </div>
   );
 }

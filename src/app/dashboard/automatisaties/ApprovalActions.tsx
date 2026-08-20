@@ -39,32 +39,43 @@ export default function ApprovalActions({ id }: { id: number }) {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
-      {error && <span className="text-[10px] text-rose-400">{error}</span>}
-      <button
-        onClick={() => decide("approve")}
-        disabled={pending}
-        className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/25 disabled:opacity-50"
-      >
-        {acting === "approve" ? (
-          <Loader2 size={10} className="animate-spin" />
-        ) : (
-          <ThumbsUp size={10} />
-        )}
-        Goedkeuren
-      </button>
-      <button
-        onClick={() => decide("reject")}
-        disabled={pending}
-        className="inline-flex items-center gap-1 rounded bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium text-rose-400 transition-colors hover:bg-rose-500/25 disabled:opacity-50"
-      >
-        {acting === "reject" ? (
-          <Loader2 size={10} className="animate-spin" />
-        ) : (
-          <ThumbsDown size={10} />
-        )}
-        Afwijzen
-      </button>
+    <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:items-end">
+      {error && (
+        <span
+          role="alert"
+          className="max-w-xs text-xs leading-5 text-rose-400"
+        >
+          {error}
+        </span>
+      )}
+      <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+        <button
+          type="button"
+          onClick={() => decide("approve")}
+          disabled={pending}
+          className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+        >
+          {acting === "approve" ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <ThumbsUp size={13} />
+          )}
+          Goedkeuren
+        </button>
+        <button
+          type="button"
+          onClick={() => decide("reject")}
+          disabled={pending}
+          className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/70 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+        >
+          {acting === "reject" ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <ThumbsDown size={13} />
+          )}
+          Afwijzen
+        </button>
+      </div>
     </div>
   );
 }
