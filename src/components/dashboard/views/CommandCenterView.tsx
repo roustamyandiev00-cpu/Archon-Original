@@ -44,8 +44,8 @@ const domainCards: DomainCard[] = [
     label: "Offerte",
     icon: FileText,
     href: "/dashboard/offertes",
-    stripe: "border-l-orange-500",
-    iconTone: "text-orange-400 bg-orange-500/10",
+    stripe: "border-l-sky-500",
+    iconTone: "text-sky-400 bg-sky-500/10",
     status: (m) =>
       m.offertesCount > 0
         ? `${m.offertesCount} offerte${m.offertesCount > 1 ? "s" : ""} deze maand`
@@ -56,8 +56,8 @@ const domainCards: DomainCard[] = [
     label: "Factuur",
     icon: Receipt,
     href: "/dashboard/facturen",
-    stripe: "border-l-orange-500",
-    iconTone: "text-orange-400 bg-orange-500/10",
+    stripe: "border-l-sky-500",
+    iconTone: "text-sky-400 bg-sky-500/10",
     status: (m) =>
       m.overdueFacturenCount > 0
         ? `${m.overdueFacturenCount} vervallen factuur${m.overdueFacturenCount > 1 ? "en" : ""}`
@@ -89,8 +89,8 @@ const domainCards: DomainCard[] = [
     label: "Planning",
     icon: Calendar,
     href: "/dashboard/agenda",
-    stripe: "border-l-orange-500",
-    iconTone: "text-orange-400 bg-orange-500/10",
+    stripe: "border-l-sky-500",
+    iconTone: "text-sky-400 bg-sky-500/10",
     status: () => "Planning en afspraken bekijken",
   },
   {
@@ -202,7 +202,7 @@ export default function CommandCenterView({
               {status.nextHref && status.nextLabel ? (
                 <Link
                   href={status.nextHref}
-                  className="mt-2 inline-flex text-xs font-medium text-orange-300 transition-colors hover:text-orange-200"
+                  className="mt-2 inline-flex text-xs font-medium text-sky-300 transition-colors hover:text-sky-200"
                 >
                   {status.nextLabel} →
                 </Link>
@@ -420,7 +420,7 @@ export default function CommandCenterView({
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-zinc-500">Openstaand</span>
-                  <span className="font-semibold text-orange-300">
+                  <span className="font-semibold text-amber-300">
                     {euro(mission.openstaand)}
                   </span>
                 </div>

@@ -7,6 +7,7 @@ import {
 } from "@/components/dashboard/context";
 import { writeAuditEntry } from "@/lib/agents/audit";
 import {
+  assertAssigneeMembership,
   assertTaskRelations,
   writeTaskActivity,
 } from "@/lib/tasks/relations";
@@ -309,10 +310,15 @@ export async function assignTask(id: number, userId: string | null) {
   if ("error" in access) return { error: access.error };
   const { supabase, companyId, user } = access;
 
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Ongeldige taak." };
+
+  const assignee = await assertAssigneeMembership(supabase, companyId, userId);
+  if (!assignee.ok) return { error: assignee.error };
+
   const { data, error } = await supabase
     .from("tasks")
     .update({
-      assigned_to_user_id: userId,
+      assigned_to_user_id: assignee.userId,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -332,7 +338,7 @@ export async function assignTask(id: number, userId: string | null) {
     action: "task.assigned",
     entityType: "task",
     entityId: id,
-    metadata: { assignedTo: userId },
+    metadata: { assignedTo: assignee.userId },
   });
 
   revalidateTasks(id);
@@ -816,9 +822,8 @@ export async function listTasks(filters: TaskListFilters = {}) {
     query = query.eq("assigned_to_user_id", filters.assignee);
   }
   if (filters.q?.trim()) {
-    query = query.or(
-      `title.ilike.%${filters.q.trim()}%,description.ilike.%${filters.q.trim()}%`,
-    );
+    const q = filters.q.trim().replace(/[%(),]/g, "");
+    query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
   }
   if (filters.overdue) {
     query = query

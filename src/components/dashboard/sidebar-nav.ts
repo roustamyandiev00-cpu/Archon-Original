@@ -115,7 +115,15 @@ const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
         href: "/dashboard/leads",
         icon: Contact,
       },
-      { label: "Automatisaties", href: "/dashboard/automatisaties", icon: Zap },
+      {
+        label: "Automatisaties",
+        href: "/dashboard/automatisaties",
+        icon: Zap,
+        available: false,
+        tag: "WIP",
+        labelTone: "warning",
+        hint: "Binnenkort beschikbaar",
+      },
     ],
   },
   {
@@ -126,11 +134,37 @@ const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
         label: "Bouwnetwerk",
         href: "/dashboard/werkposts",
         icon: HardHat,
+        available: false,
+        tag: "WIP",
+        labelTone: "warning",
+        hint: "Binnenkort beschikbaar",
       },
       {
         label: "Samenwerkingen",
         href: "/dashboard/werkposts/samenwerkingen",
         icon: Handshake,
+        available: false,
+        tag: "WIP",
+        labelTone: "warning",
+        hint: "Binnenkort beschikbaar",
+      },
+      {
+        label: "Telegram",
+        href: "/dashboard/telegram",
+        icon: MessageCircle,
+        available: false,
+        tag: "WIP",
+        labelTone: "warning",
+        hint: "Binnenkort beschikbaar",
+      },
+      {
+        label: "Geschillen",
+        href: "/dashboard/geschillen",
+        icon: Shield,
+        available: false,
+        tag: "WIP",
+        labelTone: "warning",
+        hint: "Binnenkort beschikbaar",
       },
     ],
   },
@@ -165,7 +199,15 @@ const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
     title: "AI",
     items: [
       { label: "AI-agents", href: "/dashboard/command-center?view=crew", icon: Bot },
-      { label: "Comms", href: "/dashboard/comms", icon: MessageCircle },
+      {
+        label: "Comms",
+        href: "/dashboard/comms",
+        icon: MessageCircle,
+        available: false,
+        tag: "WIP",
+        labelTone: "warning",
+        hint: "Binnenkort beschikbaar",
+      },
       { label: "Geheugen", href: "/dashboard/geheugen", icon: BrainCircuit },
     ],
   },
@@ -189,6 +231,7 @@ export function getSidebarGroups(registeredUsers: number): SidebarGroup[] {
 export const TOPBAR_OBSERVEER_ITEMS: SidebarItem[] = [
   { label: "Onderzoek", href: "/dashboard/onderzoek", icon: Search, available: true },
   { label: "KPI's", href: "/dashboard/kpi", icon: BarChart3, available: true },
+  // Analytics redirect naar KPI — beide links blijven voor backwards compatibility
   { label: "Analytics", href: "/dashboard/analytics", icon: LineChart, available: true },
 ];
 
@@ -254,6 +297,28 @@ export function sidebarItemIsActive(
   }
 
   return current === target || current.startsWith(`${target}/`);
+}
+
+/** Vindt de sectie + paginalabel voor het huidige pad (voor de topbar-titel). */
+export function findCurrentPageLabel(
+  pathname: string,
+  searchParams?: Pick<URLSearchParams, "get"> | null,
+): { group: string; label: string } | null {
+  for (const group of SIDEBAR_GROUPS_BASE) {
+    for (const item of group.items) {
+      if (sidebarItemIsActive(pathname, item.href, searchParams)) {
+        return { group: group.title, label: item.label };
+      }
+      if (item.children) {
+        for (const child of item.children) {
+          if (sidebarItemIsActive(pathname, child.href, searchParams)) {
+            return { group: group.title, label: child.label };
+          }
+        }
+      }
+    }
+  }
+  return null;
 }
 
 export function groupHasActivePath(

@@ -26,7 +26,7 @@ export function DashboardPanel({
       <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-3.5">
         <div className="flex items-center gap-2.5">
           {Icon && (
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-orange-500/10 text-orange-400">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-sky-500/10 text-sky-400">
               <Icon size={14} />
             </span>
           )}
@@ -61,7 +61,7 @@ export function EmptyState({
   const actionClass =
     actionVariant === "secondary"
       ? `${actionMargin} inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-transparent px-4 py-2 text-sm font-medium text-zinc-200 transition-colors hover:border-white/25 hover:bg-white/[0.04]`
-      : `${actionMargin} inline-flex items-center gap-1.5 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400`;
+      : `${actionMargin} inline-flex items-center gap-1.5 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400`;
 
   return (
     <div
@@ -104,13 +104,13 @@ export function QuickActionCard({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-zinc-900/60 px-4 py-3.5 transition-all hover:border-orange-500/25 hover:bg-zinc-900"
+      className="group flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-zinc-900/60 px-4 py-3.5 transition-all hover:border-sky-500/25 hover:bg-zinc-900"
     >
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-800/80 text-zinc-400 transition-colors group-hover:bg-orange-500/10 group-hover:text-orange-400">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-800/80 text-zinc-400 transition-colors group-hover:bg-sky-500/10 group-hover:text-sky-400">
         <Icon size={17} />
       </span>
       <div className="min-w-0">
-        <span className="block text-sm font-semibold text-zinc-100 group-hover:text-orange-100">
+        <span className="block text-sm font-semibold text-zinc-100 group-hover:text-sky-100">
           {title}
         </span>
         <span className="mt-0.5 block truncate text-xs text-zinc-500">
@@ -173,7 +173,7 @@ export function PrimaryButton({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-orange-400 ${className.includes("w-") ? "" : "w-full"} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-sky-400 ${className.includes("w-") ? "" : "w-full"} ${className}`}
     >
       {children}
     </Link>
@@ -209,7 +209,7 @@ export function IconActionButton({
   children: ReactNode;
 }) {
   const className =
-    "grid h-8 w-8 place-items-center rounded-lg bg-orange-500/15 text-orange-400 transition-colors hover:bg-orange-500/25";
+    "grid h-8 w-8 place-items-center rounded-lg bg-sky-500/15 text-sky-400 transition-colors hover:bg-sky-500/25";
 
   if (href) {
     return (

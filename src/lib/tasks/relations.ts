@@ -8,14 +8,17 @@ type Client = SupabaseClient<Database>;
 export async function assertTaskRelations(
   supabase: Client,
   companyId: number,
-  input: Pick<
-    ParsedTaskInput,
-    | "contactId"
-    | "offerteId"
-    | "factuurId"
-    | "projectId"
-    | "afspraakId"
-    | "parentTaskId"
+  input: Partial<
+    Pick<
+      ParsedTaskInput,
+      | "contactId"
+      | "dealId"
+      | "offerteId"
+      | "factuurId"
+      | "projectId"
+      | "afspraakId"
+      | "parentTaskId"
+    >
   >,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (input.contactId) {
@@ -26,6 +29,16 @@ export async function assertTaskRelations(
       .eq("company_id", companyId)
       .maybeSingle();
     if (!data) return { ok: false, error: "Contact behoort niet tot dit bedrijf." };
+  }
+
+  if (input.dealId) {
+    const { data } = await supabase
+      .from("deals")
+      .select("id")
+      .eq("id", input.dealId)
+      .eq("bedrijf_id", companyId)
+      .maybeSingle();
+    if (!data) return { ok: false, error: "Deal behoort niet tot dit bedrijf." };
   }
 
   if (input.offerteId) {
@@ -81,6 +94,44 @@ export async function assertTaskRelations(
   }
 
   return { ok: true };
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type AssigneeMembershipResult =
+  | { ok: true; userId: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Valideert dat een toe te wijzen gebruiker een actief lid is van exact
+ * `companyId`. Cross-tenant-, inactive- en niet-bestaande memberships worden
+ * geweigerd. Een lege userId (unassign) is toegestaan.
+ */
+export async function assertAssigneeMembership(
+  supabase: Client,
+  companyId: number,
+  userId: string | null,
+): Promise<AssigneeMembershipResult> {
+  if (!userId) return { ok: true, userId: null };
+
+  const target = userId.trim();
+  if (!UUID_RE.test(target)) {
+    return { ok: false, error: "Ongeldige gebruiker." };
+  }
+
+  const { data: members, error } = await supabase.rpc("team_list_members", {
+    p_company_id: companyId,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  const member = (members ?? []).find(
+    (m) => m.user_id.toLowerCase() === target.toLowerCase(),
+  );
+  if (!member || member.is_active !== true) {
+    return { ok: false, error: "Gebruiker is geen actief lid van dit bedrijf." };
+  }
+
+  return { ok: true, userId: member.user_id };
 }
 
 export async function writeTaskActivity(

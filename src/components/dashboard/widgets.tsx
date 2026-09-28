@@ -80,7 +80,7 @@ export function StatCard({
   sublabel?: string;
 }) {
   const Icon = statIcons[icon];
-  const stroke = positive ? "#38bdf8" : "#e85a6b";
+  const stroke = positive ? "#38bdf8" : "#fb7185";
   const gid = `spark-${label.replace(/\s+/g, "")}`;
   const large = size === "lg";
   const compact = size === "compact";

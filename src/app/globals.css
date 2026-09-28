@@ -12,10 +12,27 @@
   --color-border: rgba(255, 255, 255, 0.08);
   --color-text: #ffffff;
   --color-text-muted: #94a3b8;
+
+  /* Één accent: brandblauw/sky. Gebruik voor CTA's, actieve nav en data-highlights. */
   --color-primary: #3b82f6;
   --color-primary-600: #2563eb;
   --color-accent-light: #60a5fa;
   --color-accent-cyan: #38bdf8;
+  --color-primary-soft: rgba(59, 130, 246, 0.14);
+
+  /* Oppervlakte-hiërarchie (donker → lichter) */
+  --color-surface-raised: #1a212e;
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Statuskleuren — één bron van waarheid (concept/verzonden/betaald/vervallen/…) */
+  --color-success: #34d399;
+  --color-success-soft: rgba(52, 211, 153, 0.12);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgba(251, 191, 36, 0.12);
+  --color-danger: #fb7185;
+  --color-danger-soft: rgba(251, 113, 133, 0.12);
+  --color-info: #38bdf8;
+  --color-info-soft: rgba(56, 189, 248, 0.12);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-app: var(--font-inter), ui-sans-serif, system-ui, sans-serif;

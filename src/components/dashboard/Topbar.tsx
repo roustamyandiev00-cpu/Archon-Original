@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   Bell,
@@ -10,6 +10,7 @@ import {
   Activity,
   X,
   ChevronDown,
+  ChevronRight,
   BarChart3,
   LineChart,
   Zap,
@@ -31,6 +32,7 @@ import { usePendingApprovals } from "@/components/dashboard/PendingApprovalsProv
 import TopbarProfileMenu from "@/components/dashboard/TopbarProfileMenu";
 import type { TopbarProfile, TopbarSummary } from "@/components/dashboard/mission-data";
 import {
+  findCurrentPageLabel,
   TOPBAR_OBSERVEER_ITEMS,
 } from "@/components/dashboard/sidebar-nav";
 
@@ -63,6 +65,9 @@ export default function Topbar({
   isPreviewMode?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPage = findCurrentPageLabel(pathname, searchParams);
   const { items: pendingItems } = usePendingApprovals();
   const {
     unreadItems: completedItems,
@@ -149,6 +154,17 @@ export default function Topbar({
           >
             <LogoMark size={34} glow={false} />
           </Link>
+
+          {currentPage && (
+            <div className="hidden min-w-0 items-center gap-2 lg:flex">
+              <span className="text-xs text-zinc-500">{currentPage.group}</span>
+              <ChevronRight size={13} className="shrink-0 text-zinc-600" />
+              <span className="truncate text-sm font-semibold text-zinc-100">
+                {currentPage.label}
+              </span>
+              <span className="ml-2 h-4 w-px bg-white/10" />
+            </div>
+          )}
 
           <div className="hidden items-center gap-5 md:flex">
             <Stat label="Offertes vandaag" value={String(initial.offertesVandaag)} />
