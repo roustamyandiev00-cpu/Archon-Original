@@ -25,6 +25,26 @@ describe("tasks validation", () => {
     expect(parseCreateTaskInput({ title: "x", status: "nope" }).ok).toBe(false);
   });
 
+  it("weigert ongeldige prioriteit en bron", () => {
+    expect(parseCreateTaskInput({ title: "x", priority: "medium" }).ok).toBe(false);
+    expect(parseCreateTaskInput({ title: "x", source: "import" }).ok).toBe(false);
+  });
+
+  it("negeert ongeldige relationele id's", () => {
+    const parsed = parseCreateTaskInput({
+      title: "x",
+      contactId: 0,
+      dealId: -5,
+      projectId: Number.NaN,
+    });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.data.contactId).toBeNull();
+      expect(parsed.data.dealId).toBeNull();
+      expect(parsed.data.projectId).toBeNull();
+    }
+  });
+
   it("herkent status en prioriteit", () => {
     expect(isTaskStatus("completed")).toBe(true);
     expect(isTaskStatus("done")).toBe(false);

@@ -90,7 +90,7 @@ export default function Sidebar({
               ? "font-normal text-rose-400 hover:bg-rose-500/[0.06] hover:text-rose-300"
               : "font-normal text-orange-400 hover:bg-orange-500/[0.06] hover:text-orange-300"
             : active
-              ? "dashboard-sidebar-link--active bg-[#0c2836] font-medium text-sky-200"
+              ? "dashboard-sidebar-link--active bg-white/[0.06] font-medium text-sky-100"
               : parentOfActive
                 ? "font-normal text-zinc-300 hover:bg-white/[0.035] hover:text-zinc-100"
                 : "font-normal text-zinc-400 hover:bg-white/[0.035] hover:text-zinc-100",
@@ -107,7 +107,7 @@ export default function Sidebar({
         {active && available ? (
           <span
             aria-hidden
-            className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-cyan-400/80"
+            className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-sky-400/90"
           />
         ) : null}
         <item.icon
@@ -127,7 +127,7 @@ export default function Sidebar({
                     ? "text-rose-400"
                     : "text-orange-400"
                   : active
-                    ? "text-cyan-400"
+                    ? "text-sky-400"
                     : parentOfActive
                       ? "text-zinc-400 group-hover:text-zinc-200"
                       : "text-zinc-500 group-hover:text-zinc-300",
@@ -230,7 +230,7 @@ export default function Sidebar({
               key={group.title}
               className={
                 groupIndex > 0
-                  ? "mt-3 border-t border-white/[0.05] pt-3"
+                  ? "mt-2.5 border-t border-white/[0.05] pt-2.5"
                   : undefined
               }
             >
@@ -352,7 +352,7 @@ export default function Sidebar({
             <Sparkles
               size={ICON_SIZE}
               strokeWidth={ICON_STROKE}
-              className="shrink-0 text-cyan-400"
+              className="shrink-0 text-sky-400"
             />
             <span className="min-w-0 flex-1 leading-snug">
               Start {TRIAL_DAYS} dagen gratis

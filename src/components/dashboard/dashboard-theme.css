@@ -1325,12 +1325,12 @@
 }
 
 .dashboard-root[data-theme="light"] .dashboard-sidebar .dashboard-sidebar-link--active {
-  background-color: #0c2836 !important;
-  color: #bae6fd !important;
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #e0f2fe !important;
 }
 
-.dashboard-root[data-theme="light"] .dashboard-sidebar .dashboard-sidebar-link--active .text-cyan-400 {
-  color: #22d3ee !important;
+.dashboard-root[data-theme="light"] .dashboard-sidebar .dashboard-sidebar-link--active .text-sky-400 {
+  color: #38bdf8 !important;
 }
 
 .dashboard-root[data-theme="light"] .dashboard-sidebar .text-zinc-50,

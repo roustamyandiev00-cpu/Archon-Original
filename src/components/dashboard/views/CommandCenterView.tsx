@@ -44,8 +44,8 @@ const domainCards: DomainCard[] = [
     label: "Offerte",
     icon: FileText,
     href: "/dashboard/offertes",
-    stripe: "border-l-orange-500",
-    iconTone: "text-orange-400 bg-orange-500/10",
+    stripe: "border-l-sky-500",
+    iconTone: "text-sky-400 bg-sky-500/10",
     status: (m) =>
       m.offertesCount > 0
         ? `${m.offertesCount} offerte${m.offertesCount > 1 ? "s" : ""} deze maand`
@@ -56,8 +56,8 @@ const domainCards: DomainCard[] = [
     label: "Factuur",
     icon: Receipt,
     href: "/dashboard/facturen",
-    stripe: "border-l-orange-500",
-    iconTone: "text-orange-400 bg-orange-500/10",
+    stripe: "border-l-sky-500",
+    iconTone: "text-sky-400 bg-sky-500/10",
     status: (m) =>
       m.overdueFacturenCount > 0
         ? `${m.overdueFacturenCount} vervallen factuur${m.overdueFacturenCount > 1 ? "en" : ""}`
@@ -89,8 +89,8 @@ const domainCards: DomainCard[] = [
     label: "Planning",
     icon: Calendar,
     href: "/dashboard/agenda",
-    stripe: "border-l-orange-500",
-    iconTone: "text-orange-400 bg-orange-500/10",
+    stripe: "border-l-sky-500",
+    iconTone: "text-sky-400 bg-sky-500/10",
     status: () => "Planning en afspraken bekijken",
   },
   {
@@ -144,8 +144,8 @@ function statusMessage(mission: DashboardHomeProps["mission"]) {
   }
   if (isFreshTenant(mission)) {
     return {
-      text: "Klaar om te starten",
-      detail: "Begin met een contact of maak je eerste offerte.",
+      text: "Start met een contact of offerte",
+      detail: "Je dashboard vult zich na je eerste stappen.",
       tone: "ok" as const,
       nextHref: "/dashboard/contacten",
       nextLabel: "Contact toevoegen",
@@ -166,12 +166,13 @@ export default function CommandCenterView({
   mission,
 }: Pick<DashboardHomeProps, "mission" | "agentName">) {
   const status = statusMessage(mission);
+  const freshTenant = isFreshTenant(mission);
   const openTasks = [...mission.important, ...mission.tasks].slice(0, 3);
   const hasCashflowData = mission.gefactureerd > 0 || mission.openstaand > 0;
   const attentionCount = mission.important.length + mission.actionItems.length;
 
   return (
-    <div className="flex min-h-0 flex-col gap-3 lg:h-full lg:gap-3 lg:overflow-hidden">
+    <div className="flex min-h-0 flex-col gap-4 lg:h-full lg:gap-5 lg:overflow-hidden">
       <section
         data-tour="dash-status"
         className="shrink-0 rounded-xl border border-white/[0.08] bg-zinc-900/80 p-3.5 sm:p-4"
@@ -201,7 +202,7 @@ export default function CommandCenterView({
               {status.nextHref && status.nextLabel ? (
                 <Link
                   href={status.nextHref}
-                  className="mt-2 inline-flex text-xs font-medium text-orange-300 transition-colors hover:text-orange-200"
+                  className="mt-2 inline-flex text-xs font-medium text-sky-300 transition-colors hover:text-sky-200"
                 >
                   {status.nextLabel} →
                 </Link>
@@ -216,7 +217,11 @@ export default function CommandCenterView({
             <MetricStat
               label="Contacten"
               value={mission.klantenCount}
-              sublabel="actieve contacten"
+              sublabel={
+                mission.klantenCount > 0
+                  ? "actieve contacten"
+                  : "voeg je eerste toe"
+              }
               icon={Users}
               tone="neutral"
             />
@@ -224,7 +229,7 @@ export default function CommandCenterView({
               label="Aandacht"
               value={attentionCount}
               sublabel={
-                attentionCount > 0 ? "actie nodig" : "geen blokkades"
+                attentionCount > 0 ? "actie nodig" : "alles op schema"
               }
               icon={Clock}
               tone={attentionCount > 0 ? "warn" : "ok"}
@@ -235,7 +240,7 @@ export default function CommandCenterView({
               sublabel={
                 mission.overdueFacturenCount > 0
                   ? "facturen open"
-                  : "geen vervallen"
+                  : "niets vervallen"
               }
               icon={AlertTriangle}
               tone={mission.overdueFacturenCount > 0 ? "warn" : "ok"}
@@ -243,7 +248,9 @@ export default function CommandCenterView({
             <MetricStat
               label="Offertes"
               value={mission.offertesCount}
-              sublabel="deze maand"
+              sublabel={
+                mission.offertesCount > 0 ? "deze maand" : "nog geen offertes"
+              }
               icon={TrendingUp}
               tone="orange"
             />
@@ -253,7 +260,7 @@ export default function CommandCenterView({
 
       <div
         data-tour="dash-actions"
-        className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4"
+        className="grid shrink-0 grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3"
       >
         <QuickActionCard
           title="Contacten"
@@ -281,16 +288,18 @@ export default function CommandCenterView({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 pb-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-0">
+      <div className="grid grid-cols-1 gap-4 pb-4 lg:min-h-0 lg:flex-1 lg:gap-5 lg:overflow-y-auto lg:pb-0">
         <DashboardPanel
           title="AI Command Center"
           icon={Bot}
           data-tour="dash-agents"
         >
-          <p className="mb-3 text-xs text-zinc-500">
-            {DOMAIN_CARD_COUNT} werkgebieden – open een module
+          <p className="mb-3.5 text-xs text-zinc-500">
+            {freshTenant
+              ? "Kies een module om te beginnen"
+              : `${DOMAIN_CARD_COUNT} werkgebieden – open een module`}
           </p>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-3.5">
             {domainCards.map((card) => {
               const Icon = card.icon;
 
@@ -328,7 +337,7 @@ export default function CommandCenterView({
           </div>
         </DashboardPanel>
 
-        <div className="grid min-h-0 grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid min-h-0 grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
           <DashboardPanel
             id="dash-inbox"
             title="AI Inbox"
@@ -344,11 +353,17 @@ export default function CommandCenterView({
               <EmptyState
                 compact
                 icon={Inbox}
-                message="Geen AI-acties op dit moment"
-                detail="Als agents iets vinden dat aandacht vraagt, verschijnt het hier. Start ondertussen met een contact of offerte."
-                actionLabel="Eerste offerte"
-                actionHref="/dashboard/offertes/nieuw"
-                actionVariant="secondary"
+                message="Nog geen AI-acties"
+                detail="Agents melden hier wat aandacht vraagt."
+                actionLabel={
+                  freshTenant ? "Contact toevoegen" : "Eerste offerte"
+                }
+                actionHref={
+                  freshTenant
+                    ? "/dashboard/contacten"
+                    : "/dashboard/offertes/nieuw"
+                }
+                actionVariant={freshTenant ? "primary" : "secondary"}
               />
             )}
           </DashboardPanel>
@@ -357,9 +372,11 @@ export default function CommandCenterView({
             title="Mijn Taken"
             icon={Clock}
             action={
-              <IconActionButton href="/dashboard/taken" label="Taak toevoegen">
-                <Plus size={16} />
-              </IconActionButton>
+              openTasks.length > 0 ? (
+                <IconActionButton href="/dashboard/taken" label="Taak toevoegen">
+                  <Plus size={16} />
+                </IconActionButton>
+              ) : undefined
             }
           >
             {openTasks.length > 0 ? (
@@ -389,8 +406,8 @@ export default function CommandCenterView({
               <EmptyState
                 compact
                 icon={CheckCircle2}
-                message="Nog geen taken voor vandaag"
-                detail="Maak een taak aan of laat AI er een voorstellen."
+                message="Nog geen taken"
+                detail="Plan je eerste taak of laat AI er een voorstellen."
                 actionLabel="Taak toevoegen"
                 actionHref="/dashboard/taken"
               />
@@ -408,7 +425,7 @@ export default function CommandCenterView({
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-zinc-500">Openstaand</span>
-                  <span className="font-semibold text-orange-300">
+                  <span className="font-semibold text-amber-300">
                     {euro(mission.openstaand)}
                   </span>
                 </div>
@@ -420,10 +437,16 @@ export default function CommandCenterView({
               <EmptyState
                 compact
                 icon={Wallet}
-                message="Nog niet genoeg data"
-                detail="Maak eerst facturen zodat cashflow op echte bedragen gebaseerd is."
-                actionLabel="Facturen bekijken"
-                actionHref="/dashboard/facturen"
+                message="Nog geen cashflow"
+                detail="Facturen verschijnen hier zodra je begint te factureren."
+                actionLabel={
+                  freshTenant ? "Eerste factuur" : "Facturen bekijken"
+                }
+                actionHref={
+                  freshTenant
+                    ? "/dashboard/facturen/nieuw"
+                    : "/dashboard/facturen"
+                }
                 actionVariant="secondary"
               />
             )}
