@@ -80,11 +80,17 @@ const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
     items: [
       { label: "Contacten", href: "/dashboard/contacten", icon: Users },
       {
-        label: "Prijslijst",
-        href: "/dashboard/prijslijst",
-        icon: Tags,
+        label: "Offertes",
+        href: "/dashboard/offertes",
+        icon: FileText,
+        children: [
+          {
+            label: "Prijslijst",
+            href: "/dashboard/prijslijst",
+            icon: Tags,
+          },
+        ],
       },
-      { label: "Offertes", href: "/dashboard/offertes", icon: FileText },
       {
         label: "Projecten",
         href: "/dashboard/offertes/projecten",
@@ -104,11 +110,19 @@ const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
         label: "Facturen",
         href: "/dashboard/facturen",
         icon: Receipt,
-      },
-      {
-        label: "Boekhouding",
-        href: "/dashboard/boekhouding",
-        icon: Wallet,
+        children: [
+          {
+            label: "E-Facturen",
+            href: "/dashboard/e-facturen",
+            icon: ScrollText,
+            tag: "Beta",
+          },
+          {
+            label: "Boekhouding",
+            href: "/dashboard/boekhouding",
+            icon: Wallet,
+          },
+        ],
       },
       {
         label: "Leads / CRM",
@@ -172,12 +186,6 @@ const SIDEBAR_GROUPS_BASE: SidebarGroup[] = [
     title: "Beheer",
     collapsible: true,
     items: [
-      {
-        label: "E-Facturen",
-        href: "/dashboard/e-facturen",
-        icon: ScrollText,
-        tag: "Beta",
-      },
       {
         label: "Activiteiten",
         href: "/dashboard/activiteit",
@@ -306,15 +314,15 @@ export function findCurrentPageLabel(
 ): { group: string; label: string } | null {
   for (const group of SIDEBAR_GROUPS_BASE) {
     for (const item of group.items) {
-      if (sidebarItemIsActive(pathname, item.href, searchParams)) {
-        return { group: group.title, label: item.label };
-      }
       if (item.children) {
         for (const child of item.children) {
           if (sidebarItemIsActive(pathname, child.href, searchParams)) {
             return { group: group.title, label: child.label };
           }
         }
+      }
+      if (sidebarItemIsActive(pathname, item.href, searchParams)) {
+        return { group: group.title, label: item.label };
       }
     }
   }
