@@ -291,3 +291,50 @@ Sluit iedere taak af met:
 
 Zeg nooit dat iets volledig klaar of veilig is als de relevante controle niet kon worden uitgevoerd.
 
+
+## 14. Cursor Cloud specific instructions
+
+Deze sectie geldt voor Cursor Cloud Agents die de ontwikkelomgeving opzetten of valideren.
+
+### Boot requirements
+
+1. **Dependencies:** `pnpm install` (Puppeteer, sharp en unrs-resolver draaien postinstall-scripts; toegestaan via `pnpm.onlyBuiltDependencies` in `package.json`).
+2. **Environment:** kopieer `.env.example` naar `.env.local`. Minimaal vereist:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (of `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
+   - `SUPABASE_SERVICE_ROLE_KEY` (server actions, cron-routes, admin flows)
+
+Zonder Supabase-env vars start de dev-server wel, maar middleware faalt op de meeste routes (`src/lib/supabase/env.ts`).
+
+### Running the app
+
+```bash
+pnpm dev          # http://localhost:3000
+pnpm dev:mobile   # bind 0.0.0.0 voor LAN/mobiel
+pnpm test         # vitest (geen DB)
+pnpm lint         # eslint
+pnpm typecheck    # tsc --noEmit
+pnpm build        # productiebuild
+```
+
+Alleen één proces is lokaal vereist: de Next.js dev-server. Er is geen docker-compose in de repo.
+
+### Supabase and migrations
+
+- Voorwaartse migraties staan in `supabase/migrations/` (41+ patches per 2026-07-21).
+- Baseline-schema staat in `supabase/recovered_migrations/` (referentie voor volledige lokale DB).
+- Voor volledige CRM/dashboard-flows: gebruik een hosted Supabase-project (staging/productie), niet een lege lokale Postgres.
+- `supabase/config.toml` is voor optioneel lokaal Supabase CLI-gebruik; lokale stack vereist Docker.
+
+### Preview mode (beperkt dashboard zonder login)
+
+Bezoek `/dashboard/voorbeeld` voor read-only demo-UI. Vereist nog steeds geldige Supabase-env vars voor middleware.
+
+### Lint and tests
+
+- `pnpm test` — unit tests in `src/lib/**/__tests__/` en `src/components/**/__tests__/`; geen Supabase nodig.
+- `pnpm lint` — kan pre-existing ESLint-issues rapporteren; de linter zelf draait correct.
+
+### Optional integrations (niet vereist om te booten)
+
+Groq/OpenAI, ElevenLabs, Storecove/Peppol, Billit, Slack (`SLACK_CONNECTOR`), cron secrets — zie `.env.example`.

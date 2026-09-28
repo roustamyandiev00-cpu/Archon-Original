@@ -380,23 +380,28 @@ export default function CommandCenterView({
             }
           >
             {openTasks.length > 0 ? (
-              <ul className="space-y-1.5">
-                {openTasks.map((task) => (
-                  <li key={task.id}>
-                    <Link
-                      href={task.href}
-                      className="block rounded-lg border border-white/[0.05] px-2.5 py-2 transition-colors hover:border-white/12 hover:bg-white/[0.03]"
-                    >
-                      <p className="truncate text-sm font-medium text-zinc-200">
-                        {task.title}
-                      </p>
-                      <p className="truncate text-xs text-zinc-500">
-                        {task.detail}
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-1.5">
+                  {openTasks.map((task) => (
+                    <li key={task.id}>
+                      <Link
+                        href={task.href}
+                        className="block rounded-lg border border-white/[0.05] px-2.5 py-2 transition-colors hover:border-white/12 hover:bg-white/[0.03]"
+                      >
+                        <p className="truncate text-sm font-medium text-zinc-200">
+                          {task.title}
+                        </p>
+                        <p className="truncate text-xs text-zinc-500">
+                          {task.detail}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <PrimaryButton href="/dashboard/taken" className="mt-3">
+                  Taken openen
+                </PrimaryButton>
+              </>
             ) : (
               <EmptyState
                 compact
