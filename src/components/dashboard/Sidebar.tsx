@@ -292,7 +292,7 @@ export default function Sidebar({
                     return (
                       <div key={item.label}>
                         {renderLink(item, itemActive, false, !!childActive)}
-                        {hasChildren ? (
+                        {hasChildren && (itemActive || childActive) ? (
                           <div className="relative ml-[19px] mt-0.5 flex flex-col gap-0.5 border-l border-white/[0.06] pl-2.5">
                             {item.children!.map((child) =>
                               renderLink(
